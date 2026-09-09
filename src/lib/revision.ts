@@ -68,8 +68,24 @@ export async function revisarBase(): Promise<Revision> {
   return { ok: true }
 }
 
+/**
+ * A dónde está intentando conectarse, para poder decirlo en la pantalla.
+ * Sólo el servidor y el puerto: el usuario y la contraseña no salen nunca.
+ */
+function aDondeVa(): { host: string; puerto: string } | null {
+  try {
+    const url = new URL(process.env.DATABASE_URL ?? '')
+    return { host: url.hostname, puerto: url.port || '5432' }
+  } catch {
+    return null
+  }
+}
+
+const PLACEHOLDERS = ['REGION', 'PROYECTO', 'PROJECT', 'YOUR', 'CLAVE', 'PASSWORD']
+
 function noSePudoConectar(error: unknown): Revision {
   const codigo = (error as { code?: string })?.code ?? ''
+  const destino = aDondeVa()
 
   if (codigo === '28P01' || codigo === '28000') {
     return {
@@ -102,15 +118,12 @@ function noSePudoConectar(error: unknown): Revision {
   }
 
   if (codigo in dePlomeria) {
+    const aDonde = destino ? ` a ${destino.host}:${destino.puerto}` : ''
     return {
       ok: false,
       titulo: 'No se puede llegar a la base',
-      detalle: `Al conectar, ${dePlomeria[codigo]} (${codigo}).`,
-      pasos: [
-        'Casi siempre es la cadena equivocada: la conexión directa de Supabase (db.PROYECTO.supabase.co, puerto 5432) va sólo por IPv6 y desde Vercel no se llega.',
-        'Usá la cadena del POOLER en modo transacción: ...pooler.supabase.com, puerto 6543.',
-        'Después de cambiar la variable hay que volver a desplegar.',
-      ],
+      detalle: `Al conectar${aDonde}, ${dePlomeria[codigo]} (${codigo}).`,
+      pasos: pasosSegunElHost(destino),
     }
   }
 
@@ -124,4 +137,40 @@ function noSePudoConectar(error: unknown): Revision {
       'Después de cambiar una variable de entorno hay que volver a desplegar.',
     ],
   }
+}
+
+
+/** Los pasos cambian según a dónde esté apuntando: el host dice cuál es el error. */
+function pasosSegunElHost(destino: { host: string; puerto: string } | null): string[] {
+  const volverADesplegar = 'Después de cambiar la variable en Vercel hay que volver a desplegar: el despliegue que está corriendo tiene el valor viejo.'
+
+  if (destino && PLACEHOLDERS.some((p) => destino.host.includes(p))) {
+    return [
+      `El servidor dice «${destino.host}»: quedó el texto de ejemplo sin reemplazar.`,
+      'Copiá la cadena entera desde Supabase → botón Connect → Direct · Connection string → Transaction pooler, y pegala tal cual.',
+      volverADesplegar,
+    ]
+  }
+
+  if (destino && /^db\..*\.supabase\.co$/.test(destino.host)) {
+    return [
+      `Estás usando la conexión directa (${destino.host}), que va sólo por IPv6: desde Vercel no se llega.`,
+      'Cambiala por la del pooler en modo transacción: el servidor termina en .pooler.supabase.com y el puerto es 6543.',
+      volverADesplegar,
+    ]
+  }
+
+  if (destino && destino.host.endsWith('.pooler.supabase.com') && destino.puerto !== '6543') {
+    return [
+      `El servidor está bien, pero el puerto es ${destino.puerto}.`,
+      'El pooler en modo transacción, que es el que sirve en Vercel, escucha en el 6543.',
+      volverADesplegar,
+    ]
+  }
+
+  return [
+    'Revisá que el servidor de la cadena sea el del pooler: termina en .pooler.supabase.com, puerto 6543.',
+    'La conexión directa (db.PROYECTO.supabase.co, puerto 5432) va sólo por IPv6 y desde Vercel no se llega.',
+    volverADesplegar,
+  ]
 }
