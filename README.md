@@ -137,6 +137,19 @@ las filas que no cambiaron casi no escriben.
 La cookie de sesión sale con `Secure` en producción, así que la aplicación tiene
 que servirse por HTTPS: en Vercel ya lo está.
 
+### Si algo de eso falta, la aplicación lo dice
+
+Antes de tocar la base, el login y el marco de la aplicación revisan que la
+conexión esté (`src/lib/revision.ts`). Si falta `DATABASE_URL`, si no se llega
+al servidor, si la contraseña no es, si las tablas no están creadas o si todavía
+no hay ningún usuario, sale una pantalla con el motivo y los pasos, en vez de un
+«Application error» con un digest. Nunca muestra la cadena de conexión ni la
+contraseña.
+
+El caso más común al publicar: **usar la conexión directa en vez del pooler**.
+La directa (`db.PROYECTO.supabase.co`, puerto 5432) va sólo por IPv6 y desde
+Vercel no se llega.
+
 ## Lo que todavía no está
 
 Paso 2 (editar la ficha en el lugar), 2 bis (cargar documentos y completar

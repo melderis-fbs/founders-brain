@@ -184,3 +184,14 @@ dl { margin: 0; }
 .entrada .marca { color: var(--beige-o); font-weight: 800; letter-spacing: .2em; font-size: 11px; text-transform: uppercase; }
 .entrada input { min-width: 0; width: 100%; }
 .entrada .error { color: var(--rojo); font-size: 13px; }
+
+/* ── Cuando la base no anda ──────────────────────────────────────────────── */
+.rota {
+  background: #fff; border-radius: 16px; padding: 30px 32px; width: min(560px, 92vw);
+}
+.rota .marca { color: var(--beige-o); font-weight: 800; letter-spacing: .2em; font-size: 11px; text-transform: uppercase; }
+.rota h1 { margin: 10px 0 6px; font-size: 20px; }
+.rota .detalle { color: var(--gris); font-size: 13px; margin: 0 0 16px; }
+.rota ol { margin: 0; padding-left: 20px; font-size: 13.5px; line-height: 1.7; }
+.rota li { margin-bottom: 6px; }
+.rota code { background: var(--crema); border-radius: 4px; padding: 1px 5px; }
