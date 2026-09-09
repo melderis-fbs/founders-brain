@@ -1,0 +1,181 @@
+/* Identidad Founders: los mismos tokens que la landing. */
+:root {
+  --negro: #111111;
+  --tinta: #1c1c1c;
+  --carbon: #191919;
+  --papel: #fafaf8;
+  --crema: #f2eee9;
+  --beige: #c4b49a;
+  --beige-o: #a8946f;
+  --borde: #e6e1da;
+  --gris: #6f6a63;
+  --gris-claro: #9a958d;
+  --rojo: #a3341f;
+  --verde: #3d6b45;
+  --ambar: #8a6410;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+/* ── Barra de arriba ─────────────────────────────────────────────────────── */
+.barra {
+  background: var(--negro);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 24px;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.barra .marca {
+  font-weight: 800;
+  letter-spacing: .18em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--beige);
+  text-decoration: none;
+}
+.barra nav { display: flex; gap: 20px; flex: 1; }
+.barra nav a {
+  color: #b8b8b8;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+}
+.barra nav a:hover { color: #fff; }
+.barra nav a.activo { color: #fff; border-bottom-color: var(--beige); }
+.barra .quien { font-size: 12px; color: var(--gris-claro); display: flex; align-items: center; gap: 14px; }
+.barra .quien form { display: inline; }
+.barra .quien button {
+  background: none; border: 0; color: var(--gris-claro); cursor: pointer;
+  font: inherit; text-decoration: underline; padding: 0;
+}
+.barra .quien button:hover { color: #fff; }
+
+/* ── Estructura ──────────────────────────────────────────────────────────── */
+.hoja { padding: 22px 24px 60px; max-width: 1560px; margin: 0 auto; }
+.titulo-fila { display: flex; align-items: baseline; gap: 14px; margin: 0 0 14px; flex-wrap: wrap; }
+h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 13px; font-weight: 700; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--gris); }
+.cuenta { font-size: 13px; color: var(--gris); }
+
+.tarjeta {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+/* ── Tabla ───────────────────────────────────────────────────────────────── */
+.tabla-marco { background: #fff; border: 1px solid var(--borde); border-radius: 12px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  position: sticky; top: 0; background: var(--crema); z-index: 1;
+  text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--gris); padding: 9px 14px; white-space: nowrap;
+  border-bottom: 1px solid var(--borde);
+}
+tbody td { padding: 9px 14px; border-bottom: 1px solid #f1eee9; vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: #fcfbf9; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nombre-cliente { font-weight: 600; text-decoration: none; }
+.nombre-cliente:hover { text-decoration: underline; text-decoration-color: var(--beige); }
+
+/* ── Marcas y estados ────────────────────────────────────────────────────── */
+.marca-estado {
+  display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px;
+  border-radius: 99px; border: 1px solid var(--borde); background: var(--crema); color: var(--gris);
+  white-space: nowrap;
+}
+.marca-estado.activo { background: #eef3ee; border-color: #cddccf; color: var(--verde); }
+.marca-estado.pausado { background: #fbf3e2; border-color: #ecdcb8; color: var(--ambar); }
+.marca-estado.baja { background: #f9edea; border-color: #e8cdc6; color: var(--rojo); }
+.marca-estado.finalizado { background: #eeeeee; border-color: #dddddd; color: var(--gris); }
+
+.pasado { color: var(--rojo); font-weight: 600; }
+.apagado { color: var(--gris-claro); }
+.falta { color: var(--rojo); }
+.faltan-lista { color: var(--gris); }
+.faltan-lista b { color: var(--tinta); font-weight: 600; }
+.mini { font-size: 12px; color: var(--gris); }
+
+/* ── Filtros ─────────────────────────────────────────────────────────────── */
+.filtros { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+.campo { display: flex; flex-direction: column; gap: 4px; }
+.campo label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--gris); font-weight: 700; }
+select, input[type='text'], input[type='email'], input[type='password'], input[type='file'] {
+  font: inherit; padding: 7px 10px; border: 1px solid var(--borde); border-radius: 8px;
+  background: #fff; color: var(--tinta); min-width: 190px;
+}
+select:focus, input:focus { outline: 2px solid var(--beige); outline-offset: -1px; }
+
+.boton {
+  font: inherit; font-weight: 600; font-size: 13px; padding: 8px 18px; border-radius: 99px;
+  border: 1px solid var(--negro); background: var(--negro); color: #fff; cursor: pointer;
+  text-decoration: none; display: inline-block;
+}
+.boton:hover { background: #000; }
+.boton.suave { background: #fff; color: var(--tinta); border-color: var(--borde); }
+.boton.suave:hover { border-color: var(--beige-o); }
+
+/* ── Bloques de la ficha ─────────────────────────────────────────────────── */
+.bloques { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; align-items: start; }
+.dato { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f4f1ec; }
+.dato:last-child { border-bottom: 0; }
+.dato dt { font-size: 12px; color: var(--gris); }
+.dato dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+dl { margin: 0; }
+
+.cabecera-ficha {
+  background: var(--negro); color: #fff; border-radius: 12px; padding: 18px 22px; margin-bottom: 16px;
+}
+.cabecera-ficha h1 { color: #fff; font-size: 22px; }
+.cabecera-ficha .sub { color: var(--beige); font-size: 13px; margin-top: 4px; font-weight: 600; }
+.cabecera-ficha .faltantes { color: #cfcac2; font-size: 12.5px; margin-top: 10px; line-height: 1.6; }
+.cabecera-ficha .faltantes b { color: #fff; font-weight: 600; }
+
+/* ── Reporte de importación ──────────────────────────────────────────────── */
+.resumen { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.resumen .caja {
+  background: #fff; border: 1px solid var(--borde); border-radius: 10px; padding: 10px 16px; min-width: 120px;
+}
+.resumen .caja .n { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.resumen .caja .q { font-size: 11px; color: var(--gris); text-transform: uppercase; letter-spacing: .07em; }
+.resumen .caja.mal { border-color: #e8cdc6; background: #fdf7f5; }
+.resumen .caja.mal .n { color: var(--rojo); }
+
+.aviso {
+  border-left: 3px solid var(--rojo); background: #fdf7f5; padding: 10px 14px;
+  border-radius: 0 8px 8px 0; margin-bottom: 14px; font-size: 13px;
+}
+.aviso.ok { border-left-color: var(--verde); background: #f2f6f2; }
+
+/* ── Login ───────────────────────────────────────────────────────────────── */
+.entrada { min-height: 100dvh; display: grid; place-items: center; background: var(--negro); }
+.entrada form {
+  background: #fff; border-radius: 16px; padding: 32px; width: min(380px, 92vw);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.entrada .marca { color: var(--beige-o); font-weight: 800; letter-spacing: .2em; font-size: 11px; text-transform: uppercase; }
+.entrada input { min-width: 0; width: 100%; }
+.entrada .error { color: var(--rojo); font-size: 13px; }

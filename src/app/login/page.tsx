@@ -1,0 +1,37 @@
+import { redirect } from 'next/navigation'
+import { entrar, usuarioActual } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
+
+export default async function Login({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams
+  if (await usuarioActual()) redirect('/clientes')
+
+  async function intentar(datos: FormData) {
+    'use server'
+    const email = String(datos.get('email') ?? '')
+    const clave = String(datos.get('clave') ?? '')
+    const usuario = await entrar(email, clave)
+    if (!usuario) redirect('/login?error=1')
+    redirect('/clientes')
+  }
+
+  return (
+    <main className="entrada">
+      <form action={intentar}>
+        <div className="marca">Founders</div>
+        <h1>Founders Brain</h1>
+        <div className="campo">
+          <label htmlFor="email">Email</label>
+          <input id="email" name="email" type="email" autoComplete="username" required autoFocus />
+        </div>
+        <div className="campo">
+          <label htmlFor="clave">Contraseña</label>
+          <input id="clave" name="clave" type="password" autoComplete="current-password" required />
+        </div>
+        {error ? <p className="error">Ese email y esa contraseña no coinciden.</p> : null}
+        <button className="boton" type="submit">Entrar</button>
+      </form>
+    </main>
+  )
+}
