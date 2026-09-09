@@ -27,24 +27,41 @@ export class ErrorDeEscritura extends Error {
   }
 }
 
-function crearPool(): Pool {
-  const url = process.env.DATABASE_URL
-  if (!url) {
-    throw new Error(
-      'Falta DATABASE_URL. Copiá .env.example a .env.local y poné la cadena de conexión de Supabase ' +
-        '(Project Settings → Database → Connection string → URI).',
-    )
-  }
+/**
+ * Las opciones con las que se abre el pool.
+ *
+ * Ojo con el TLS, porque no es obvio: cuando se pasa `connectionString`, `pg`
+ * pisa lo que le pongamos acá con lo que diga la cadena. Es decir que si la
+ * cadena trae `sslmode=...`, manda la cadena y este `ssl` no se aplica.
+ *
+ * Así que la regla es explícita: si la cadena dice algo de TLS, decide la
+ * cadena, porque es alguien eligiendo a propósito. Si no dice nada, ciframos
+ * igual pero sin validar el certificado —que es lo que necesita la conexión
+ * directa de Supabase, con su propia autoridad— y en el Postgres local, nada.
+ */
+export function opcionesDePool(url: string) {
   const esLocal = /@(localhost|127\.0\.0\.1)/.test(url)
-  return new Pool({
+  const laCadenaDecideElTls = /[?&]sslmode=/.test(url)
+
+  return {
     connectionString: url,
-    // Supabase exige TLS; en el Postgres local no hay certificado que validar.
-    ssl: esLocal ? undefined : { rejectUnauthorized: false },
+    ...(laCadenaDecideElTls ? {} : { ssl: esLocal ? undefined : { rejectUnauthorized: false } }),
     // En Vercel cada instancia es un proceso corto y Supabase tiene un tope de
     // conexiones para todos: pocas por instancia. En un servidor propio, más.
     max: Number(process.env.DB_MAX_CONEXIONES ?? (process.env.VERCEL ? 3 : 10)),
     idleTimeoutMillis: 30_000,
-  })
+  }
+}
+
+function crearPool(): Pool {
+  const url = process.env.DATABASE_URL
+  if (!url) {
+    throw new Error(
+      'Falta DATABASE_URL. En Supabase está en el botón Connect, arriba del proyecto: ' +
+        'la cadena del pooler en modo transacción (puerto 6543).',
+    )
+  }
+  return new Pool(opcionesDePool(url))
 }
 
 const global_ = globalThis as unknown as { __poolFounders?: Pool }
