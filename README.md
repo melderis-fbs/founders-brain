@@ -107,6 +107,21 @@ nombre a un cliente sin que se duplique.
 4. Creá el primer usuario: `npm run seed -- tu@email.com "Tu Nombre" tuclave`,
    también desde tu máquina y apuntando a la misma base.
 
+### La primera carga de la cartera, hacela por la línea de comandos
+
+Una función de Vercel se corta al minuto. Subir la planilla entera por la
+pantalla son cientos de escrituras seguidas contra Supabase, y con la cartera
+completa puede no llegar. Para esa primera vez:
+
+```bash
+npm run importar -- ruta/a/la-planilla.csv
+```
+
+Corre exactamente el mismo código que la pantalla, con las mismas reglas, y
+deja el mismo reporte guardado (te dice en qué `/importar/<n>` quedó). De ahí en
+adelante las actualizaciones del día a día sí entran cómodas por la pantalla:
+las filas que no cambiaron casi no escriben.
+
 La cookie de sesión sale con `Secure` en producción, así que la aplicación tiene
 que servirse por HTTPS: en Vercel ya lo está.
 

@@ -10,7 +10,7 @@ import { importarCsv } from '@/lib/importar/importar'
  * sin decir por qué.
  */
 export const runtime = 'nodejs'
-export const maxDuration = 300
+export const maxDuration = 60
 
 const TOPE_BYTES = 25 * 1024 * 1024
 

@@ -232,14 +232,9 @@ async function procesarFilas(
           avisos: [],
         }
     reporte.push(fila)
-
-    await escribirDevolviendo(
-      `insert into importacion_filas (importacion_id, nro_fila, cliente_nombre, cliente_id, resultado, motivo, avisos)
-       values ($1, $2, $3, $4, $5, $6, $7) returning id`,
-      [importacionId, fila.nroFila, fila.clienteNombre, fila.clienteId, fila.resultado, fila.motivo, fila.avisos],
-      cli,
-    )
   }
+
+  await guardarReporte(cli, importacionId, reporte)
 
   return {
     filasLeidas,
@@ -248,6 +243,35 @@ async function procesarFilas(
     sinCambios: reporte.filter((f) => f.resultado === 'sin_cambios').length,
     omitidas: reporte.filter((f) => f.resultado === 'omitida').length,
     filas: reporte,
+  }
+}
+
+/**
+ * El reporte se guarda por tandas y no fila por fila.
+ *
+ * Contra Supabase cada ida y vuelta cuesta decenas de milisegundos, y 200
+ * inserciones sueltas son 200 idas y vueltas de más. Con la cartera entera eso
+ * es la diferencia entre importar y quedarse sin tiempo.
+ */
+async function guardarReporte(cli: PoolClient, importacionId: number, filasDelReporte: FilaDelReporte[]) {
+  const TANDA = 500
+  for (let i = 0; i < filasDelReporte.length; i += TANDA) {
+    const tanda = filasDelReporte.slice(i, i + TANDA)
+    await escribir(
+      `insert into importacion_filas (importacion_id, nro_fila, cliente_nombre, cliente_id, resultado, motivo, avisos)
+       select $1, f.nro_fila, f.cliente_nombre, f.cliente_id, f.resultado, f.motivo, f.avisos
+         from jsonb_to_recordset($2::jsonb)
+           as f(nro_fila int, cliente_nombre text, cliente_id bigint, resultado text, motivo text, avisos text[])`,
+      [importacionId, JSON.stringify(tanda.map((f) => ({
+        nro_fila: f.nroFila,
+        cliente_nombre: f.clienteNombre,
+        cliente_id: f.clienteId,
+        resultado: f.resultado,
+        motivo: f.motivo,
+        avisos: f.avisos,
+      })))],
+      { esperadas: tanda.length, cliente: cli },
+    )
   }
 }
 

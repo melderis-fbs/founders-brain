@@ -11,7 +11,8 @@
     "test": "vitest run",
     "seed": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/seed.ts",
     "migrar": "node scripts/migrar.mjs",
-    "fixture": "node scripts/fixture.mjs"
+    "fixture": "node scripts/fixture.mjs",
+    "importar": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/importar.ts"
   },
   "dependencies": {
     "next": "^15.5.25",
