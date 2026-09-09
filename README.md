@@ -35,6 +35,7 @@ string → URI**. En producción usá la cadena del *pooler* (puerto 6543).
 | `npm run migrar` | Aplica `supabase/migrations/*.sql` en orden |
 | `npm run seed -- <email> "<nombre>" <clave>` | Crea o actualiza un usuario admin |
 | `npm run fixture` | Genera una planilla de prueba de 199 filas en `fixtures/` |
+| `npm run importar -- <archivo.csv>` | Importa un CSV sin tope de tiempo (la primera carga de la cartera) |
 
 ## Por qué se conecta así a Supabase
 
@@ -83,12 +84,23 @@ entraba y la carga se trababa sin decir por qué. Por eso el formulario de
 Las reglas 2, 4, 5, 6 y 9 entran con los pasos que las necesitan (alertas,
 extracción con IA).
 
-## Qué entiende de la planilla
+## La planilla sale de la aplicación, no al revés
 
-Los encabezados no tienen que estar escritos exactamente igual: no importan los
-acentos ni las mayúsculas, y cada campo acepta varios nombres. La lista completa
-está en la pantalla **Importar**, y desde ahí se baja una plantilla con los
-encabezados que la aplicación reconoce.
+Los campos mandan. `src/lib/campos.ts` define qué datos tiene un cliente, y de
+ahí salen los encabezados de la planilla madre. Desde la pantalla **Importar**
+se baja de dos formas:
+
+- **vacía, con una fila de ejemplo** — para empezar la planilla;
+- **con la cartera de hoy** — para rehacerla desde lo que ya está cargado.
+
+El viaje de ida y vuelta no mueve un dato: bajar la cartera y volver a subirla
+da *sin cambios* en todas las filas, y ninguna columna queda sin reconocer. Hay
+una prueba que lo verifica.
+
+Los sinónimos que acepta la importación (`meta`, `objetivo mensual`,
+`facturacion objetivo`… para *meta mensual*) existen sólo para que lo que ya
+está escrito hoy entre sin retocarlo. No son el contrato: el contrato es la
+plantilla.
 
 Si la planilla trae una columna `id_cliente`, esa manda: se le puede corregir el
 nombre a un cliente sin que se duplique.

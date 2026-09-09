@@ -34,21 +34,33 @@ export default async function Importar({ searchParams }: { searchParams: Promise
               <label htmlFor="archivo">Archivo</label>
               <input id="archivo" name="archivo" type="file" accept=".csv,text/csv,text/plain" required />
             </div>
-            <button className="boton" type="submit">Importar</button>{' '}
-            <a className="boton suave" href="/api/plantilla">Bajar la plantilla</a>
+            <button className="boton" type="submit">Importar</button>
           </form>
+
+          <h2 style={{ marginTop: 24 }}>Bajar la planilla</h2>
+          <p>
+            <a className="boton suave" href="/api/plantilla">Vacía, con un ejemplo</a>{' '}
+            <a className="boton suave" href="/api/cartera">Con la cartera de hoy</a>
+          </p>
+          <p className="mini" style={{ marginBottom: 0 }}>
+            Las columnas de la planilla salen de los campos de la aplicación. Bajala, corregila
+            en la planilla y volvé a subirla: como la fila se identifica por el id del cliente,
+            corrige en vez de duplicar.
+          </p>
         </section>
 
         <section className="tarjeta">
-          <h2>Qué columnas entiende</h2>
-          <p className="mini" style={{ marginTop: 0 }}>
-            No hace falta que se llamen exactamente así: los acentos y las mayúsculas no importan.
-          </p>
+          <h2>Las columnas</h2>
           <dl>
             {columnas.map((c) => (
               <div className="dato" key={c.clave}>
-                <dt>{c.etiqueta}</dt>
-                <dd className="mini">{[c.clave, ...c.sinonimos].slice(0, 5).join(' · ')}</dd>
+                <dt><code className="columna">{c.clave}</code></dt>
+                <dd>
+                  {c.etiqueta}
+                  {c.sinonimos.length > 0 ? (
+                    <div className="mini">también entra como {c.sinonimos.slice(0, 4).join(' · ')}</div>
+                  ) : null}
+                </dd>
               </div>
             ))}
           </dl>

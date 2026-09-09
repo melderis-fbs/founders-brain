@@ -1,6 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { exportarClientes } from '../clientes'
 import { fila, filas, pool } from '../db'
 import { importarCsv } from './importar'
+import { csvDeCartera } from './plantilla'
 
 const hayBase = Boolean(process.env.DATABASE_URL)
 const prueba = hayBase ? describe : describe.skip
@@ -164,6 +166,22 @@ Juan Pérez,lucia fernandez,activo,6,10/03/2025,,,,,`)
     expect(r.filas[1].avisos).toEqual([])
     const cuantas = await filas<{ n: number }>('select count(*)::int as n from consultoras')
     expect(cuantas[0].n).toBe(1)
+  })
+
+  it('la planilla sale de la app: se baja la cartera y se vuelve a subir sin que cambie nada', async () => {
+    await importar(`${ENCABEZADOS}
+Norma Márquez,Lucía Fernández,activo,4,03/02/2025,5.400.000,1.800.000,1,Proyecto llave en mano,Texto del onboarding
+Juan Pérez,Lucía Fernández,pausado,6,10/03/2025,2.000.000,500.000,0,,`)
+
+    const csv = csvDeCartera(await exportarClientes())
+    const r = await importar(csv, 'cartera.csv')
+
+    expect(r.errorGeneral).toBeNull()
+    expect(r.columnasIgnoradas).toEqual([])   // la aplicación entiende todo lo que ella misma escribe
+    expect(r.omitidas).toBe(0)
+    expect(r.nuevos).toBe(0)
+    expect(r.sinCambios).toBe(2)              // el viaje de ida y vuelta no mueve un solo dato
+    expect(await contarClientes()).toBe(2)
   })
 
   it('el reporte queda guardado, no sólo en pantalla', async () => {

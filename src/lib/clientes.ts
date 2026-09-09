@@ -132,6 +132,25 @@ export async function traerCliente(id: number): Promise<ClienteCompleto | null> 
   }
 }
 
+/**
+ * La cartera entera con todos sus valores, para bajarla como planilla.
+ *
+ * Acá sí viajan los textos largos, y está bien: el archivo ES el texto. Lo que
+ * no se hace nunca es traerlos a una pantalla que se escanea.
+ */
+export async function exportarClientes() {
+  const seleccion = CAMPOS
+    .filter((c) => c.clave !== 'nombre' && c.clave !== 'consultora')
+    .map((campo) => `${ALIAS[campo.tabla]}.${campo.columna} as "${campo.clave}"`)
+    .join(', ')
+
+  return filas<{ ref_externa: string | null; consultora: string | null } & Record<string, unknown>>(
+    `select c.ref_externa, c.nombre, co.nombre as consultora, ${seleccion}
+     ${UNIONES}
+     order by c.nombre`,
+  )
+}
+
 /** Los documentos del cliente, sin el texto: título, tipo, fecha y tamaño. */
 export async function documentosDe(clienteId: number) {
   return filas<{ id: number; tipo: string; titulo: string; fecha: string | null; caracteres: number; origen: string; creado_en: string }>(

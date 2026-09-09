@@ -1,11 +1,18 @@
 import Papa from 'papaparse'
-import { CAMPOS, DOCUMENTOS_DE_PLANILLA } from '../campos'
+import { CAMPOS, DOCUMENTOS_DE_PLANILLA, type Campo } from '../campos'
+import { plegado } from '../texto'
 import { encabezadosDePlantilla } from './mapeo'
 
 /**
- * La plantilla que se baja desde la pantalla de importar: los encabezados que
- * la aplicación entiende y una fila de ejemplo, para que la planilla madre y la
- * aplicación hablen el mismo idioma sin que nadie tenga que adivinarlo.
+ * La planilla sale de acá, no al revés.
+ *
+ * Los campos de la aplicación mandan: de `campos.ts` salen los encabezados, y
+ * la planilla madre se arma con ellos. Los sinónimos que acepta la importación
+ * existen sólo para que lo que ya está escrito hoy entre sin retocarlo.
+ *
+ * Dos formas de bajarla:
+ *  - vacía, con una fila de ejemplo, para empezar la planilla;
+ *  - con la cartera cargada, para rehacer la planilla desde lo que hay.
  */
 const EJEMPLO: Record<string, string> = {
   id_cliente: 'FB-001',
@@ -55,9 +62,52 @@ export function csvDePlantilla(): string {
 
 /** Para la pantalla: qué encabezado alternativo se acepta para cada campo. */
 export function columnasQueSeEntienden() {
+  // Los sinónimos se muestran sin repetir el nombre de la columna: el nombre de
+  // la columna ya está a la izquierda, y repetirlo es ruido.
+  const otros = (clave: string, sinonimos: readonly string[]) =>
+    sinonimos.filter((s) => plegado(s) !== plegado(clave))
+
   return [
     { clave: 'id_cliente', etiqueta: 'Id del cliente (opcional)', sinonimos: ['id', 'identificador', 'ref', 'referencia', 'codigo'] },
-    ...CAMPOS.map((c) => ({ clave: c.clave, etiqueta: c.etiqueta, sinonimos: [...c.sinonimos] })),
-    ...DOCUMENTOS_DE_PLANILLA.map((d) => ({ clave: `texto_${d.tipo}`, etiqueta: d.etiqueta, sinonimos: [...d.sinonimos] })),
+    ...CAMPOS.map((c) => ({ clave: c.clave, etiqueta: c.etiqueta, sinonimos: otros(c.clave, c.sinonimos) })),
+    ...DOCUMENTOS_DE_PLANILLA.map((d) => ({
+      clave: `texto_${d.tipo}`, etiqueta: d.etiqueta, sinonimos: otros(`texto_${d.tipo}`, d.sinonimos),
+    })),
   ]
+}
+
+
+// ── La cartera, exportada con los mismos encabezados ────────────────────────
+
+/** Cómo se escribe cada valor para que vuelva a entrar tal cual salió. */
+function escribirValor(campo: Campo, valor: unknown): string {
+  if (valor === null || valor === undefined) return ''
+  switch (campo.tipo) {
+    case 'booleano':
+      return valor ? 'sí' : 'no'
+    case 'fecha':
+      return String(valor).slice(0, 10).split('-').reverse().join('/')
+    case 'numero':
+    case 'entero':
+      // Sin separador de miles: así no depende de cómo esté configurada la planilla.
+      return String(valor)
+    default:
+      return String(valor)
+  }
+}
+
+export type ClienteExportable = { ref_externa: string | null; consultora: string | null } & Record<string, unknown>
+
+export function csvDeCartera(clientes: readonly ClienteExportable[]): string {
+  const encabezados = encabezadosDePlantilla().filter((h) => !h.startsWith('texto_'))
+  const data = clientes.map((cliente) => {
+    const fila: Record<string, string> = { id_cliente: cliente.ref_externa ?? '' }
+    for (const campo of CAMPOS) {
+      fila[campo.clave] = campo.clave === 'consultora'
+        ? (cliente.consultora ?? '')
+        : escribirValor(campo, cliente[campo.clave])
+    }
+    return fila
+  })
+  return Papa.unparse({ fields: encabezados, data })
 }
