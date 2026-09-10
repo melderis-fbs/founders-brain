@@ -226,3 +226,11 @@ dl { margin: 0; }
   .lateral nav { flex-direction: row; flex-wrap: wrap; }
   .hoja { padding: 20px 16px 50px; }
 }
+
+/* El texto de un documento, sólo cuando alguien lo abre. */
+.texto-documento {
+  margin: 10px 0 0; padding: 12px 14px; background: var(--hover); border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.6;
+  white-space: pre-wrap; max-height: 360px; overflow: auto;
+}
+textarea.edicion { min-height: 90px; }

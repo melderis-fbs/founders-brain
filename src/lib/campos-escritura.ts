@@ -23,6 +23,8 @@ export const ALIAS_TABLA = {
   cliente_negocio: 'n',
   cliente_numeros: 'm',
   cliente_comercial: 'k',
+  cliente_autoridad: 'a',
+  cliente_intentos: 'i',
 } as const
 
 export type Origen = 'planilla' | 'persona' | 'documento'

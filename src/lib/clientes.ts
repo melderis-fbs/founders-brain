@@ -3,7 +3,10 @@ import { fila, filas } from './db'
 import { fuentesConDatos, type FuentesConDatos } from './hitos'
 import { plegado } from './texto'
 
-const ALIAS = { clientes: 'c', cliente_negocio: 'n', cliente_numeros: 'm', cliente_comercial: 'k' } as const
+const ALIAS = {
+  clientes: 'c', cliente_negocio: 'n', cliente_numeros: 'm', cliente_comercial: 'k',
+  cliente_autoridad: 'a', cliente_intentos: 'i',
+} as const
 
 const CAMPOS_QUE_CUENTAN = CAMPOS.filter((c) => c.cuenta)
 
@@ -30,6 +33,8 @@ const UNIONES = `
   left join cliente_negocio n on n.cliente_id = c.id
   left join cliente_numeros m on m.cliente_id = c.id
   left join cliente_comercial k on k.cliente_id = c.id
+  left join cliente_autoridad a on a.cliente_id = c.id
+  left join cliente_intentos i on i.cliente_id = c.id
   left join consultoras co on co.id = c.consultora_id`
 
 export type FilaDeLista = {

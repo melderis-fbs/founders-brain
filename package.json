@@ -15,11 +15,13 @@
     "importar": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/importar.ts"
   },
   "dependencies": {
+    "mammoth": "^1.12.2",
     "next": "^15.5.25",
     "papaparse": "^5.7.0",
     "pg": "^8.23.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",

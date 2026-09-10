@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
+import { Documentos } from '@/componentes/Documentos'
 import {
-  CAMPOS, ETIQUETA_DOCUMENTO, ETIQUETA_GRUPO, TOTAL_CAMPOS,
-  type Campo, type Grupo, type TipoDocumento,
+  CAMPOS, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo,
 } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
@@ -13,7 +13,7 @@ import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/progra
 
 export const dynamic = 'force-dynamic'
 
-const GRUPOS: Grupo[] = ['identidad', 'negocio', 'numeros', 'comercial']
+const GRUPOS: Grupo[] = ['identidad', 'negocio', 'autoridad', 'intentos', 'numeros', 'comercial']
 
 /** Lo que se ve. Nunca un número sin su unidad. */
 function comoSeLee(campo: Campo, valor: unknown): string | null {
@@ -43,8 +43,14 @@ function deDonde(origen: OrigenDeCampo | undefined): string | undefined {
   return `Vino de la planilla, el ${cuando}`
 }
 
-export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
+export default async function Ficha({
+  params, searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ error?: string; cargado?: string }>
+}) {
   const { id } = await params
+  const { error, cargado } = await searchParams
   const cliente = await traerCliente(Number(id))
   if (!cliente) notFound()
 
@@ -66,6 +72,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   return (
     <>
       <p className="mini"><Link href="/clientes">← Clientes</Link></p>
+      {error ? <div className="aviso">{decodeURIComponent(error)}</div> : null}
+      {cargado ? <div className="aviso ok">El documento se cargó.</div> : null}
 
       <div className="cabecera-ficha">
         <h1>{cliente.nombre}</h1>
@@ -93,7 +101,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       <div className="bloques">
         {GRUPOS.map((grupo) => (
           <section className="tarjeta" key={grupo}>
-            <h2>{ETIQUETA_GRUPO[grupo]}</h2>
+            <h2 title={POR_QUE_EL_GRUPO[grupo]}>{ETIQUETA_GRUPO[grupo]}</h2>
             <dl>
               {CAMPOS.filter((c) => c.grupo === grupo).map((campo) => (
                 <div className="dato" key={campo.clave}>
@@ -116,25 +124,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
           </section>
         ))}
 
-        <section className="tarjeta">
-          <h2>Documentos</h2>
-          {documentos.length === 0 ? (
-            <p className="apagado" style={{ margin: 0 }}>No hay ningún documento cargado de este cliente.</p>
-          ) : (
-            <dl>
-              {documentos.map((d) => (
-                <div className="dato" key={d.id}>
-                  <dt>{ETIQUETA_DOCUMENTO[d.tipo as TipoDocumento] ?? d.tipo}</dt>
-                  <dd>
-                    {d.caracteres.toLocaleString('es-AR')} caracteres · entró por {d.origen}
-                    <br />
-                    <span className="mini">{new Date(d.creado_en).toLocaleDateString('es-AR')}</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </section>
+        <Documentos clienteId={cliente.id} documentos={documentos} />
       </div>
     </>
   )

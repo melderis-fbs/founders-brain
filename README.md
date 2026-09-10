@@ -180,6 +180,23 @@ La validación es **la misma** que la de la importación —el mismo módulo, no
 copia—, así que la ficha nunca acepta algo que la planilla rechaza: escribir
 «lo que salga» en el ticket devuelve el mismo mensaje en los dos lados.
 
+### Los documentos se cargan desde la ficha
+
+Dos caminos, los dos en el bloque «Documentos»:
+
+- **Pegar texto** — el principal, el que siempre funciona. Va por una acción de
+  servidor, que para texto está bien.
+- **Subir archivo** — PDF, .docx y texto plano, por `POST /api/documentos`, que
+  es un endpoint. Nunca por una acción de servidor: el tope de 1 MB es lo que
+  trababa la carga en la versión anterior.
+
+`src/lib/extraer-archivo.ts` viene tal cual del Brain anterior: el problema ya
+estaba resuelto ahí. Un PDF escaneado no tiene texto adentro, y lo dice en vez
+de guardar un documento vacío.
+
+El texto completo de un documento viaja al navegador **sólo cuando alguien lo
+abre**. En la lista se ven el título, el tipo, la fecha y el tamaño.
+
 ### De dónde salió cada dato
 
 Toda escritura queda anotada en `campo_origen`: si vino de la planilla, si lo
