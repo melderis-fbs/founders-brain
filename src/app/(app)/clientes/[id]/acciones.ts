@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { usuarioActual } from '@/lib/auth'
 import { guardarUnCampo, type ResultadoEdicion } from '@/lib/campos-escritura'
 import { guardarDocumento } from '@/lib/documentos'
+import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 
 /**
  * Guardar un dato editado en la ficha.
@@ -42,6 +43,36 @@ export async function pegarDocumento(clienteId: number, datos: FormData): Promis
   })
 
   if (!guardado.ok) return { ok: false, error: guardado.error }
+  revalidatePath(`/clientes/${clienteId}`)
+  return { ok: true }
+}
+
+// ── Sesiones ────────────────────────────────────────────────────────────────
+
+export async function nuevaSesion(clienteId: number, datos: FormData): Promise<{ ok: boolean; error?: string }> {
+  const usuario = await usuarioActual()
+  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+
+  const r = await crearSesion({
+    clienteId,
+    numero: String(datos.get('numero') ?? ''),
+    fechaBruta: String(datos.get('fecha') ?? ''),
+    estado: String(datos.get('estado') ?? 'hecha'),
+    quePaso: String(datos.get('que_paso') ?? ''),
+  })
+  if (!r.ok) return { ok: false, error: r.error }
+  revalidatePath(`/clientes/${clienteId}`)
+  return { ok: true }
+}
+
+export async function pegarTranscripcion(
+  clienteId: number, sesionId: number, texto: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const usuario = await usuarioActual()
+  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+
+  const r = await guardarTranscripcion(sesionId, clienteId, texto)
+  if (!r.ok) return { ok: false, error: r.error }
   revalidatePath(`/clientes/${clienteId}`)
   return { ok: true }
 }

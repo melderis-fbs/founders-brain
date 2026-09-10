@@ -25,7 +25,14 @@ const EXTENSIONES = '.txt,.md,.csv,.vtt,.srt,.json,.log,.pdf,.docx'
  * va por un endpoint del servidor —no por una acción— porque una acción tiene
  * tope de 1 MB y un contrato en PDF no entra.
  */
-export function Documentos({ clienteId, documentos }: { clienteId: number; documentos: DocumentoEnLista[] }) {
+export function Documentos({
+  clienteId, documentos, suelto = false,
+}: {
+  clienteId: number
+  documentos: DocumentoEnLista[]
+  /** Dentro de una pestaña ya hay una tarjeta: no hace falta otra. */
+  suelto?: boolean
+}) {
   const router = useRouter()
   const [modo, setModo] = useState<'ninguno' | 'pegar' | 'archivo'>('ninguno')
   const [guardando, setGuardando] = useState(false)
@@ -49,9 +56,11 @@ export function Documentos({ clienteId, documentos }: { clienteId: number; docum
     setTexto(r.ok ? await r.text() : 'No se pudo leer el documento.')
   }
 
+  const Marco = suelto ? 'div' : 'section'
+
   return (
-    <section className="tarjeta">
-      <h2>Documentos</h2>
+    <Marco className={suelto ? undefined : 'tarjeta'}>
+      {suelto ? null : <h2>Documentos</h2>}
 
       {documentos.length === 0 ? (
         <p className="apagado" style={{ margin: '0 0 14px' }}>No hay ninguno cargado de este cliente.</p>
@@ -110,7 +119,7 @@ export function Documentos({ clienteId, documentos }: { clienteId: number; docum
           <button type="button" className="boton suave" onClick={() => setModo('ninguno')}>Cancelar</button>
         </form>
       ) : null}
-    </section>
+    </Marco>
   )
 }
 

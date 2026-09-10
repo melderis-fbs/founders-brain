@@ -12,15 +12,15 @@ describe('la semana en la que va', () => {
     expect(semanaEnLaQueVa(null)).toBeNull()
   })
 
-  it('un programa de 4 meses son 17 semanas y uno de 6, 26', () => {
-    expect(semanasDelPrograma(4)).toBe(17)
-    expect(semanasDelPrograma(6)).toBe(26)
+  it('un programa de 4 meses son 16 semanas y uno de 6, 24', () => {
+    expect(semanasDelPrograma(4)).toBe(16)
+    expect(semanasDelPrograma(6)).toBe(24)
     expect(semanasDelPrograma(null)).toBeNull()
   })
 
   it('el número siempre viene con su comparación', () => {
     const texto = textoDeSemana('2025-02-03', 4, new Date('2025-09-01T12:00:00Z'))
-    expect(texto).toBe('semana 31 de 17')
+    expect(texto).toBe('semana 31 de 16')
     expect(seLePasoElPrograma('2025-02-03', 4, new Date('2025-09-01T12:00:00Z'))).toBe(true)
   })
 

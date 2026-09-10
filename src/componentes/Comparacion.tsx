@@ -26,12 +26,18 @@ function enPalabras(estado: EstadoHito): string {
  * Es la pantalla entera de la aplicación resumida: la diferencia se ve, no se
  * calcula en la cabeza de nadie.
  */
-export function Comparacion({ evaluados }: { evaluados: readonly HitoEvaluado[] }) {
+export function Comparacion({
+  evaluados, suelto = false,
+}: {
+  evaluados: readonly HitoEvaluado[]
+  /** Dentro de una pestaña ya hay una tarjeta: no hace falta otra. */
+  suelto?: boolean
+}) {
   const corte = dondeSeCorta(evaluados)
   const seSabeAlgo = evaluados.some((e) => e.estado !== 'sin_datos')
 
   return (
-    <div className="tarjeta">
+    <div className={suelto ? undefined : 'tarjeta'}>
       <h2>Lo que tendría que estar hecho, y lo que está</h2>
       <div className="comparacion">
         {evaluados.map(({ hito, estado, atrasoEnSemanas, porQueNoSeSabe }) => (

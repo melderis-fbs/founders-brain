@@ -221,6 +221,40 @@ pueden nombrar.
 Un cliente sin datos **no puede salir en verde**. Verde es el color que hace
 que nadie lo mire, y ahí es donde un tablero empieza a mentir.
 
+## La ficha: pestañas y acciones al costado
+
+Arriba, lo que se lee de un vistazo: el nombre con su color y su palabra, la
+frase que explica el color, y cinco datos —en qué semana va, consultora, dónde
+se corta, cuántos datos tiene cargados y cuántas sesiones—.
+
+Abajo, **pestañas**, no veinte tarjetas apiladas: Resumen · Su negocio · Su
+autoridad · Lo que ya probó · Números y pagos · Sesiones · Documentos. Todo se
+edita en el lugar, en cualquier pestaña.
+
+Y al costado, **siempre en el mismo lugar**, la columna de acciones: las que
+funcionan se ven normales, las que todavía no están se ven apagadas y con borde
+punteado. No se promete lo que no hay.
+
+## Las sesiones
+
+Pestaña **Sesiones**: una fila por sesión con su número, la fecha, **su color**
+y qué pasó. El color no es decoración, dice si de esa hora quedó algo:
+
+| Color | Cuándo |
+|---|---|
+| Rojo | cancelada, o no asistió |
+| Amarillo | se hizo pero no hay transcripción, o la hay y nadie la analizó |
+| Verde | se hizo, quedó la transcripción y está analizada |
+| Gris | todavía no pasó |
+
+Se abre la que interesa y adentro está lo que salió de la sesión, los
+compromisos, y el lugar para pegar la transcripción. El botón **Analizar**
+devuelve de tres a cinco puntos —ni uno más de cinco— con la frase de la
+transcripción que sostiene cada uno, y los compromisos que se acordaron.
+
+Analizar cuesta plata: corre sólo cuando alguien aprieta el botón, y la
+transcripción entera viaja al navegador sólo cuando se abre esa sesión.
+
 ## Preguntar sobre un cliente
 
 En la ficha, el bloque **Preguntar sobre X**. Corre **sólo al apretar Enviar**,

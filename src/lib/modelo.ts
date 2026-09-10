@@ -176,3 +176,84 @@ async function anotarLlamada(
     // queda sin registrar; no se le arruina la pantalla a nadie por eso
   }
 }
+
+// ── Analizar una sesión ─────────────────────────────────────────────────────
+
+export const REGLAS_SESION = `${REGLAS}
+
+AHORA ESTÁS ANALIZANDO UNA SESIÓN 1:1
+
+Te dan el expediente del cliente y la transcripción de una sesión. Devolvé exactamente este formato, sin nada antes ni después:
+
+## Qué pasó
+Una sola línea, la que va a leerse en la lista de sesiones.
+
+## Puntos
+- De tres a cinco puntos. Ni uno más de cinco.
+- Cada uno con la frase de la transcripción que lo sostiene, entre comillas.
+
+## Compromisos
+- Lo que el cliente se comprometió a hacer, con fecha si la dijo.
+- Si no se acordó ninguno, escribí una sola línea: «No se acordó ningún compromiso.»`
+
+export type Analisis = { texto: string; quePaso: string | null; puntos: string[]; compromisos: string[] }
+
+export async function* analizarSesionEnVivo(
+  expediente: string,
+  transcripcion: string,
+  registro: Registro,
+): AsyncGenerator<string, void, unknown> {
+  const arranque = Date.now()
+
+  const stream = anthropic().messages.stream({
+    model: MODELO,
+    max_tokens: 4000,
+    system: [{ type: 'text', text: REGLAS_SESION, cache_control: { type: 'ephemeral' } }],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: expediente, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: `## Transcripción de la sesión\n\n${transcripcion}` },
+      ],
+    }],
+  })
+
+  try {
+    for await (const evento of stream) {
+      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') yield evento.delta.text
+    }
+    const final = await stream.finalMessage()
+    await anotarLlamada(registro, final.usage, Date.now() - arranque, null)
+  } catch (error) {
+    await anotarLlamada(registro, null, Date.now() - arranque, error instanceof Error ? error.message : String(error))
+    throw error
+  }
+}
+
+/**
+ * Partir la respuesta en sus tres pedazos.
+ *
+ * Tolerante a propósito: si el modelo cambia una mayúscula o se saltea un
+ * encabezado, se guarda igual el texto completo y lo que se haya podido
+ * separar. Perder el análisis entero por un título mal escrito sería peor.
+ */
+export function partirAnalisis(texto: string): Analisis {
+  const seccion = (titulo: string): string[] => {
+    const re = new RegExp(`^#{1,3}\\s*${titulo}\\s*$`, 'im')
+    const desde = texto.search(re)
+    if (desde < 0) return []
+    const resto = texto.slice(desde).split('\n').slice(1)
+    const lineas: string[] = []
+    for (const linea of resto) {
+      if (/^#{1,3}\s/.test(linea)) break
+      const limpia = linea.replace(/^\s*[-*•]\s*/, '').trim()
+      if (limpia !== '') lineas.push(limpia)
+    }
+    return lineas
+  }
+
+  const quePaso = seccion('Qué pasó')[0] ?? null
+  const puntos = seccion('Puntos').slice(0, 5)   // ni uno más de cinco
+  const compromisos = seccion('Compromisos')
+  return { texto, quePaso, puntos, compromisos }
+}

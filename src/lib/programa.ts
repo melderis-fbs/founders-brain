@@ -5,10 +5,16 @@
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000
 
-/** Un programa de 4 meses son 17 semanas; uno de 6, 26. */
+/**
+ * Cuántas semanas dura el programa.
+ *
+ * Cuatro semanas por mes, que es como se cuenta en Founders: un programa de 4
+ * meses son 16 semanas y uno de 6, 24. No es el promedio del calendario
+ * (30,44 días), es la cuenta con la que trabaja el equipo.
+ */
 export function semanasDelPrograma(meses: number | null | undefined): number | null {
   if (meses === null || meses === undefined || !Number.isFinite(meses) || meses <= 0) return null
-  return Math.round((meses * 30.44) / 7)
+  return Math.round(meses * 4)
 }
 
 /** En qué semana del programa va hoy. El primer día es la semana 1. */
