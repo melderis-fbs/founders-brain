@@ -150,8 +150,31 @@ El caso más común al publicar: **usar la conexión directa en vez del pooler**
 La directa (`db.PROYECTO.supabase.co`, puerto 5432) va sólo por IPv6 y desde
 Vercel no se llega.
 
+## La ficha se edita donde está
+
+Cada dato de la ficha se edita en el lugar: se hace clic sobre el valor y se
+escribe. No hay pantalla de edición ni botón «modificar». Se guarda con Enter
+(en los textos largos, Ctrl+Enter) o al salir del campo, y se cancela con
+Escape.
+
+La validación es **la misma** que la de la importación —el mismo módulo, no una
+copia—, así que la ficha nunca acepta algo que la planilla rechaza: escribir
+«lo que salga» en el ticket devuelve el mismo mensaje en los dos lados.
+
+### De dónde salió cada dato
+
+Toda escritura queda anotada en `campo_origen`: si vino de la planilla, si lo
+corrigió una persona o si lo propuso un documento, con su cita. Se ve al pasar
+el mouse sobre el valor.
+
+Eso es lo que va a permitir cumplir la **regla 9** en el paso 2 bis: un análisis
+automático no puede pisar lo que escribió una persona. Y mientras tanto ya
+sirve para algo concreto: cuando la planilla cambia un dato que alguien había
+corregido a mano, la planilla manda —es la fuente— pero **el reporte lo dice**,
+fila por fila, en vez de hacerlo en silencio.
+
 ## Lo que todavía no está
 
-Paso 2 (editar la ficha en el lugar), 2 bis (cargar documentos y completar
-campos desde los documentos), 3 (la comparación con lo esperado), 4 (la grilla
-por semanas), 5 (las alertas), 6 (sesiones) y 7 (el análisis del caso).
+Paso (cargar documentos y completar campos desde los documentos), 3 (la
+comparación con lo esperado), 4 (la grilla por semanas), 5 (las alertas),
+6 (sesiones) y 7 (el análisis del caso).

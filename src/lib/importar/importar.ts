@@ -1,11 +1,10 @@
 import Papa from 'papaparse'
 import type { PoolClient } from 'pg'
 import { CAMPOS, CAMPOS_POR_CLAVE, ETIQUETA_DOCUMENTO, type Campo, type TipoDocumento } from '../campos'
+import { ALIAS_TABLA, anotarOrigen, camposEscritosPorPersonas, leerCampo } from '../campos-escritura'
 import { conPuntoDeRetorno, enTransaccion, escribir, escribirDevolviendo, filas } from '../db'
 import { clave as claveDeNombre, plegado } from '../texto'
-import {
-  leerBooleano, leerEntero, leerFecha, leerNumero, leerOpcion, leerTexto, leerTextoLargo, type Lectura,
-} from '../valores'
+import { leerTexto, leerTextoLargo } from '../valores'
 import { mapearEncabezados, type Mapeo } from './mapeo'
 
 /**
@@ -43,13 +42,6 @@ export type Reporte = {
   filas: FilaDelReporte[]
 }
 
-const ALIAS_TABLA = {
-  clientes: 'c',
-  cliente_negocio: 'n',
-  cliente_numeros: 'm',
-  cliente_comercial: 'k',
-} as const
-
 /** Todos los campos menos los dos que se resuelven aparte. */
 const CAMPOS_DIRECTOS = CAMPOS.filter((c) => c.clave !== 'nombre' && c.clave !== 'consultora')
 
@@ -61,19 +53,6 @@ type ClienteExistente = {
   nombre_pleg: string
   consultora_id: number | null
 } & Record<string, unknown>
-
-// ── Lectura de una celda según el tipo del campo ──────────────────────────────
-function leerCampo(campo: Campo, bruto: unknown): Lectura<unknown> {
-  switch (campo.tipo) {
-    case 'texto': return leerTexto(bruto)
-    case 'texto_largo': return leerTextoLargo(bruto)
-    case 'numero': return leerNumero(bruto)
-    case 'entero': return leerEntero(bruto)
-    case 'fecha': return leerFecha(bruto)
-    case 'booleano': return leerBooleano(bruto)
-    case 'opcion': return leerOpcion(bruto, campo.opciones ?? [], campo.alias)
-  }
-}
 
 /** ¿El valor que trae la planilla dice algo distinto de lo que ya está guardado? */
 function esDistinto(guardado: unknown, nuevo: unknown): boolean {
@@ -201,6 +180,10 @@ async function procesarFilas(
   )
   const consultorasPorPleg = new Map(consultoras.map((c) => [c.nombre_pleg, c]))
 
+  // Qué datos corrigió alguien a mano en la ficha. La planilla los puede pisar
+  // —es la fuente— pero nunca en silencio: se avisa fila por fila.
+  const aMano = await camposEscritosPorPersonas(cli)
+
   // Para no aplicar dos filas del mismo archivo al mismo cliente.
   const vistosEnArchivo = new Map<string, number>()   // nombre_clave -> nro de fila
   const plegadosEnArchivo = new Map<string, { nroFila: number; nombre: string }>()
@@ -216,7 +199,7 @@ async function procesarFilas(
 
     const salida = await conPuntoDeRetorno(cli, `fila_${i}`, () =>
       procesarUnaFila(cli, {
-        bruto, nroFila, mapeo, columnaNombre,
+        bruto, nroFila, mapeo, columnaNombre, aMano,
         porClave, porPleg, porRef, consultorasPorPleg, vistosEnArchivo, plegadosEnArchivo,
       }),
     )
@@ -282,6 +265,7 @@ async function procesarUnaFila(
     nroFila: number
     mapeo: Mapeo
     columnaNombre: string
+    aMano: Set<string>
     porClave: Map<string, ClienteExistente>
     porPleg: Map<string, ClienteExistente>
     porRef: Map<string, ClienteExistente>
@@ -290,7 +274,7 @@ async function procesarUnaFila(
     plegadosEnArchivo: Map<string, { nroFila: number; nombre: string }>
   },
 ): Promise<FilaDelReporte> {
-  const { bruto, nroFila, mapeo, columnaNombre, porClave, porPleg, porRef,
+  const { bruto, nroFila, mapeo, columnaNombre, aMano, porClave, porPleg, porRef,
           consultorasPorPleg, vistosEnArchivo, plegadosEnArchivo } = ctx
 
   const omitir = (motivo: string, nombre: string | null = null): FilaDelReporte => ({
@@ -452,6 +436,21 @@ async function procesarUnaFila(
       parametros, { esperadas: 1, cliente: cli },
     )
   }
+
+  // Regla 10, también acá: si la planilla cambia un dato que alguien había
+  // corregido en la ficha, el reporte lo dice. La planilla manda, pero no calla.
+  for (const [clave] of cambios) {
+    if (aMano.has(`${clienteId}:${clave}`)) {
+      const campo = campoDe(clave)
+      avisos.push(`${campo.etiqueta}: la planilla pisó lo que alguien había corregido a mano en la ficha.`)
+    }
+  }
+
+  // De dónde salió cada dato que se escribió.
+  const clavesEscritas = cambios.map(([clave]) => clave)
+  if (cambiaNombre) clavesEscritas.push('nombre')
+  if (cambiaConsultora) clavesEscritas.push('consultora')
+  await anotarOrigen(clavesEscritas, { clienteId, origen: 'planilla' }, cli)
 
   // ── 5 · Los textos que la planilla trae en columnas ────────────────────────
   let cambiaAlgunDocumento = false

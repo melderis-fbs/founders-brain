@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CAMPOS, ETIQUETA_DOCUMENTO, ETIQUETA_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo, type TipoDocumento } from '@/lib/campos'
+import { CampoEditable } from '@/componentes/CampoEditable'
+import {
+  CAMPOS, ETIQUETA_DOCUMENTO, ETIQUETA_GRUPO, TOTAL_CAMPOS,
+  type Campo, type Grupo, type TipoDocumento,
+} from '@/lib/campos'
+import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, traerCliente } from '@/lib/clientes'
 import { seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
 
@@ -8,15 +13,32 @@ export const dynamic = 'force-dynamic'
 
 const GRUPOS: Grupo[] = ['identidad', 'negocio', 'numeros', 'comercial']
 
-function mostrar(campo: Campo, valor: unknown): React.ReactNode {
-  if (valor === null || valor === undefined || (typeof valor === 'string' && valor.trim() === '')) {
-    return <span className="falta">falta</span>
-  }
+/** Lo que se ve. Nunca un número sin su unidad. */
+function comoSeLee(campo: Campo, valor: unknown): string | null {
+  if (valor === null || valor === undefined || (typeof valor === 'string' && valor.trim() === '')) return null
   if (campo.tipo === 'booleano') return valor ? 'sí' : 'no'
-  if (campo.tipo === 'numero' && typeof valor === 'number') return valor.toLocaleString('es-AR')
   if (campo.clave === 'programa_meses') return `${valor} meses`
-  if (campo.tipo === 'fecha') return String(valor).split('-').reverse().join('/')
+  if (campo.tipo === 'fecha') return String(valor).slice(0, 10).split('-').reverse().join('/')
+  if ((campo.tipo === 'numero' || campo.tipo === 'entero') && typeof valor === 'number') {
+    return valor.toLocaleString('es-AR')
+  }
   return String(valor)
+}
+
+/** Lo que se edita: tiene que volver a entrar tal cual salió. */
+function comoSeEdita(campo: Campo, valor: unknown): string {
+  if (valor === null || valor === undefined) return ''
+  if (campo.tipo === 'booleano') return valor ? 'sí' : 'no'
+  if (campo.tipo === 'fecha') return String(valor).slice(0, 10)
+  return String(valor)
+}
+
+function deDonde(origen: OrigenDeCampo | undefined): string | undefined {
+  if (!origen) return undefined
+  const cuando = new Date(origen.actualizado_en).toLocaleDateString('es-AR')
+  if (origen.origen === 'persona') return `Corregido a mano en la ficha, el ${cuando}`
+  if (origen.origen === 'documento') return `Salió de un documento, el ${cuando}${origen.cita ? ` · «${origen.cita}»` : ''}`
+  return `Vino de la planilla, el ${cuando}`
 }
 
 export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
@@ -24,9 +46,11 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   const cliente = await traerCliente(Number(id))
   if (!cliente) notFound()
 
-  const documentos = await documentosDe(cliente.id)
-  const semana = textoDeSemana(cliente.valores.fecha_inicio as string, cliente.valores.programa_meses as number)
-  const pasado = seLePasoElPrograma(cliente.valores.fecha_inicio as string, cliente.valores.programa_meses as number)
+  const [documentos, origenes] = await Promise.all([documentosDe(cliente.id), origenesDe(cliente.id)])
+  const inicio = cliente.valores.fecha_inicio as string
+  const meses = cliente.valores.programa_meses as number
+  const semana = textoDeSemana(inicio, meses)
+  const pasado = seLePasoElPrograma(inicio, meses)
 
   return (
     <>
@@ -59,7 +83,18 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
               {CAMPOS.filter((c) => c.grupo === grupo).map((campo) => (
                 <div className="dato" key={campo.clave}>
                   <dt>{campo.etiqueta}</dt>
-                  <dd>{mostrar(campo, cliente.valores[campo.clave])}</dd>
+                  <dd>
+                    <CampoEditable
+                      clienteId={cliente.id}
+                      clave={campo.clave}
+                      tipo={campo.tipo}
+                      opciones={campo.opciones}
+                      ayuda={campo.ayuda}
+                      valorCrudo={comoSeEdita(campo, cliente.valores[campo.clave])}
+                      valorMostrado={comoSeLee(campo, cliente.valores[campo.clave])}
+                      deDonde={deDonde(origenes.get(campo.clave))}
+                    />
+                  </dd>
                 </div>
               ))}
             </dl>
