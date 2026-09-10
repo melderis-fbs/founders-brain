@@ -163,3 +163,88 @@ async function guardarConsultora(clienteId: number, valor: unknown, usuarioId: n
   await anotarOrigen(['consultora'], { clienteId, origen: 'persona', usuarioId })
   return { ok: true }
 }
+
+// ── Un cliente nuevo, cargado a mano ────────────────────────────────────────
+
+export type Alta = { ok: true; clienteId: number } | { ok: false; error: string; campo?: string }
+
+/**
+ * Dar de alta un cliente sin pasar por la planilla.
+ *
+ * Pide lo mínimo para que la comparación tenga sentido —nombre y, si se sabe,
+ * consultora, programa y fecha de inicio— y el resto se completa en la ficha.
+ * Un formulario de 51 campos no lo llena nadie.
+ *
+ * La regla 3 rige igual que en la importación: un nombre que ya existe, o que
+ * sólo se diferencia por acentos o mayúsculas, no entra y se dice contra cuál
+ * choca. Es peor tener dos fichas de la misma persona que ninguna.
+ */
+export async function crearCliente(datos: {
+  nombre: string
+  consultora?: string | null
+  programaMeses?: string | null
+  fechaInicio?: string | null
+  estado?: string | null
+  usuarioId: number
+}): Promise<Alta> {
+  const lecturaNombre = leerTexto(datos.nombre)
+  if (lecturaNombre.estado !== 'ok') return { ok: false, error: 'Poné el nombre del cliente.', campo: 'nombre' }
+
+  const nombre = lecturaNombre.valor
+  const nombreClave = claveDeNombre(nombre)
+  const nombrePleg = plegado(nombre)
+
+  const exacto = await fila<{ id: number; nombre: string }>(
+    'select id, nombre from clientes where nombre_clave = $1', [nombreClave],
+  )
+  if (exacto) return { ok: false, error: `«${exacto.nombre}» ya está cargado.`, campo: 'nombre' }
+
+  const parecido = await fila<{ id: number; nombre: string }>(
+    'select id, nombre from clientes where nombre_pleg = $1 limit 1', [nombrePleg],
+  )
+  if (parecido) {
+    return {
+      ok: false,
+      campo: 'nombre',
+      error: `Ya existe «${parecido.nombre}», que se escribe igual salvo acentos o mayúsculas. Si es la misma persona, abrí esa ficha; si es otra, escribí el nombre completo para distinguirlas.`,
+    }
+  }
+
+  // Los tres datos opcionales pasan por la misma lectura que la planilla.
+  const opcionales: [string, string | null | undefined][] = [
+    ['programa_meses', datos.programaMeses],
+    ['fecha_inicio', datos.fechaInicio],
+    ['estado', datos.estado],
+  ]
+  const valores = new Map<string, unknown>()
+  for (const [clave, bruto] of opcionales) {
+    const campo = CAMPOS_POR_CLAVE.get(clave)!
+    const lectura = leerCampo(campo, bruto ?? '')
+    if (lectura.estado === 'error') return { ok: false, error: `${campo.etiqueta}: ${lectura.motivo}`, campo: clave }
+    if (lectura.estado === 'ok') valores.set(clave, lectura.valor)
+  }
+
+  const columnas = ['nombre', 'nombre_clave', 'nombre_pleg']
+  const parametros: unknown[] = [nombre, nombreClave, nombrePleg]
+  for (const [clave, valor] of valores) {
+    columnas.push(CAMPOS_POR_CLAVE.get(clave)!.columna)
+    parametros.push(valor)
+  }
+
+  const creado = await escribirDevolviendo<{ id: number }>(
+    `insert into clientes (${columnas.join(', ')}) values (${parametros.map((_, i) => `$${i + 1}`).join(', ')}) returning id`,
+    parametros,
+  )
+
+  const puestos = ['nombre', ...valores.keys()]
+  if (datos.consultora && datos.consultora.trim() !== '') {
+    const r = await guardarConsultora(creado.id, datos.consultora.trim(), datos.usuarioId)
+    if (!r.ok) return { ok: false, error: r.error, campo: 'consultora' }
+  } else {
+    await anotarOrigen(puestos, { clienteId: creado.id, origen: 'persona', usuarioId: datos.usuarioId })
+    return { ok: true, clienteId: creado.id }
+  }
+
+  await anotarOrigen(puestos, { clienteId: creado.id, origen: 'persona', usuarioId: datos.usuarioId })
+  return { ok: true, clienteId: creado.id }
+}

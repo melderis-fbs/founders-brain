@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
-import { camposEscritosPorPersonas, guardarUnCampo, origenesDe } from './campos-escritura'
+import { camposEscritosPorPersonas, crearCliente, guardarUnCampo, origenesDe } from './campos-escritura'
 import { escribirDevolviendo, fila, pool } from './db'
 import { importarCsv } from './importar/importar'
 
@@ -7,6 +7,9 @@ const hayBase = Boolean(process.env.DATABASE_URL)
 const prueba = hayBase ? describe : describe.skip
 
 const ENCABEZADOS = 'nombre,consultora,estado,programa,fecha inicio,meta mensual,oferta'
+
+// Un solo pool para todo el archivo: se cierra una vez, al final de todo.
+afterAll(async () => { await pool().end() })
 
 async function unUsuario() {
   const u = await escribirDevolviendo<{ id: number }>(
@@ -20,7 +23,6 @@ prueba('editar la ficha en el lugar', () => {
   beforeEach(async () => {
     await pool().query('truncate clientes, consultoras, documentos, importaciones, importacion_filas restart identity cascade')
   })
-  afterAll(async () => { await pool().end() })
 
   async function unCliente() {
     await importarCsv({
@@ -104,5 +106,61 @@ prueba('editar la ficha en el lugar', () => {
     await guardarUnCampo({ clienteId, clave: 'consultora', bruto: 'lucia', usuarioId })
     const cuantas = await fila<{ n: number }>('select count(*)::int as n from consultoras')
     expect(cuantas?.n).toBe(1)   // «lucia» y «Lucía» son la misma consultora
+  })
+})
+
+prueba('dar de alta un cliente a mano', () => {
+  beforeEach(async () => {
+    await pool().query('truncate clientes, consultoras, documentos, importaciones, importacion_filas restart identity cascade')
+  })
+
+  it('crea el cliente con lo mínimo y anota que lo escribió una persona', async () => {
+    const usuarioId = await unUsuario()
+    const r = await crearCliente({
+      nombre: 'Norma Márquez', consultora: 'Lucía Fernández',
+      programaMeses: '4', fechaInicio: '2026-03-02', estado: 'activo', usuarioId,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+
+    const c = await fila<{ nombre: string; programa_meses: number; fecha_inicio: string; estado: string }>(
+      'select nombre, programa_meses, fecha_inicio, estado from clientes where id = $1', [r.clienteId],
+    )
+    expect(c).toMatchObject({ nombre: 'Norma Márquez', programa_meses: 4, fecha_inicio: '2026-03-02', estado: 'activo' })
+
+    const origenes = await origenesDe(r.clienteId)
+    expect(origenes.get('nombre')?.origen).toBe('persona')
+    expect(origenes.get('consultora')?.origen).toBe('persona')
+  })
+
+  it('con el nombre solo alcanza: el resto se completa en la ficha', async () => {
+    const usuarioId = await unUsuario()
+    const r = await crearCliente({ nombre: 'Juan Pérez', usuarioId })
+    expect(r.ok).toBe(true)
+  })
+
+  it('regla 3 · no deja crear a alguien que ya está', async () => {
+    const usuarioId = await unUsuario()
+    await crearCliente({ nombre: 'Norma Márquez', usuarioId })
+
+    const igual = await crearCliente({ nombre: 'Norma Márquez', usuarioId })
+    expect(igual.ok).toBe(false)
+    if (!igual.ok) expect(igual.error).toContain('ya está cargado')
+
+    const parecido = await crearCliente({ nombre: 'norma marquez', usuarioId })
+    expect(parecido.ok).toBe(false)
+    if (!parecido.ok) expect(parecido.error).toContain('acentos o mayúsculas')
+
+    const cuantos = await fila<{ n: number }>('select count(*)::int as n from clientes')
+    expect(cuantos?.n).toBe(1)
+  })
+
+  it('una fecha que no se entiende no crea un cliente a medias', async () => {
+    const usuarioId = await unUsuario()
+    const r = await crearCliente({ nombre: 'Elena Suárez', fechaInicio: 'el lunes', usuarioId })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('no es una fecha')
+    const cuantos = await fila<{ n: number }>('select count(*)::int as n from clientes')
+    expect(cuantos?.n).toBe(0)
   })
 })

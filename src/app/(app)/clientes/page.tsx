@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ClienteNuevo } from '@/componentes/ClienteNuevo'
 import { Etapas } from '@/componentes/Comparacion'
 import { ESTADOS, TOTAL_CAMPOS } from '@/lib/campos'
 import { fuentesDeLaCartera, listarClientes, listarConsultoras } from '@/lib/clientes'
@@ -45,13 +46,16 @@ export default async function Clientes({
 
   return (
     <>
-      <header className="encabezado">
+      <header className="encabezado" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+        <div>
         <h1>Clientes</h1>
         <p className="bajada">
           {clientes.length === 0
             ? (buscar ? `Ningún cliente coincide con «${buscar}».` : 'Todavía no hay ninguno cargado.')
             : `${clientes.length} ${consultoraId || estado || buscar ? 'con este filtro' : 'en la cartera'} · ordenados por quién necesita atención primero`}
         </p>
+        </div>
+        <ClienteNuevo consultoras={consultoras} />
       </header>
 
       <form className="filtros" method="get">
@@ -77,7 +81,9 @@ export default async function Clientes({
       {clientes.length === 0 ? (
         <div className="tarjeta">
           <p style={{ margin: 0 }}>
-            Todavía no entró ningún cliente. <Link href="/importar">Subí el CSV de la planilla madre</Link>.
+            {buscar
+              ? 'Ningún cliente coincide con lo que buscaste.'
+              : <>Todavía no entró ningún cliente. <Link href="/importar">Subí el CSV de la planilla madre</Link>, o cargá uno a mano con «Cliente nuevo».</>}
           </p>
         </div>
       ) : (

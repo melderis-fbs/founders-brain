@@ -190,6 +190,15 @@ Es la regla 2. Decir «no hizo la primera venta» cuando nadie cargó ninguna ve
 no es un dato flojo: es una afirmación falsa sobre el cliente, y acierta por la
 razón equivocada.
 
+## Un cliente nuevo, a mano
+
+Desde la lista, botón **Cliente nuevo**. Pide cuatro datos —nombre, consultora,
+programa y fecha de inicio— y abre la ficha, donde se completa el resto. Un
+formulario de 51 campos no lo llena nadie.
+
+La regla 3 rige igual que en la importación: un nombre que ya existe, o que sólo
+se diferencia por acentos o mayúsculas, no entra y se dice contra cuál choca.
+
 ## La ficha se edita donde está
 
 Cada dato de la ficha se edita en el lugar: se hace clic sobre el valor y se
