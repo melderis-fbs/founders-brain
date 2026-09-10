@@ -13,7 +13,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   const revision = await revisarBase()
   if (!revision.ok) return <BaseSinAndar revision={revision} />
 
-  if (await usuarioActual()) redirect('/clientes')
+  if (await usuarioActual()) redirect('/tablero')
 
   async function intentar(datos: FormData) {
     'use server'
@@ -21,7 +21,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
     const clave = String(datos.get('clave') ?? '')
     const usuario = await entrar(email, clave)
     if (!usuario) redirect('/login?error=1')
-    redirect('/clientes')
+    redirect('/tablero')
   }
 
   return (

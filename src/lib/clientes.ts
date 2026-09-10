@@ -1,5 +1,7 @@
 import { CAMPOS, type Campo } from './campos'
 import { fila, filas } from './db'
+import { fuentesConDatos, type FuentesConDatos } from './hitos'
+import { plegado } from './texto'
 
 const ALIAS = { clientes: 'c', cliente_negocio: 'n', cliente_numeros: 'm', cliente_comercial: 'k' } as const
 
@@ -38,6 +40,7 @@ export type FilaDeLista = {
   fecha_inicio: string | null
   programa_meses: number | null
   documentos: number
+  tiene_onboarding: boolean
 } & Record<string, unknown>
 
 export type ClienteDeLista = {
@@ -48,10 +51,15 @@ export type ClienteDeLista = {
   fechaInicio: string | null
   programaMeses: number | null
   documentos: number
+  tieneOnboarding: boolean
+  /** Presencia de cada dato, sin traer el texto: alcanza para comparar. */
+  presencia: Record<string, unknown>
   faltan: Campo[]
 }
 
-export async function listarClientes(filtros: { consultoraId?: number | null; estado?: string | null } = {}): Promise<ClienteDeLista[]> {
+export async function listarClientes(
+  filtros: { consultoraId?: number | null; estado?: string | null; buscar?: string | null } = {},
+): Promise<ClienteDeLista[]> {
   const condiciones: string[] = []
   const parametros: unknown[] = []
   if (filtros.consultoraId) {
@@ -62,11 +70,18 @@ export async function listarClientes(filtros: { consultoraId?: number | null; es
     parametros.push(filtros.estado)
     condiciones.push(`c.estado = $${parametros.length}`)
   }
+  if (filtros.buscar && filtros.buscar.trim() !== '') {
+    // Buscar sí pliega acentos y mayúsculas: acá no se decide de quién es un
+    // dato, sólo se filtra una lista. La regla 3 rige para lo otro.
+    parametros.push(`%${plegado(filtros.buscar)}%`)
+    condiciones.push(`c.nombre_pleg like $${parametros.length}`)
+  }
   const donde = condiciones.length > 0 ? `where ${condiciones.join(' and ')}` : ''
 
   const encontrados = await filas<FilaDeLista>(
     `select c.id, c.nombre, co.nombre as consultora, c.estado, c.fecha_inicio, c.programa_meses,
             (select count(*)::int from documentos d where d.cliente_id = c.id) as documentos,
+            exists(select 1 from documentos d where d.cliente_id = c.id and d.tipo = 'onboarding') as tiene_onboarding,
             ${seleccionDeTenencia()}
      ${UNIONES}
      ${donde}
@@ -74,16 +89,25 @@ export async function listarClientes(filtros: { consultoraId?: number | null; es
     parametros,
   )
 
-  return encontrados.map((f) => ({
-    id: f.id,
-    nombre: f.nombre,
-    consultora: f.consultora,
-    estado: f.estado,
-    fechaInicio: f.fecha_inicio,
-    programaMeses: f.programa_meses,
-    documentos: f.documentos,
-    faltan: CAMPOS_QUE_CUENTAN.filter((campo) => f[`tiene_${campo.clave}`] !== true),
-  }))
+  return encontrados.map((f) => {
+    // La comparación necesita saber si el dato está, no qué dice. Así una lista
+    // de 194 clientes no arrastra al navegador 194 ofertas de 900 caracteres.
+    const presencia: Record<string, unknown> = {}
+    for (const campo of CAMPOS_QUE_CUENTAN) presencia[campo.clave] = f[`tiene_${campo.clave}`] === true ? true : null
+
+    return {
+      id: f.id,
+      nombre: f.nombre,
+      consultora: f.consultora,
+      estado: f.estado,
+      fechaInicio: f.fecha_inicio,
+      programaMeses: f.programa_meses,
+      documentos: f.documentos,
+      tieneOnboarding: f.tiene_onboarding,
+      presencia,
+      faltan: CAMPOS_QUE_CUENTAN.filter((campo) => f[`tiene_${campo.clave}`] !== true),
+    }
+  })
 }
 
 export type ClienteCompleto = {
@@ -158,6 +182,23 @@ export async function documentosDe(clienteId: number) {
        from documentos where cliente_id = $1 order by creado_en desc`,
     [clienteId],
   )
+}
+
+/**
+ * Qué fuentes tienen datos en toda la cartera (regla 2).
+ * Se calcula una vez por pantalla, no una vez por cliente.
+ */
+export async function fuentesDeLaCartera(): Promise<FuentesConDatos> {
+  const r = await fila<{ fichas: boolean; onboardings: boolean }>(
+    `select
+       exists(select 1 from cliente_negocio where oferta is not null or cliente_ideal is not null or mensaje is not null)
+         or exists(select 1 from cliente_numeros where meta_mensual is not null or ticket is not null) as fichas,
+       exists(select 1 from documentos where tipo = 'onboarding') as onboardings`,
+  )
+  return fuentesConDatos({
+    algunClienteConDatosDeFicha: r?.fichas ?? false,
+    algunOnboardingCargado: r?.onboardings ?? false,
+  })
 }
 
 export async function listarConsultoras() {

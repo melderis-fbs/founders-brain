@@ -37,10 +37,10 @@ export default async function Reporte({ params }: { params: Promise<{ id: string
   return (
     <>
       <p className="mini"><Link href="/importar">← Importar</Link></p>
-      <div className="titulo-fila">
+      <header className="encabezado">
         <h1>{imp.archivo}</h1>
-        <span className="cuenta">{new Date(imp.creado_en).toLocaleString('es-AR')}</span>
-      </div>
+        <p className="bajada">{new Date(imp.creado_en).toLocaleString('es-AR')}</p>
+      </header>
 
       {imp.error_general ? (
         <div className="aviso">
@@ -48,15 +48,16 @@ export default async function Reporte({ params }: { params: Promise<{ id: string
         </div>
       ) : (
         <>
-          <div className="resumen">
-            <div className={`caja ${imp.filas_omitidas > 0 ? 'mal' : ''}`}>
-              <div className="n">{imp.filas_omitidas}</div>
-              <div className="q">no entraron</div>
+          <div className="rejilla">
+            <div className="tarjeta">
+              <div className="rotulo">No entraron</div>
+              <div className={`cifra ${imp.filas_omitidas > 0 ? 'rojo' : ''}`}>
+                {imp.filas_omitidas} <span className="de">de {imp.filas_leidas}</span>
+              </div>
             </div>
-            <div className="caja"><div className="n">{imp.clientes_nuevos}</div><div className="q">clientes nuevos</div></div>
-            <div className="caja"><div className="n">{imp.clientes_actualizados}</div><div className="q">actualizados</div></div>
-            <div className="caja"><div className="n">{imp.filas_sin_cambios}</div><div className="q">sin cambios</div></div>
-            <div className="caja"><div className="n">{imp.filas_leidas}</div><div className="q">filas leídas</div></div>
+            <div className="tarjeta"><div className="rotulo">Clientes nuevos</div><div className="cifra azul">{imp.clientes_nuevos}</div></div>
+            <div className="tarjeta"><div className="rotulo">Actualizados</div><div className="cifra azul">{imp.clientes_actualizados}</div></div>
+            <div className="tarjeta"><div className="rotulo">Sin cambios</div><div className="cifra apagado">{imp.filas_sin_cambios}</div></div>
           </div>
 
           <h2>Lo que no entró</h2>

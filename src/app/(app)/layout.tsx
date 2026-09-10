@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { salir, usuarioActual } from '@/lib/auth'
+import { BarraLateral } from '@/componentes/BarraLateral'
 import { BaseSinAndar } from '@/componentes/BaseSinAndar'
-import { Menu } from '@/componentes/Menu'
 import { revisarBase } from '@/lib/revision'
 
 export const dynamic = 'force-dynamic'
@@ -20,18 +20,16 @@ export default async function Marco({ children }: { children: React.ReactNode })
   }
 
   return (
-    <>
-      <header className="barra">
-        <a className="marca" href="/clientes">Founders</a>
-        <Menu />
-        <div className="quien">
-          <span>{usuario.nombre}</span>
-          <form action={cerrar}>
-            <button type="submit">salir</button>
-          </form>
+    <div className="marco">
+      <aside className="lateral">
+        <BarraLateral />
+        <div className="abajo">
+          {usuario.nombre}
+          {' · '}
+          <form action={cerrar}><button type="submit">salir</button></form>
         </div>
-      </header>
+      </aside>
       <main className="hoja">{children}</main>
-    </>
+    </div>
   )
 }

@@ -18,9 +18,10 @@ export default async function Importar({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <div className="titulo-fila">
+      <header className="encabezado">
         <h1>Importar la planilla madre</h1>
-      </div>
+        <p className="bajada">Las columnas salen de los campos de la aplicación.</p>
+      </header>
 
       {error ? <div className="aviso">{decodeURIComponent(error)}</div> : null}
 
@@ -67,7 +68,7 @@ export default async function Importar({ searchParams }: { searchParams: Promise
         </section>
       </div>
 
-      <h2 style={{ marginTop: 26 }}>Importaciones anteriores</h2>
+      <h2 style={{ marginTop: 28 }}>Importaciones anteriores</h2>
       {anteriores.length === 0 ? (
         <div className="tarjeta"><p className="apagado" style={{ margin: 0 }}>Todavía no se importó nada.</p></div>
       ) : (

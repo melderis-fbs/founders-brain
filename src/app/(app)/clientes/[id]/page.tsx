@@ -1,13 +1,15 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
+import { Comparacion } from '@/componentes/Comparacion'
 import {
   CAMPOS, ETIQUETA_DOCUMENTO, ETIQUETA_GRUPO, TOTAL_CAMPOS,
   type Campo, type Grupo, type TipoDocumento,
 } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
-import { documentosDe, traerCliente } from '@/lib/clientes'
-import { seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
+import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
+import { evaluarHitos } from '@/lib/hitos'
+import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,11 +48,20 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   const cliente = await traerCliente(Number(id))
   if (!cliente) notFound()
 
-  const [documentos, origenes] = await Promise.all([documentosDe(cliente.id), origenesDe(cliente.id)])
+  const [documentos, origenes, conDatos] = await Promise.all([
+    documentosDe(cliente.id), origenesDe(cliente.id), fuentesDeLaCartera(),
+  ])
   const inicio = cliente.valores.fecha_inicio as string
   const meses = cliente.valores.programa_meses as number
   const semana = textoDeSemana(inicio, meses)
   const pasado = seLePasoElPrograma(inicio, meses)
+
+  const evaluados = evaluarHitos({
+    semana: semanaEnLaQueVa(inicio),
+    valores: cliente.valores,
+    tiposDeDocumento: new Set(documentos.map((d) => d.tipo)),
+    conDatos,
+  })
 
   return (
     <>
@@ -59,9 +70,9 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       <div className="cabecera-ficha">
         <h1>{cliente.nombre}</h1>
         <div className="sub">
-          {semana}
-          {pasado ? ' · ya se pasó del programa' : ''}
-          {cliente.consultora ? ` · ${cliente.consultora}` : ' · sin consultora asignada'}
+          <span className={pasado ? 'rojo' : undefined} style={{ fontWeight: 600 }}>{semana}</span>
+          {pasado ? <span className="chip mal">ya se pasó del programa</span> : null}
+          <span>{cliente.consultora ?? 'sin consultora asignada'}</span>
         </div>
         <div className="faltantes">
           {cliente.faltan.length === 0 ? (
@@ -73,6 +84,10 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
             </>
           )}
         </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <Comparacion evaluados={evaluados} />
       </div>
 
       <div className="bloques">

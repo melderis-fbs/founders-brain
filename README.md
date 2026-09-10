@@ -150,6 +150,25 @@ El caso más común al publicar: **usar la conexión directa en vez del pooler**
 La directa (`db.PROYECTO.supabase.co`, puerto 5432) va sólo por IPv6 y desde
 Vercel no se llega.
 
+## La comparación: dónde está y dónde tendría que estar
+
+`src/lib/hitos.ts` tiene el catálogo del método —los doce hitos con su semana,
+su etapa y cuáles bloquean lo que viene después— y se compara contra la semana
+en la que va cada cliente. Se dibuja en tres lugares: las cinco etapas en cada
+fila de la lista, el cuadro completo en la ficha y los números en el tablero.
+
+### Un hito puede decir tres cosas, no dos
+
+Además de «hecho» y «falta», un hito puede decir **«sin datos»**. Cada hito
+declara de qué lee, y si esa fuente está vacía **en toda la cartera**, no opina.
+Hoy las ventas, las reuniones, las llamadas, el tracker y el seguimiento no se
+cargan en ninguna parte, así que sus hitos dicen «sin datos» y el tablero tiene
+una tarjeta que lista exactamente eso.
+
+Es la regla 2. Decir «no hizo la primera venta» cuando nadie cargó ninguna venta
+no es un dato flojo: es una afirmación falsa sobre el cliente, y acierta por la
+razón equivocada.
+
 ## La ficha se edita donde está
 
 Cada dato de la ficha se edita en el lugar: se hace clic sobre el valor y se
