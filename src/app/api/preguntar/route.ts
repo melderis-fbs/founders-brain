@@ -44,6 +44,15 @@ export async function POST(pedido: NextRequest) {
 
   const flujo = new ReadableStream<Uint8Array>({
     async start(control) {
+      // Si el navegador se va —cierra la pestaña, cambia de pantalla— escribir
+      // en el flujo revienta. Eso NO puede abortar lo que sigue: la llamada ya
+      // se pagó, y el resultado tiene que quedar guardado igual.
+      let seguirEscribiendo = true
+      const escribir = (texto: string) => {
+        if (!seguirEscribiendo) return
+        try { control.enqueue(codificador.encode(texto)) } catch { seguirEscribiendo = false }
+      }
+
       try {
         for await (const pedazo of preguntarEnVivo(expediente.texto, turnos, {
           clienteId,
@@ -51,17 +60,17 @@ export async function POST(pedido: NextRequest) {
           para: 'preguntar',
           pregunta: ultima.content.slice(0, 500),
         })) {
-          control.enqueue(codificador.encode(pedazo))
+          escribir(pedazo)
         }
         if (expediente.omitidos.length > 0) {
-          control.enqueue(codificador.encode(
+          escribir(
             `\n\n---\nNo entraron por tamaño, así que esto no los tuvo en cuenta: ${expediente.omitidos.join(', ')}.`,
-          ))
+          )
         }
       } catch (error) {
-        control.enqueue(codificador.encode(`\n\n[No se pudo contestar. ${explicarError(error)}]`))
+        escribir(`\n\n[No se pudo contestar. ${explicarError(error)}]`)
       } finally {
-        control.close()
+        try { control.close() } catch { /* ya estaba cerrado porque el navegador se fue */ }
       }
     },
   })

@@ -195,7 +195,9 @@ function Detalle({ clienteId, sesionId }: { clienteId: number; sesionId: number 
         </div>
       ) : null}
 
-      {enVivo ? <div className="bloque-analisis"><pre>{enVivo}</pre></div> : null}
+      {/* Mientras se escribe se muestra tal cual llega, sin los ## del formato:
+          esos son para partirlo después, no para que los lea nadie. */}
+      {enVivo ? <div className="bloque-analisis"><pre>{enVivo.replace(/^#{1,3}\s+/gm, '')}</pre></div> : null}
 
       <h3>Transcripción</h3>
       {editando ? (

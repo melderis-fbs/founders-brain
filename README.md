@@ -255,6 +255,16 @@ transcripción que sostiene cada uno, y los compromisos que se acordaron.
 Analizar cuesta plata: corre sólo cuando alguien aprieta el botón, y la
 transcripción entera viaja al navegador sólo cuando se abre esa sesión.
 
+Medido sobre una sesión real de 1.500 caracteres: **10 segundos y US$ 0,025**,
+con 2.459 tokens leídos del cache.
+
+### Si el navegador se va, el análisis se guarda igual
+
+Escribir en el flujo revienta cuando alguien cierra la pestaña a mitad de una
+respuesta. Eso **no** puede abortar lo que sigue: la llamada ya se pagó, así que
+el resultado se guarda igual y sólo se deja de escribir en pantalla. Sin esto,
+cerrar la pestaña costaba la plata y no dejaba el análisis.
+
 ## Preguntar sobre un cliente
 
 En la ficha, el bloque **Preguntar sobre X**. Corre **sólo al apretar Enviar**,

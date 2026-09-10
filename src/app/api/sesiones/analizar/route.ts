@@ -42,13 +42,22 @@ export async function POST(pedido: NextRequest) {
   const codificador = new TextEncoder()
   const flujo = new ReadableStream<Uint8Array>({
     async start(control) {
+      // Si el navegador se va —cierra la pestaña, cambia de pantalla— escribir
+      // en el flujo revienta. Eso NO puede abortar lo que sigue: la llamada ya
+      // se pagó, y el resultado tiene que quedar guardado igual.
+      let seguirEscribiendo = true
+      const escribir = (texto: string) => {
+        if (!seguirEscribiendo) return
+        try { control.enqueue(codificador.encode(texto)) } catch { seguirEscribiendo = false }
+      }
+
       let completo = ''
       try {
         for await (const pedazo of analizarSesionEnVivo(expediente.texto, sesion.transcripcion!, {
           clienteId, usuarioId: usuario.id, para: 'sesion', pregunta: `sesión ${sesion.numero ?? sesionId}`,
         })) {
           completo += pedazo
-          control.enqueue(codificador.encode(pedazo))
+          escribir(pedazo)
         }
         const partido = partirAnalisis(completo)
         await guardarAnalisis({
@@ -57,9 +66,9 @@ export async function POST(pedido: NextRequest) {
           compromisos: partido.compromisos, quePaso: partido.quePaso,
         })
       } catch (error) {
-        control.enqueue(codificador.encode(`\n\n[No se pudo analizar. ${explicarError(error)}]`))
+        escribir(`\n\n[No se pudo analizar. ${explicarError(error)}]`)
       } finally {
-        control.close()
+        try { control.close() } catch { /* ya estaba cerrado porque el navegador se fue */ }
       }
     },
   })
