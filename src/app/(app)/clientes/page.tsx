@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { ClienteNuevo } from '@/componentes/ClienteNuevo'
 import { Etapas } from '@/componentes/Comparacion'
+import { Semaforo } from '@/componentes/Semaforo'
 import { ESTADOS, TOTAL_CAMPOS } from '@/lib/campos'
 import { fuentesDeLaCartera, listarClientes, listarConsultoras } from '@/lib/clientes'
 import { dondeSeCorta, estadoDeEtapas, evaluarHitos, queNecesita } from '@/lib/hitos'
+import { semaforoDe } from '@/lib/semaforo'
 import { semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
 
 export const dynamic = 'force-dynamic'
@@ -36,6 +38,7 @@ export default async function Clientes({
       semana,
       evaluados,
       etapas: estadoDeEtapas(evaluados),
+      semaforo: semaforoDe(evaluados),
       atraso: corte?.atrasoEnSemanas ?? -1,
       necesita: queNecesita(evaluados, c.faltan),
     }
@@ -92,6 +95,7 @@ export default async function Clientes({
             <thead>
               <tr>
                 <th>Cliente</th>
+                <th>Cómo va</th>
                 <th>Consultora</th>
                 <th>Va en</th>
                 <th>Etapas</th>
@@ -101,9 +105,10 @@ export default async function Clientes({
               </tr>
             </thead>
             <tbody>
-              {filas.map(({ cliente: c, etapas, necesita, atraso }) => (
+              {filas.map(({ cliente: c, etapas, necesita, atraso, semaforo }) => (
                 <tr key={c.id}>
                   <td><Link className="nombre-cliente" href={`/clientes/${c.id}`}>{c.nombre}</Link></td>
+                  <td><Semaforo estado={semaforo} /></td>
                   <td className={c.consultora ? undefined : 'apagado'}>{c.consultora ?? 'sin asignar'}</td>
                   <td className={`semana ${seLePasoElPrograma(c.fechaInicio, c.programaMeses) ? 'rojo' : c.fechaInicio ? '' : 'apagado'}`}>
                     {textoDeSemana(c.fechaInicio, c.programaMeses)}

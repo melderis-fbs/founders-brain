@@ -31,11 +31,23 @@ string → URI**. En producción usá la cadena del *pooler* (puerto 6543).
 | `npm run dev` | Levanta la aplicación en desarrollo |
 | `npm run build` / `npm start` | Compila y sirve la versión de producción |
 | `npm run typecheck` | Corre los tipos |
-| `npm test` | Corre las pruebas (las de importación necesitan `DATABASE_URL`) |
+| `npm test` | Corre las pruebas. Las que escriben en la base necesitan `DATABASE_URL_PRUEBAS` |
 | `npm run migrar` | Aplica `supabase/migrations/*.sql` en orden |
 | `npm run seed -- <email> "<nombre>" <clave>` | Crea o actualiza un usuario admin |
 | `npm run fixture` | Genera una planilla de prueba de 199 filas en `fixtures/` |
 | `npm run importar -- <archivo.csv>` | Importa un CSV sin tope de tiempo (la primera carga de la cartera) |
+
+## Las pruebas corren sobre una base aparte
+
+Las pruebas hacen `truncate`. Si `npm test` corriera contra la base de trabajo,
+se llevaría puesta la cartera entera. Por eso el interruptor es **otra
+variable**, `DATABASE_URL_PRUEBAS`: sin ella, las pruebas que escriben se
+saltean solas y las demás corren igual.
+
+```
+Test Files  7 passed | 3 skipped (10)
+Tests       56 passed | 28 skipped (84)
+```
 
 ## Por qué se conecta así a Supabase
 
@@ -189,6 +201,37 @@ una tarjeta que lista exactamente eso.
 Es la regla 2. Decir «no hizo la primera venta» cuando nadie cargó ninguna venta
 no es un dato flojo: es una afirmación falsa sobre el cliente, y acierta por la
 razón equivocada.
+
+## El semáforo
+
+Cuatro colores, no tres, y la diferencia es el punto: **gris no es verde**.
+
+| Color | Palabra | Cuándo |
+|---|---|---|
+| Rojo | grave | Falta algo que **bloquea** lo que viene después, o el atraso llegó a 4 semanas |
+| Amarillo | atrasado | Hay algo vencido, poco y que no bloquea |
+| Verde | en tiempo | No hay nada vencido de lo que hoy se puede medir |
+| Gris | sin datos | No hay con qué compararlo |
+
+El color nunca va solo: siempre lleva su palabra al lado y, al pasar el mouse,
+la frase que lo explica —«"oferta y promesa cerradas" bloquea todo lo que viene
+después y falta hace 6 semanas»—. No hay puntaje: el color sale de hitos que se
+pueden nombrar.
+
+Un cliente sin datos **no puede salir en verde**. Verde es el color que hace
+que nadie lo mire, y ahí es donde un tablero empieza a mentir.
+
+## La grilla
+
+Dos vistas de la misma cosa, en `/grilla`:
+
+- **Por etapa** — un kanban: cada cliente en la etapa donde se corta, ordenado
+  por gravedad y por semanas de atraso. Si muchos se amontonan en la misma
+  columna, suele ser el programa y no el cliente.
+- **Por semanas** — clientes en filas, semanas en columnas. Sólo las semanas en
+  las que el método espera algo: las otras no son columnas.
+
+Las dos se filtran por consultora, porque nadie trabaja sobre 196 tarjetas.
 
 ## Un cliente nuevo, a mano
 

@@ -7,12 +7,12 @@ import { Iconos } from './Iconos'
 const AHORA = [
   { href: '/tablero', texto: 'Tablero', icono: Iconos.tablero },
   { href: '/clientes', texto: 'Clientes', icono: Iconos.clientes },
+  { href: '/grilla', texto: 'La grilla', icono: Iconos.grilla },
   { href: '/importar', texto: 'Importar', icono: Iconos.importar },
 ]
 
 /** Lo que todavía no está. Se ve, pero apagado: no se promete lo que no hay. */
 const DESPUES = [
-  { texto: 'Grilla por semanas', icono: Iconos.grilla },
   { texto: 'Alertas', icono: Iconos.alertas },
   { texto: 'Consultoras', icono: Iconos.consultoras },
 ]

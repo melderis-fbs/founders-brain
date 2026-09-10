@@ -51,6 +51,28 @@ export default async function Tablero() {
         </div>
       </div>
 
+      <div className="tarjeta" style={{ marginBottom: 14 }}>
+        <div className="rotulo" style={{ marginBottom: 12 }}>Cómo va la cartera</div>
+        <div className="semaforo-cartera">
+          {([
+            ['rojo', 'grave', t.porColor.rojo],
+            ['amarillo', 'atrasado', t.porColor.amarillo],
+            ['verde', 'en tiempo', t.porColor.verde],
+            ['gris', 'sin datos', t.porColor.gris],
+          ] as const).map(([color, palabra, cuantos]) => (
+            <div key={color}>
+              <span className={`semaforo ${color}`}><i />{palabra}</span>
+              <div className={`cifra ${color === 'gris' ? 'apagado' : color === 'amarillo' ? 'ambar' : color}`}>
+                {cuantos} <span className="de">de {t.total}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="pie">
+          «Sin datos» no es «en tiempo»: son clientes de los que todavía no se puede afirmar nada.
+        </div>
+      </div>
+
       <div className="rejilla">
         <div className="tarjeta">
           <div className="rotulo">Se pasaron del programa</div>

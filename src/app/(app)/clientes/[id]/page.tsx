@@ -3,12 +3,14 @@ import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
 import { Documentos } from '@/componentes/Documentos'
+import { Semaforo } from '@/componentes/Semaforo'
 import {
   CAMPOS, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo,
 } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
 import { evaluarHitos } from '@/lib/hitos'
+import { semaforoDe } from '@/lib/semaforo'
 import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
 
 export const dynamic = 'force-dynamic'
@@ -78,6 +80,7 @@ export default async function Ficha({
       <div className="cabecera-ficha">
         <h1>{cliente.nombre}</h1>
         <div className="sub">
+          <Semaforo estado={semaforoDe(evaluados)} />
           <span className={pasado ? 'rojo' : undefined} style={{ fontWeight: 600 }}>{semana}</span>
           {pasado ? <span className="chip mal">ya se pasó del programa</span> : null}
           <span>{cliente.consultora ?? 'sin consultora asignada'}</span>
@@ -93,6 +96,8 @@ export default async function Ficha({
           )}
         </div>
       </div>
+
+      <p className="mini" style={{ marginTop: -8, marginBottom: 14 }}>{semaforoDe(evaluados).porque}</p>
 
       <div style={{ marginBottom: 14 }}>
         <Comparacion evaluados={evaluados} />

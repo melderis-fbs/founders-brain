@@ -1,6 +1,7 @@
 import { listarClientes, fuentesDeLaCartera } from './clientes'
 import { dondeSeCorta, evaluarHitos, FUENTES_ETIQUETA, HITOS, type Fuente } from './hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa } from './programa'
+import { semaforoDe, type Color } from './semaforo'
 
 /**
  * Los números de la semana.
@@ -17,6 +18,8 @@ export type Tablero = {
   datosQueFaltan: number
   /** Dónde se corta la mayoría: casi siempre es el programa, no el cliente. */
   corteMasComun: { etiqueta: string; semana: number; cuantos: number } | null
+  /** Cuántos hay de cada color. Gris es su propia categoría, nunca verde. */
+  porColor: Record<Color, number>
   porConsultora: { nombre: string; clientes: number; conAtraso: number; fichasAMedias: number }[]
   /** Qué fuentes todavía no se cargan, y cuántos hitos no se pueden medir por eso. */
   sinFuente: { fuente: Fuente; etiqueta: string; hitos: number }[]
@@ -29,6 +32,7 @@ export async function traerTablero(): Promise<Tablero> {
   let sePasaron = 0
   let fichasAMedias = 0
   let datosQueFaltan = 0
+  const porColor: Record<Color, number> = { rojo: 0, amarillo: 0, verde: 0, gris: 0 }
   const cortes = new Map<string, { etiqueta: string; semana: number; cuantos: number }>()
   const porConsultora = new Map<string, { nombre: string; clientes: number; conAtraso: number; fichasAMedias: number }>()
 
@@ -41,6 +45,7 @@ export async function traerTablero(): Promise<Tablero> {
     })
     const corte = dondeSeCorta(evaluados)
     const atrasado = corte !== null
+    porColor[semaforoDe(evaluados).color]++
     const aMedias = c.faltan.length > 0
 
     if (atrasado) conAtraso++
@@ -80,6 +85,7 @@ export async function traerTablero(): Promise<Tablero> {
     sePasaron,
     fichasAMedias,
     datosQueFaltan,
+    porColor,
     corteMasComun: [...cortes.values()].sort((a, b) => b.cuantos - a.cuantos)[0] ?? null,
     porConsultora: [...porConsultora.values()].sort((a, b) => b.conAtraso - a.conAtraso || b.clientes - a.clientes),
     sinFuente,
