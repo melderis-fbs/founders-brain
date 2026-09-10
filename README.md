@@ -221,6 +221,45 @@ pueden nombrar.
 Un cliente sin datos **no puede salir en verde**. Verde es el color que hace
 que nadie lo mire, y ahí es donde un tablero empieza a mentir.
 
+## Preguntar sobre un cliente
+
+En la ficha, el bloque **Preguntar sobre X**. Corre **sólo al apretar Enviar**,
+nunca al abrir la pantalla: cada pregunta cuesta plata, y esa es toda la razón
+de que haya un botón.
+
+Le llega el expediente armado por `src/lib/expediente.ts`: la ficha con los
+campos vacíos marcados **NO CARGADO**, la comparación con lo esperado con los
+hitos que no se pueden evaluar marcados **SIN DATOS**, y los documentos
+cargados, de lo más nuevo a lo más viejo hasta un tope de 60.000 caracteres. Lo
+que no entró por tamaño **se dice al final de la respuesta**: un expediente que
+en silencio incluye tres de once documentos es un expediente en el que nadie
+puede confiar.
+
+Las reglas del método van en el prompt del sistema (`REGLAS` en
+`src/lib/modelo.ts`) y son las del documento: sin cita textual no se afirma
+nada; lo que no está en el expediente no está; un campo vacío no es cero; un
+hito «sin datos» no se cuenta como incumplido; tres a cinco puntos como máximo.
+
+### Qué cuesta, y dónde se ve
+
+Modelo `claude-opus-5`. Un cliente con un documento son unos 850 tokens de
+expediente: **menos de dos centavos de dólar por pregunta**. Las repreguntas de
+una misma conversación cuestan menos, porque el expediente y las reglas viajan
+cacheados.
+
+Cada llamada queda registrada en `llamadas_modelo` con sus tokens, su costo y
+cuánto tardó. «El chat cuesta plata» tiene que ser un número, no una intuición.
+
+### La clave
+
+`ANTHROPIC_API_KEY` en `.env.local` y en Vercel. Si la clave **no** está
+asignada a un workspace, la API la rechaza; en ese caso hay que cargar también
+`ANTHROPIC_WORKSPACE_ID`. Los errores de la API salen traducidos y con el
+arreglo al lado, no en inglés.
+
+Sin clave, el bloque de preguntar avisa y **el resto de la aplicación anda
+igual**.
+
 ## La grilla
 
 Dos vistas de la misma cosa, en `/grilla`:

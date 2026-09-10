@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
 import { Documentos } from '@/componentes/Documentos'
+import { Preguntar } from '@/componentes/Preguntar'
 import { Semaforo } from '@/componentes/Semaforo'
 import {
   CAMPOS, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo,
@@ -101,6 +102,10 @@ export default async function Ficha({
 
       <div style={{ marginBottom: 14 }}>
         <Comparacion evaluados={evaluados} />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <Preguntar clienteId={cliente.id} nombre={cliente.nombre} />
       </div>
 
       <div className="bloques">

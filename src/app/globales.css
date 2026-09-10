@@ -282,3 +282,14 @@ textarea.edicion { min-height: 90px; }
 
 .semaforo-cartera { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
 .semaforo-cartera .cifra { font-size: 28px; margin-top: 4px; }
+
+/* ── Preguntar sobre un cliente ──────────────────────────────────────────── */
+.sugeridas { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.sugeridas .boton { font-size: 13px; padding: 7px 13px; }
+.conversacion { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; max-height: 460px; overflow-y: auto; }
+.turno { font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; }
+.turno.user { font-weight: 600; }
+.turno.user::before { content: '— '; color: var(--gris-suave); }
+.turno.assistant { background: var(--papel); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; }
+.preguntar-caja { display: flex; gap: 10px; align-items: flex-end; }
+.preguntar-caja textarea { flex: 1; }
