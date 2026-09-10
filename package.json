@@ -12,7 +12,8 @@
     "seed": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/seed.ts",
     "migrar": "node scripts/migrar.mjs",
     "fixture": "node scripts/fixture.mjs",
-    "importar": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/importar.ts"
+    "importar": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/importar.ts",
+    "esquema": "node scripts/esquema.mjs"
   },
   "dependencies": {
     "mammoth": "^1.12.2",

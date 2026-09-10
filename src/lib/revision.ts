@@ -1,4 +1,27 @@
-import { fila, pool } from './db'
+import { fila, filas, pool } from './db'
+
+/**
+ * Qué tiene que existir en la base, y qué migración lo crea.
+ *
+ * Alcanzaba con mirar si estaba la tabla `usuarios`, y eso dejó pasar el caso
+ * real: la base tenía la primera migración y no las siguientes, así que la
+ * aplicación conectaba bien y después reventaba contra una tabla que no
+ * existía. Un chequeo que sólo mira la primera puerta no sirve.
+ */
+const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string, string][] }[] = [
+  {
+    migracion: '0001_estructura.sql',
+    tablas: ['usuarios', 'sesiones_login', 'consultoras', 'clientes', 'cliente_negocio',
+             'cliente_numeros', 'cliente_comercial', 'documentos', 'importaciones', 'importacion_filas'],
+    columnas: [],
+  },
+  { migracion: '0002_origen_de_los_datos.sql', tablas: ['campo_origen'], columnas: [] },
+  {
+    migracion: '0003_autoridad_e_intentos.sql',
+    tablas: ['cliente_autoridad', 'cliente_intentos'],
+    columnas: [['clientes', 'horas_por_semana'], ['cliente_negocio', 'mecanismo']],
+  },
+]
 
 /**
  * Por qué la aplicación no puede arrancar, dicho en una pantalla.
@@ -36,18 +59,8 @@ export async function revisarBase(): Promise<Revision> {
   }
 
   try {
-    const tabla = await fila<{ existe: string | null }>(`select to_regclass('public.usuarios')::text as existe`)
-    if (!tabla?.existe) {
-      return {
-        ok: false,
-        titulo: 'La base está conectada pero vacía',
-        detalle: 'Conecté bien, pero las tablas no están creadas.',
-        pasos: [
-          'Pegá supabase/migrations/0001_estructura.sql en el SQL Editor de Supabase y ejecutalo.',
-          'O corré `npm run migrar` desde tu máquina, con la misma DATABASE_URL.',
-        ],
-      }
-    }
+    const faltante = await queMigracionFalta()
+    if (faltante) return faltante
 
     const cuantos = await fila<{ n: number }>('select count(*)::int as n from usuarios where activo')
     if (!cuantos || cuantos.n === 0) {
@@ -82,6 +95,60 @@ function aDondeVa(): { host: string; puerto: string } | null {
 }
 
 const PLACEHOLDERS = ['REGION', 'PROYECTO', 'PROJECT', 'YOUR', 'CLAVE', 'PASSWORD']
+
+/** La primera migración que falta, con lo que le falta nombrado. */
+async function queMigracionFalta(): Promise<Revision | null> {
+  const columnas = await filas<{ table_name: string; column_name: string }>(
+    `select table_name, column_name from information_schema.columns where table_schema = 'public'`,
+  )
+  const tablas = new Set(columnas.map((c) => c.table_name))
+  const conColumna = new Set(columnas.map((c) => `${c.table_name}.${c.column_name}`))
+
+  // information_schema sólo muestra lo que el usuario puede ver. Cero tablas
+  // puede ser una base vacía, pero también un usuario sin permisos, y decir lo
+  // primero cuando pasa lo segundo manda a arreglar lo que no está roto.
+  if (tablas.size === 0) {
+    return {
+      ok: false,
+      titulo: 'No veo ninguna tabla',
+      detalle: 'La conexión funciona, pero en el esquema public no aparece nada.',
+      pasos: [
+        'Si la base es nueva: corré las migraciones de supabase/migrations/ en orden, o `npm run esquema` y pegá todo junto en el SQL Editor.',
+        'Si ya las corriste: el usuario de la cadena de conexión no tiene permisos sobre el esquema public. En Supabase la cadena tiene que ser la del usuario postgres.',
+      ],
+    }
+  }
+
+  for (const paso of ESQUEMA_ESPERADO) {
+    const tablasQueFaltan = paso.tablas.filter((t) => !tablas.has(t))
+    const columnasQueFaltan = paso.columnas
+      .filter(([t, c]) => tablas.has(t) && !conColumna.has(`${t}.${c}`))
+      .map(([t, c]) => `${t}.${c}`)
+
+    if (tablasQueFaltan.length === 0 && columnasQueFaltan.length === 0) continue
+
+    const esLaPrimera = paso.migracion.startsWith('0001')
+    const cuantas = tablasQueFaltan.length + columnasQueFaltan.length
+    const queFalta = [
+      tablasQueFaltan.length > 0 ? `${tablasQueFaltan.length === 1 ? 'la tabla' : 'las tablas'} ${tablasQueFaltan.join(', ')}` : null,
+      columnasQueFaltan.length > 0 ? `${columnasQueFaltan.length === 1 ? 'la columna' : 'las columnas'} ${columnasQueFaltan.join(', ')}` : null,
+    ].filter(Boolean).join(' y ')
+
+    return {
+      ok: false,
+      titulo: esLaPrimera ? 'La base está conectada pero vacía' : 'A la base le falta una migración',
+      detalle: esLaPrimera
+        ? 'Conecté bien, pero las tablas no están creadas.'
+        : `Conecté bien, pero ${cuantas === 1 ? 'falta' : 'faltan'} ${queFalta}.`,
+      pasos: [
+        `Pegá supabase/migrations/${paso.migracion} en el SQL Editor de Supabase y ejecutalo.`,
+        'Si te salteaste alguna anterior, corré todas en orden: son idempotentes, volver a correr una que ya está no rompe nada.',
+        'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL, que las aplica todas en orden.',
+      ],
+    }
+  }
+  return null
+}
 
 function noSePudoConectar(error: unknown): Revision {
   const codigo = (error as { code?: string })?.code ?? ''

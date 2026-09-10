@@ -137,6 +137,19 @@ las filas que no cambiaron casi no escriben.
 La cookie de sesión sale con `Secure` en producción, así que la aplicación tiene
 que servirse por HTTPS: en Vercel ya lo está.
 
+### Cada vez que agrego una migración, hay que correrla
+
+Las migraciones se acumulan en `supabase/migrations/`. Correr sólo la primera y
+no las siguientes deja la base conectando bien y reventando después contra una
+tabla que no existe. Para no tener que acordarse:
+
+```bash
+npm run migrar          # las aplica todas en orden, desde tu máquina
+npm run esquema         # las imprime todas juntas, para pegar en el SQL Editor
+```
+
+Son idempotentes: volver a correr una que ya está aplicada no rompe nada.
+
 ### Si algo de eso falta, la aplicación lo dice
 
 Antes de tocar la base, el login y el marco de la aplicación revisan que la
@@ -145,6 +158,14 @@ al servidor, si la contraseña no es, si las tablas no están creadas o si todav
 no hay ningún usuario, sale una pantalla con el motivo y los pasos, en vez de un
 «Application error» con un digest. Nunca muestra la cadena de conexión ni la
 contraseña.
+
+El chequeo mira **todo el esquema**, no sólo la primera tabla: si falta una
+migración dice cuál, y qué tabla o columna le falta.
+
+Y para lo que ningún chequeo puede prever están `src/app/error.tsx` y
+`src/app/global-error.tsx`: cualquier excepción del servidor sale como una
+pantalla que se lee, con la referencia del error para buscarla en los logs, en
+vez del «Application error» de Vercel.
 
 El caso más común al publicar: **usar la conexión directa en vez del pooler**.
 La directa (`db.PROYECTO.supabase.co`, puerto 5432) va sólo por IPv6 y desde
