@@ -265,6 +265,24 @@ respuesta. Eso **no** puede abortar lo que sigue: la llamada ya se pagó, así q
 el resultado se guarda igual y sólo se deja de escribir en pantalla. Sin esto,
 cerrar la pestaña costaba la plata y no dejaba el análisis.
 
+## El diagnóstico del caso
+
+Pestaña **Diagnóstico**, a botón. Contesta cuatro cosas y nada más:
+
+1. **Dónde se corta** — el primer eslabón que no está, no el último problema.
+2. **Por qué** — con la frase del expediente que lo sostiene. Si lo que la
+   sostiene es un campo `NO CARGADO` o un hito `SIN DATOS`, lo dice así.
+3. **¿Es el cliente o somos nosotros?** — tres respuestas posibles y ninguna
+   más, y la tercera es «no se puede saber con lo que hay cargado».
+4. **Qué hacer** — tres acciones como máximo, cada una empezable esta semana y
+   con quién la hace. Más **qué falta cargar** para poder decir más.
+
+**Queda guardado con su fecha y no se rehace solo.** Volver a correrlo es una
+decisión de alguien, porque cuesta plata. Los anteriores quedan: comparar el
+diagnóstico de hace dos meses con el de hoy dice más que cualquiera suelto.
+
+Medido sobre un caso real: **15 segundos y US$ 0,043**.
+
 ## Preguntar sobre un cliente
 
 En la ficha, el bloque **Preguntar sobre X**. Corre **sólo al apretar Enviar**,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { explicarError, partirAnalisis } from './modelo'
+import { explicarError, partirAnalisis, partirDiagnostico } from './modelo'
 
 describe('partir el análisis de una sesión', () => {
   const respuesta = `## Qué pasó
@@ -52,5 +52,49 @@ describe('los errores de la API, en castellano', () => {
   })
   it('el de saldo dice dónde cargarlo', () => {
     expect(explicarError({ status: 400, error: { error: { message: 'Your credit balance is too low' } } })).toContain('crédito')
+  })
+})
+
+describe('partir el diagnóstico', () => {
+  const respuesta = `## Dónde se corta
+En conseguir conversaciones: la oferta está cerrada pero no hay mensaje ni canal.
+
+## Por qué
+La ficha dice que la oferta está cerrada, pero «Mensaje: NO CARGADO» y «Canal: NO CARGADO».
+En la sesión dijo: «Empiezo a escribir el mensaje y lo borro».
+
+## ¿Es el cliente o somos nosotros?
+Somos nosotros: pasaron 26 semanas desde que vencía el mensaje y nadie lo trabajó en sesión.
+
+## Qué hacer
+- Escribir el mensaje con él en la próxima sesión, no de tarea.
+- Elegir un solo canal y no dos.
+- Poner su experiencia de finanzas en el perfil.
+
+## Qué falta cargar
+- El tracker semanal: sin eso no se sabe si escribe o no.
+- Las ventas: hoy figuran SIN DATOS.`
+
+  it('saca dónde se corta y de quién es', () => {
+    const d = partirDiagnostico(respuesta)
+    expect(d.dondeSeCorta).toContain('conseguir conversaciones')
+    expect(d.deQuienEs).toContain('Somos nosotros')
+  })
+
+  it('nunca más de tres acciones, aunque el modelo mande cinco', () => {
+    const cinco = `## Qué hacer\n${[1, 2, 3, 4, 5].map((n) => `- acción ${n}`).join('\n')}`
+    expect(partirDiagnostico(cinco).acciones).toHaveLength(3)
+  })
+
+  it('trae lo que falta cargar, nombrado', () => {
+    const d = partirDiagnostico(respuesta)
+    expect(d.faltaCargar).toHaveLength(2)
+    expect(d.faltaCargar[0]).toContain('tracker')
+  })
+
+  it('si el formato no vino, no se pierde el texto', () => {
+    const d = partirDiagnostico('Se corta en la oferta.')
+    expect(d.texto).toBe('Se corta en la oferta.')
+    expect(d.acciones).toEqual([])
   })
 })

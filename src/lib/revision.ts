@@ -21,6 +21,9 @@ const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string
     tablas: ['cliente_autoridad', 'cliente_intentos'],
     columnas: [['clientes', 'horas_por_semana'], ['cliente_negocio', 'mecanismo']],
   },
+  { migracion: '0004_llamadas_al_modelo.sql', tablas: ['llamadas_modelo'], columnas: [] },
+  { migracion: '0005_sesiones.sql', tablas: ['sesiones'], columnas: [] },
+  { migracion: '0006_diagnosticos.sql', tablas: ['diagnosticos'], columnas: [] },
 ]
 
 /**

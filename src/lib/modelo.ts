@@ -257,3 +257,89 @@ export function partirAnalisis(texto: string): Analisis {
   const compromisos = seccion('Compromisos')
   return { texto, quePaso, puntos, compromisos }
 }
+
+// ── El diagnóstico del caso ─────────────────────────────────────────────────
+
+export const REGLAS_DIAGNOSTICO = `${REGLAS}
+
+AHORA ESTÁS HACIENDO EL DIAGNÓSTICO DE UN CASO
+
+Te dan el expediente entero de un cliente: la ficha, la comparación con lo que tendría que estar hecho, y los documentos. Devolvé exactamente este formato, sin nada antes ni después:
+
+## Dónde se corta
+Una sola línea: el primer eslabón de la cadena que no está. No el último problema, el primero: lo que viene después no se le puede exigir hasta que eso esté.
+
+## Por qué
+Dos o tres líneas, cada afirmación con la frase del expediente o del documento que la sostiene, entre comillas. Si lo que sostiene la afirmación es un campo NO CARGADO o un hito SIN DATOS, decilo así.
+
+## ¿Es el cliente o somos nosotros?
+Una línea, y por qué. Tres respuestas posibles y ninguna más: «es el cliente», «somos nosotros», «no se puede saber con lo que hay cargado». No la adornes: si el expediente está vacío, la respuesta honesta es la tercera, y muchas veces la falta de datos es nuestra.
+
+## Qué hacer
+Tres acciones como máximo. Ni una más de tres. Cada una tiene que poder empezarse esta semana y decir quién la hace. Si con lo cargado no alcanza para recomendar nada, escribí una sola acción: cargar el dato que falta, nombrándolo.
+
+## Qué falta cargar
+Los datos que, si estuvieran, cambiarían el diagnóstico. Nombrados uno por uno. Si no falta nada importante, escribí «Nada que cambie este diagnóstico.»`
+
+export async function* diagnosticarEnVivo(
+  expediente: string,
+  registro: Registro,
+): AsyncGenerator<string, void, unknown> {
+  const arranque = Date.now()
+
+  const stream = anthropic().messages.stream({
+    model: MODELO,
+    max_tokens: 4000,
+    system: [{ type: 'text', text: REGLAS_DIAGNOSTICO, cache_control: { type: 'ephemeral' } }],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: expediente, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: 'Hacé el diagnóstico de este caso.' },
+      ],
+    }],
+  })
+
+  try {
+    for await (const evento of stream) {
+      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') yield evento.delta.text
+    }
+    const final = await stream.finalMessage()
+    await anotarLlamada(registro, final.usage, Date.now() - arranque, null)
+  } catch (error) {
+    await anotarLlamada(registro, null, Date.now() - arranque, error instanceof Error ? error.message : String(error))
+    throw error
+  }
+}
+
+export type Diagnostico = {
+  texto: string
+  dondeSeCorta: string | null
+  deQuienEs: string | null
+  acciones: string[]
+  faltaCargar: string[]
+}
+
+/** Igual de tolerante que el de las sesiones: nunca se pierde el texto. */
+export function partirDiagnostico(texto: string): Diagnostico {
+  const seccion = (titulo: string): string[] => {
+    const re = new RegExp(`^#{1,3}\\s*${titulo}\\s*$`, 'im')
+    const desde = texto.search(re)
+    if (desde < 0) return []
+    const lineas: string[] = []
+    for (const linea of texto.slice(desde).split('\n').slice(1)) {
+      if (/^#{1,3}\s/.test(linea)) break
+      const limpia = linea.replace(/^\s*[-*•]\s*/, '').trim()
+      if (limpia !== '') lineas.push(limpia)
+    }
+    return lineas
+  }
+
+  return {
+    texto,
+    dondeSeCorta: seccion('Dónde se corta')[0] ?? null,
+    deQuienEs: seccion('¿Es el cliente o somos nosotros\\?')[0] ?? null,
+    acciones: seccion('Qué hacer').slice(0, 3),   // ni una más de tres
+    faltaCargar: seccion('Qué falta cargar'),
+  }
+}

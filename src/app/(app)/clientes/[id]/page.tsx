@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
+import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Semaforo } from '@/componentes/Semaforo'
@@ -9,6 +10,7 @@ import { Sesiones } from '@/componentes/Sesiones'
 import { CAMPOS, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
+import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
 import { semaforoDe } from '@/lib/semaforo'
@@ -19,6 +21,7 @@ export const dynamic = 'force-dynamic'
 /** Las pestañas. Cada una es un bloque, no veinte tarjetas apiladas. */
 const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
+  { clave: 'diagnostico', texto: 'Diagnóstico' },
   { clave: 'negocio', texto: 'Su negocio' },
   { clave: 'autoridad', texto: 'Su autoridad' },
   { clave: 'intentos', texto: 'Lo que ya probó' },
@@ -64,8 +67,9 @@ export default async function Ficha({
   const cliente = await traerCliente(Number(id))
   if (!cliente) notFound()
 
-  const [documentos, origenes, conDatos, sesiones] = await Promise.all([
-    documentosDe(cliente.id), origenesDe(cliente.id), fuentesDeLaCartera(), listarSesiones(cliente.id),
+  const [documentos, origenes, conDatos, sesiones, diagnostico] = await Promise.all([
+    documentosDe(cliente.id), origenesDe(cliente.id), fuentesDeLaCartera(),
+    listarSesiones(cliente.id), ultimoDiagnostico(cliente.id),
   ])
 
   const inicio = cliente.valores.fecha_inicio as string
@@ -179,6 +183,7 @@ export default async function Ficha({
               </>
             ) : null}
 
+            {pestana === 'diagnostico' ? <DiagnosticoDelCaso clienteId={cliente.id} guardado={diagnostico} /> : null}
             {pestana === 'sesiones' ? <Sesiones clienteId={cliente.id} sesiones={sesiones} /> : null}
             {pestana === 'documentos' ? <Documentos clienteId={cliente.id} documentos={documentos} suelto /> : null}
           </div>
@@ -192,7 +197,7 @@ export default async function Ficha({
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=sesiones`}>Cargar o analizar una sesión</Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=documentos`}>Cargar un documento</Link>
               <span className="boton suave apagada" title="Todavía no está">Completar desde los documentos</span>
-              <span className="boton suave apagada" title="Todavía no está">Diagnóstico del caso</span>
+              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=diagnostico`}>Diagnóstico del caso</Link>
               <span className="boton suave apagada" title="Todavía no está">Preparar la próxima sesión</span>
             </div>
           </div>
