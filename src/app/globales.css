@@ -499,3 +499,13 @@ tr.apagado td { opacity: .6; }
 .lectura .bloque { text-decoration: none; color: inherit; }
 .lectura .bloque:hover { border-color: var(--tinta); }
 .faltantes a { color: var(--tinta); }
+
+.barra-asignar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  background: var(--papel); border: 1px solid var(--tinta); border-radius: 10px;
+  padding: 11px 14px; margin-top: 12px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, .08);
+}
+.barra-asignar select { min-width: 220px; }
+td.marca-fila, th.marca-fila { width: 34px; text-align: center; }

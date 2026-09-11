@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { Equipo } from '@/componentes/Equipo'
-import { listarConsultoras } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
-import { listarEquipo } from '@/lib/usuarios'
+import { Consultoras } from '@/componentes/Consultoras'
+import { listarConsultorasDelEquipo, listarEquipo } from '@/lib/usuarios'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +12,7 @@ export default async function PaginaEquipo() {
   // Esconder el link no alcanza: alguien puede escribir /equipo en la barra.
   if (quien.usuario.rol !== 'admin') redirect('/clientes')
 
-  const [usuarios, consultoras] = await Promise.all([listarEquipo(), listarConsultoras()])
+  const [usuarios, consultoras] = await Promise.all([listarEquipo(), listarConsultorasDelEquipo()])
 
   return (
     <>
@@ -25,6 +25,8 @@ export default async function PaginaEquipo() {
       </header>
 
       <Equipo usuarios={usuarios} consultoras={consultoras.map((c) => c.nombre)} yo={quien.usuario.id} />
+
+      <Consultoras consultoras={consultoras} />
     </>
   )
 }

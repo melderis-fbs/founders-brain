@@ -133,3 +133,86 @@ async function idDeConsultora(nombre: string | null): Promise<number | null> {
   )
   return creada.id
 }
+
+// ── Las consultoras ─────────────────────────────────────────────────────────
+
+export type ConsultoraDelEquipo = {
+  id: number
+  nombre: string
+  clientes: number
+  /** Cuántas personas entran a la aplicación viendo esta cartera. */
+  usuarios: number
+}
+
+/**
+ * Las consultoras, con o sin clientes.
+ *
+ * Una consultora recién creada tiene cero clientes y tiene que verse igual:
+ * si sólo aparecieran las que ya tienen gente asignada, no habría forma de
+ * crear una y después pasarle su cartera.
+ */
+export async function listarConsultorasDelEquipo(): Promise<ConsultoraDelEquipo[]> {
+  return filas<ConsultoraDelEquipo>(
+    `select co.id, co.nombre,
+            (select count(*)::int from clientes c where c.consultora_id = co.id) as clientes,
+            (select count(*)::int from usuarios u where u.consultora_id = co.id and u.activo) as usuarios
+       from consultoras co order by co.nombre`,
+  )
+}
+
+export async function crearConsultora(nombre: string): Promise<Resultado> {
+  const limpio = nombre.trim()
+  if (limpio === '') return { ok: false, error: 'Falta el nombre.' }
+
+  const existe = await fila<{ nombre: string }>('select nombre from consultoras where nombre_pleg = $1', [plegado(limpio)])
+  if (existe) return { ok: false, error: `«${existe.nombre}» ya está.` }
+
+  const creada = await escribirDevolviendo<{ id: number }>(
+    'insert into consultoras (nombre, nombre_pleg) values ($1, $2) returning id',
+    [limpio, plegado(limpio)],
+  )
+  return { ok: true, id: creada.id }
+}
+
+/**
+ * Corregirle el nombre a una consultora.
+ *
+ * Sirve para el caso real: la planilla la escribió de una forma y en la
+ * aplicación quedó de otra. Se corrige el nombre y los clientes se quedan
+ * donde están, porque cuelgan del id y no del texto.
+ */
+export async function renombrarConsultora(id: number, nombre: string): Promise<Resultado> {
+  const limpio = nombre.trim()
+  if (limpio === '') return { ok: false, error: 'Falta el nombre.' }
+
+  const choca = await fila<{ id: number; nombre: string }>(
+    'select id, nombre from consultoras where nombre_pleg = $1 and id <> $2', [plegado(limpio), id],
+  )
+  if (choca) return { ok: false, error: `Ya hay otra que se llama «${choca.nombre}». Si son la misma, pasale los clientes en vez de renombrarla.` }
+
+  await escribir('update consultoras set nombre = $2, nombre_pleg = $3 where id = $1', [id, limpio, plegado(limpio)])
+  return { ok: true }
+}
+
+/**
+ * Pasarle clientes a una consultora.
+ *
+ * Devuelve cuántos se movieron de verdad: los que ya estaban en esa consultora
+ * no se cuentan, así «moví 12» no dice 25 cuando 13 ya estaban ahí.
+ */
+export async function asignarClientes(clienteIds: readonly number[], consultoraId: number | null): Promise<{ ok: true; movidos: number } | { ok: false; error: string }> {
+  if (clienteIds.length === 0) return { ok: false, error: 'No elegiste ningún cliente.' }
+
+  if (consultoraId !== null) {
+    const existe = await fila<{ id: number }>('select id from consultoras where id = $1', [consultoraId])
+    if (!existe) return { ok: false, error: 'Esa consultora ya no existe.' }
+  }
+
+  const movidos = await escribir(
+    `update clientes set consultora_id = $2, actualizado_en = now()
+      where id = any($1::bigint[]) and consultora_id is distinct from $2`,
+    [clienteIds, consultoraId],
+    { esperadas: 'cualquiera' },
+  )
+  return { ok: true, movidos }
+}

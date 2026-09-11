@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { listarConsultoras } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
 import {
-  cambiarAcceso, cambiarClave, cambiarConsultora, crearUsuario, cuantosAdminsActivos, type Resultado,
+  asignarClientes, cambiarAcceso, cambiarClave, cambiarConsultora, crearConsultora, crearUsuario,
+  cuantosAdminsActivos, renombrarConsultora, type Resultado,
 } from '@/lib/usuarios'
 
 /**
@@ -79,4 +80,32 @@ async function esElUltimoAdmin(usuarioId: number): Promise<boolean> {
   const suyo = await fila<{ rol: string; activo: boolean }>('select rol, activo from usuarios where id = $1', [usuarioId])
   if (!suyo || suyo.rol !== 'admin' || !suyo.activo) return false
   return (await cuantosAdminsActivos()) <= 1
+}
+
+// ── Las consultoras ─────────────────────────────────────────────────────────
+
+export async function altaDeConsultora(nombre: string): Promise<Resultado> {
+  const puede = await soloAdmin()
+  if (!puede.ok) return puede
+  const r = await crearConsultora(nombre)
+  if (r.ok) { revalidatePath('/equipo'); revalidatePath('/clientes') }
+  return r
+}
+
+export async function corregirNombreDeConsultora(id: number, nombre: string): Promise<Resultado> {
+  const puede = await soloAdmin()
+  if (!puede.ok) return puede
+  const r = await renombrarConsultora(id, nombre)
+  if (r.ok) { revalidatePath('/equipo'); revalidatePath('/clientes') }
+  return r
+}
+
+export async function pasarClientes(
+  clienteIds: number[], consultoraId: number | null,
+): Promise<{ ok: true; movidos: number } | { ok: false; error: string }> {
+  const puede = await soloAdmin()
+  if (!puede.ok) return puede
+  const r = await asignarClientes(clienteIds, consultoraId)
+  if (r.ok) { revalidatePath('/clientes'); revalidatePath('/equipo') }
+  return r
 }

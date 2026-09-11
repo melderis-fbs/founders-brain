@@ -65,7 +65,7 @@ export type ClienteDeLista = {
 
 export async function listarClientes(
   alcance: Alcance,
-  filtros: { consultoraId?: number | null; estado?: string | null; buscar?: string | null } = {},
+  filtros: { consultoraId?: number | null; sinConsultora?: boolean; estado?: string | null; buscar?: string | null } = {},
 ): Promise<ClienteDeLista[]> {
   const condiciones: string[] = []
   const parametros: unknown[] = []
@@ -77,7 +77,11 @@ export async function listarClientes(
   if (suyo.parametro !== null) parametros.push(suyo.parametro)
   condiciones.push(suyo.condicion)
 
-  if (filtros.consultoraId) {
+  if (filtros.sinConsultora) {
+    // Los que hay que repartir. Se pide aparte y no como «consultora = nada»
+    // porque en SQL comparar contra null no devuelve nada, ni siquiera falso.
+    condiciones.push('c.consultora_id is null')
+  } else if (filtros.consultoraId) {
     parametros.push(filtros.consultoraId)
     condiciones.push(`c.consultora_id = $${parametros.length}`)
   }

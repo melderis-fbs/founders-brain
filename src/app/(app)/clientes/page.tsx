@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ClienteNuevo } from '@/componentes/ClienteNuevo'
 import { Etapas } from '@/componentes/Comparacion'
-import { Semaforo } from '@/componentes/Semaforo'
+import { TablaDeClientes } from '@/componentes/TablaDeClientes'
 import { ESTADOS, TOTAL_CAMPOS } from '@/lib/campos'
 import { fuentesDeLaCartera, listarClientes, listarConsultoras } from '@/lib/clientes'
 import { sinConsultoraAsignada } from '@/lib/permisos'
@@ -18,7 +18,10 @@ export default async function Clientes({
   searchParams: Promise<{ consultora?: string; estado?: string; buscar?: string }>
 }) {
   const { consultora, estado, buscar } = await searchParams
-  const consultoraId = consultora ? Number(consultora) : null
+  // «sin» es su propio filtro: los clientes que no tienen consultora asignada
+  // son justo los que hay que repartir, y sin esto no hay forma de juntarlos.
+  const sinConsultora = consultora === 'sin'
+  const consultoraId = consultora && !sinConsultora ? Number(consultora) : null
 
   const quien = await quienMira()
   const alcance = quien?.alcance ?? { todo: false as const, consultoraId: null }
@@ -26,7 +29,7 @@ export default async function Clientes({
   const sinAsignar = sinConsultoraAsignada(alcance)
 
   const [clientes, consultoras, conDatos] = await Promise.all([
-    listarClientes(alcance, { consultoraId, estado: estado || null, buscar: buscar || null }),
+    listarClientes(alcance, { consultoraId, sinConsultora, estado: estado || null, buscar: buscar || null }),
     listarConsultoras(),
     fuentesDeLaCartera(),
   ])
@@ -74,6 +77,7 @@ export default async function Clientes({
             <label htmlFor="consultora">Consultora</label>
             <select id="consultora" name="consultora" defaultValue={consultora ?? ''}>
               <option value="">Todas</option>
+              <option value="sin">— sin consultora —</option>
               {consultoras.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {c.clientes}</option>)}
             </select>
           </div>
@@ -103,40 +107,24 @@ export default async function Clientes({
           </p>
         </div>
       ) : (
-        <div className="tabla-marco">
-          <table>
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Cómo va</th>
-                <th>Consultora</th>
-                <th>Va en</th>
-                <th>Etapas</th>
-                <th>Estado</th>
-                <th>Qué necesita</th>
-                <th className="num">Datos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map(({ cliente: c, etapas, necesita, atraso, semaforo }) => (
-                <tr key={c.id}>
-                  <td><Link className="nombre-cliente" href={`/clientes/${c.id}`}>{c.nombre}</Link></td>
-                  <td><Semaforo estado={semaforo} /></td>
-                  <td className={c.consultora ? undefined : 'apagado'}>{c.consultora ?? 'sin asignar'}</td>
-                  <td className={`semana ${seLePasoElPrograma(c.fechaInicio, c.programaMeses) ? 'rojo' : c.fechaInicio ? '' : 'apagado'}`}>
-                    {textoDeSemana(c.fechaInicio, c.programaMeses)}
-                  </td>
-                  <td><Etapas estados={etapas} /></td>
-                  <td>{c.estado ? <span className={`chip ${c.estado}`}>{c.estado}</span> : <span className="apagado">sin estado</span>}</td>
-                  <td className={atraso >= 0 ? 'rojo' : undefined}>{necesita}</td>
-                  <td className="num mini" title={c.faltan.map((f) => f.etiqueta.toLowerCase()).join(', ')}>
-                    {c.faltan.length === 0 ? <span className="verde">completa</span> : `faltan ${c.faltan.length} de ${TOTAL_CAMPOS}`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TablaDeClientes
+          puedeAsignar={esAdmin}
+          consultoras={consultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
+          filas={filas.map(({ cliente: c, etapas, necesita, atraso, semaforo }) => ({
+            id: c.id,
+            nombre: c.nombre,
+            consultora: c.consultora,
+            estado: c.estado,
+            fechaInicio: c.fechaInicio,
+            programaMeses: c.programaMeses,
+            faltan: c.faltan.length,
+            queFalta: c.faltan.map((f) => f.etiqueta.toLowerCase()).join(', '),
+            etapas,
+            semaforo,
+            atraso,
+            necesita,
+          }))}
+        />
       )}
     </>
   )
