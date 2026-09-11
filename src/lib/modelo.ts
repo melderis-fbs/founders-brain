@@ -393,6 +393,7 @@ REGLAS QUE NO TIENEN EXCEPCIÓN
 1. Sin cita no hay propuesta. Si no podés copiar una frase del documento que lo diga, ese campo no va.
 2. Lo que no está en el documento, no está. Nada de deducir, estimar, redondear ni completar con lo que suele pasar. Si el documento dice «factura más o menos dos palos», no propongas 2000000: no lo dice.
 3. La cita se copia literal del documento, no se parafrasea. Si la tenés que arreglar para que se entienda, no la uses.
+3 bis. El valor tiene que estar sostenido POR ESA CITA, no por otro pedazo del documento. Si para justificarlo necesitás una segunda frase, entonces o ponés las dos frases en la cita, o dejás en el valor solamente lo que dice la primera. Un valor que dice más que su cita es un dato inventado con apariencia de citado.
 4. Si no encontrás ningún dato, devolvé una sola línea: «No hay nada en los documentos que complete estos campos.»
 5. El valor va en la forma que pide la flecha de cada campo. Si es un número, va el número solo: «6», no «6 años» ni «seis». La explicación queda en la cita, que es donde tiene que estar.
 6. Si el documento contradice lo que ya está cargado —otro rubro, otros números—, proponé igual lo que dice el documento y avisá al final, en una línea: «Ojo: el documento habla de X y la ficha dice Y». No te guardes las propuestas por eso. La que decide es la consultora: si no proponés nada, le sacás la decisión y encima no se entera de la contradicción.
