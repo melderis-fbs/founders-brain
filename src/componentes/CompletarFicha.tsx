@@ -99,6 +99,16 @@ export function CompletarFicha({
         </>
       ) : null}
 
+      {hayDocumentos ? (
+        <p className="siguiente">
+          {propuestas.length > 0
+            ? 'Confirmá lo que sirva y después '
+            : 'Con lo que quedó cargado, '}
+          <a href="?bloque=diagnostico">armá el diagnóstico del caso</a>
+          {propuestas.length > 0 ? '.' : ': cuantos más datos tenga, menos «eso no está cargado» te va a contestar.'}
+        </p>
+      ) : null}
+
       {enVivo ? <div className="bloque-analisis"><pre>{enVivo.replace(/^#{1,4}\s+/gm, '')}</pre></div> : null}
       {error ? <div className="error-campo" style={{ margin: '12px 0' }}>{error}</div> : null}
 

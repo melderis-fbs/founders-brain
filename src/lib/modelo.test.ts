@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { explicarError, partirAnalisis, partirDiagnostico, partirPropuestas } from './modelo'
+import { CAMPOS_POR_CLAVE } from './campos'
+import { explicarError, partirAnalisis, partirDiagnostico, partirPropuestas, reglasDeFicha } from './modelo'
 
 describe('partir el análisis de una sesión', () => {
   const respuesta = `## Qué pasó
@@ -134,6 +135,23 @@ cita: «vos fuiste doce años gerente de finanzas en una empresa de logística»
   it('un campo inventado se descarta con su motivo', () => {
     const { descartadas } = partirPropuestas('### color_favorito\nvalor: verde\ncita: «le gusta el verde»', PERMITIDAS)
     expect(descartadas[0]).toContain('color_favorito')
+  })
+
+  it('le dice en qué forma espera cada valor, así no se pierde el dato por la forma', () => {
+    const reglas = reglasDeFicha([
+      CAMPOS_POR_CLAVE.get('equipo')!,
+      CAMPOS_POR_CLAVE.get('fecha_cuenta_inversa')!,
+      CAMPOS_POR_CLAVE.get('forma_pago')!,
+    ])
+    expect(reglas).toContain('un número entero solo')
+    expect(reglas).toContain('dd/mm/aaaa')
+    expect(reglas).toContain('contado, cuotas')
+  })
+
+  it('sólo lista los campos que faltan: los cargados no se mencionan', () => {
+    const reglas = reglasDeFicha([CAMPOS_POR_CLAVE.get('oferta')!])
+    expect(reglas).toContain('- oferta —')
+    expect(reglas).not.toContain('- nombre —')
   })
 
   it('lo lee igual si viene en negrita en vez de título', () => {
