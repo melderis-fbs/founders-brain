@@ -216,3 +216,64 @@ export async function asignarClientes(clienteIds: readonly number[], consultoraI
   )
   return { ok: true, movidos }
 }
+
+/**
+ * Borrar a alguien del equipo, de verdad.
+ *
+ * «Dar de baja» le saca el acceso y deja el rastro: es lo que hay que hacer
+ * con alguien que trabajó y después se fue. Borrar es para el otro caso —una
+ * cuenta creada con el mail mal escrito, una de prueba— y por eso pide que no
+ * haya dejado rastro que se pierda.
+ *
+ * Lo que dejó escrito no se borra: si cargó datos, queda como baja y se dice
+ * por qué. Un usuario borrado se lleva puesto de dónde salió cada dato.
+ */
+export async function borrarUsuario(usuarioId: number): Promise<Resultado> {
+  const quien = await fila<{ nombre: string; rol: string }>('select nombre, rol from usuarios where id = $1', [usuarioId])
+  if (!quien) return { ok: false, error: 'Esa persona ya no está.' }
+
+  const dejoRastro = await fila<{ campos: number; propuestas: number; diagnosticos: number }>(
+    `select (select count(*)::int from campo_origen where usuario_id = $1) as campos,
+            (select count(*)::int from propuestas_campo where decidida_por = $1) as propuestas,
+            (select count(*)::int from diagnosticos where usuario_id = $1) as diagnosticos`,
+    [usuarioId],
+  )
+  const cuantas = (dejoRastro?.campos ?? 0) + (dejoRastro?.propuestas ?? 0) + (dejoRastro?.diagnosticos ?? 0)
+  if (cuantas > 0) {
+    return {
+      ok: false,
+      error: `${quien.nombre} cargó o confirmó ${cuantas} ${cuantas === 1 ? 'cosa' : 'cosas'} en la aplicación. Si se borra, se pierde de dónde salió cada una. Dale de baja: le saca el acceso y deja el rastro.`,
+    }
+  }
+
+  await escribir('delete from sesiones_login where usuario_id = $1', [usuarioId], { esperadas: 'cualquiera' })
+  await escribir('delete from usuarios where id = $1', [usuarioId])
+  return { ok: true }
+}
+
+/**
+ * Borrar una consultora.
+ *
+ * Sólo si no tiene clientes ni nadie que entre con ella. Borrarla con clientes
+ * los dejaría huérfanos en silencio, y esos clientes dejarían de verse para
+ * todos menos para el admin.
+ */
+export async function borrarConsultora(consultoraId: number): Promise<Resultado> {
+  const c = await fila<{ nombre: string }>('select nombre from consultoras where id = $1', [consultoraId])
+  if (!c) return { ok: false, error: 'Esa consultora ya no está.' }
+
+  const atada = await fila<{ clientes: number; usuarios: number }>(
+    `select (select count(*)::int from clientes where consultora_id = $1) as clientes,
+            (select count(*)::int from usuarios where consultora_id = $1) as usuarios`,
+    [consultoraId],
+  )
+  if ((atada?.clientes ?? 0) > 0) {
+    return { ok: false, error: `${c.nombre} tiene ${atada!.clientes} ${atada!.clientes === 1 ? 'cliente' : 'clientes'}. Pasáselos a otra primero, o nadie los va a ver.` }
+  }
+  if ((atada?.usuarios ?? 0) > 0) {
+    return { ok: false, error: `Hay ${atada!.usuarios} ${atada!.usuarios === 1 ? 'persona que entra' : 'personas que entran'} con ${c.nombre}. Cambiales qué ven primero.` }
+  }
+
+  await escribir('delete from consultoras where id = $1', [consultoraId])
+  return { ok: true }
+}

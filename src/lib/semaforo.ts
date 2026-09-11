@@ -81,15 +81,7 @@ function semanas(n: number | null): string {
   return `${cuantas} ${cuantas === 1 ? 'semana' : 'semanas'}`
 }
 
-/** Para agrupar en el kanban: dónde está parado el cliente. */
-export function columnaDe(semaforo: Semaforo): Etapa | 'al_dia' | 'sin_datos' {
-  if (semaforo.color === 'gris') return 'sin_datos'
-  if (semaforo.etapa === null) return 'al_dia'
-  return semaforo.etapa
-}
-
-export const ETIQUETA_COLUMNA: Record<Etapa | 'al_dia' | 'sin_datos', string> = {
+export const ETIQUETA_COLUMNA: Record<Etapa | 'sin_fecha', string> = {
   ...ETIQUETA_ETAPA,
-  al_dia: 'Al día',
-  sin_datos: 'Sin datos para saberlo',
+  sin_fecha: 'Sin fecha de inicio',
 }

@@ -9,7 +9,7 @@ import { ETIQUETA_COLUMNA } from '@/lib/semaforo'
 
 export const dynamic = 'force-dynamic'
 
-const COLUMNAS = [...ETAPAS, 'al_dia', 'sin_datos'] as const
+const COLUMNAS = [...ETAPAS, 'sin_fecha'] as const
 
 export default async function Grilla({
   searchParams,
@@ -40,7 +40,7 @@ export default async function Grilla({
         <h1>La grilla</h1>
         <p className="bajada">
           {enKanban
-            ? 'Cada cliente en la etapa donde se corta. Si muchos se amontonan en la misma, suele ser el programa y no el cliente.'
+            ? 'Cada cliente en la etapa donde tendría que estar a esta altura del programa. El color dice si llegó o no; la carta, dónde se corta.'
             : 'Qué pasó con lo que vencía en cada semana. Las columnas son sólo las semanas en las que el método espera algo.'}
         </p>
       </header>
@@ -77,6 +77,16 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
               {columna in PREGUNTA_ETAPA ? (
                 <div className="pregunta">{PREGUNTA_ETAPA[columna as keyof typeof PREGUNTA_ETAPA]}</div>
               ) : null}
+              {suyos.length > 0 ? (
+                <div className="cuantos-llegaron">
+                  {(() => {
+                    const bien = suyos.filter((c) => c.semaforo.color === 'verde').length
+                    const gris = suyos.filter((c) => c.semaforo.color === 'gris').length
+                    const mal = suyos.length - bien - gris
+                    return `${bien} ${bien === 1 ? 'llegó' : 'llegaron'} · ${mal} no${gris > 0 ? ` · ${gris} sin datos` : ''}`
+                  })()}
+                </div>
+              ) : null}
             </header>
             <div className="cartas">
               {suyos.length === 0 ? <p className="apagado mini" style={{ padding: '4px 2px' }}>Ninguno.</p> : null}
@@ -88,6 +98,9 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
                     {c.consultora ? ` · ${c.consultora}` : ''}
                   </div>
                   <div className="necesita">{c.necesita}</div>
+                  {c.seCortaEn && c.seCortaEn !== c.columna ? (
+                    <div className="mini se-corta">se corta en {ETIQUETA_ETAPA[c.seCortaEn]}</div>
+                  ) : null}
                 </Link>
               ))}
             </div>

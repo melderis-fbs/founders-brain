@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { listarConsultoras } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
 import {
-  asignarClientes, cambiarAcceso, cambiarClave, cambiarConsultora, crearConsultora, crearUsuario,
+  asignarClientes, borrarConsultora, borrarUsuario, cambiarAcceso, cambiarClave, cambiarConsultora,
+  crearConsultora, crearUsuario,
   cuantosAdminsActivos, renombrarConsultora, type Resultado,
 } from '@/lib/usuarios'
 
@@ -107,5 +108,25 @@ export async function pasarClientes(
   if (!puede.ok) return puede
   const r = await asignarClientes(clienteIds, consultoraId)
   if (r.ok) { revalidatePath('/clientes'); revalidatePath('/equipo') }
+  return r
+}
+
+export async function borrarDelEquipo(usuarioId: number): Promise<Resultado> {
+  const puede = await soloAdmin()
+  if (!puede.ok) return puede
+
+  if (await esElUltimoAdmin(usuarioId)) {
+    return { ok: false, error: 'Es el único admin activo. Si lo borrás, nadie va a poder entrar a administrar.' }
+  }
+  const r = await borrarUsuario(usuarioId)
+  if (r.ok) revalidatePath('/equipo')
+  return r
+}
+
+export async function borrarUnaConsultora(consultoraId: number): Promise<Resultado> {
+  const puede = await soloAdmin()
+  if (!puede.ok) return puede
+  const r = await borrarConsultora(consultoraId)
+  if (r.ok) { revalidatePath('/equipo'); revalidatePath('/clientes') }
   return r
 }

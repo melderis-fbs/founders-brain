@@ -509,3 +509,11 @@ tr.apagado td { opacity: .6; }
 }
 .barra-asignar select { min-width: 220px; }
 td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
+
+.kanban .columna header .cuantos-llegaron {
+  font-size: 11.5px; color: var(--gris); margin-top: 4px;
+}
+.kanban .carta .se-corta { margin-top: 3px; opacity: .85; }
+
+.boton.peligro { color: #9b3434; }
+.boton.peligro:hover:not(:disabled) { border-color: #9b3434; }

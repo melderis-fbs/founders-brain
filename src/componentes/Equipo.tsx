@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { altaDeUsuario, cambiarElAcceso, moverDeConsultora, nuevaClave } from '@/app/(app)/equipo/acciones'
+import { altaDeUsuario, borrarDelEquipo, cambiarElAcceso, moverDeConsultora, nuevaClave } from '@/app/(app)/equipo/acciones'
 import type { UsuarioDelEquipo } from '@/lib/usuarios'
 
 /**
@@ -58,6 +58,14 @@ export function Equipo({
     else setError(r.error)
   }
 
+  async function borrar(u: UsuarioDelEquipo) {
+    if (!confirm(`¿Borrar a ${u.nombre}?\n\nEsto lo saca de la lista para siempre. Si ya cargó datos, no te va a dejar: en ese caso dale de baja, que le saca el acceso y deja el rastro.`)) return
+    setTocando(u.id); setError(null); setListo(null)
+    const r = await borrarDelEquipo(u.id)
+    setTocando(null)
+    if (r.ok) { setListo(`${u.nombre} ya no está.`); router.refresh() } else setError(r.error)
+  }
+
   async function elAcceso(u: UsuarioDelEquipo) {
     setTocando(u.id); setError(null); setListo(null)
     const r = await cambiarElAcceso(u.id, !u.activo)
@@ -79,7 +87,7 @@ export function Equipo({
               <th style={{ width: 200 }}>Qué ve</th>
               <th style={{ width: 90 }}>Clientes</th>
               <th style={{ width: 150 }}>Última entrada</th>
-              <th style={{ width: 260 }} />
+              <th style={{ width: 330 }} />
             </tr>
           </thead>
           <tbody>
@@ -109,6 +117,11 @@ export function Equipo({
                   </button>{' '}
                   <button type="button" className="boton suave chico" disabled={tocando === u.id} onClick={() => void elAcceso(u)}>
                     {u.activo ? 'Dar de baja' : 'Reactivar'}
+                  </button>{' '}
+                  <button type="button" className="boton suave chico peligro" disabled={tocando === u.id || u.id === yo}
+                          title={u.id === yo ? 'No te podés borrar a vos mismo' : 'Borrarlo de la lista'}
+                          onClick={() => void borrar(u)}>
+                    Borrar
                   </button>
                 </td>
               </tr>

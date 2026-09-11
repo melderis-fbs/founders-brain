@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
-import { altaDeConsultora, corregirNombreDeConsultora } from '@/app/(app)/equipo/acciones'
+import { altaDeConsultora, borrarUnaConsultora, corregirNombreDeConsultora } from '@/app/(app)/equipo/acciones'
 import type { ConsultoraDelEquipo } from '@/lib/usuarios'
 
 /**
@@ -39,6 +39,15 @@ export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[
     else setError(r.error)
   }
 
+  async function borrar(c: ConsultoraDelEquipo) {
+    if (!confirm(`¿Borrar a ${c.nombre} de las consultoras?`)) return
+    setTocando(c.id); setError(null)
+    const r = await borrarUnaConsultora(c.id)
+    setTocando(null)
+    if (r.ok) router.refresh()
+    else setError(r.error)
+  }
+
   return (
     <section style={{ marginTop: 30 }}>
       <h2>Las consultoras</h2>
@@ -55,7 +64,7 @@ export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[
               <th>Consultora</th>
               <th style={{ width: 110 }}>Clientes</th>
               <th style={{ width: 150 }}>Quién entra</th>
-              <th style={{ width: 230 }} />
+              <th style={{ width: 330 }} />
             </tr>
           </thead>
           <tbody>
@@ -79,6 +88,10 @@ export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[
                   <button type="button" className="boton suave chico" disabled={tocando === c.id}
                           onClick={() => void renombrar(c)}>
                     Corregir el nombre
+                  </button>{' '}
+                  <button type="button" className="boton suave chico peligro" disabled={tocando === c.id}
+                          onClick={() => void borrar(c)}>
+                    Borrar
                   </button>
                 </td>
               </tr>

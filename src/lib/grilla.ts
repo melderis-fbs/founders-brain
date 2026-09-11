@@ -1,7 +1,7 @@
 import { fuentesDeLaCartera, listarClientes } from './clientes'
 import type { Alcance } from './permisos'
-import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
-import { semaforoDe, columnaDe, type Semaforo } from './semaforo'
+import { dondeSeCorta, etapaQueLeTocaria, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
+import { semaforoDe, type Semaforo } from './semaforo'
 import { semanaEnLaQueVa, semanasDelPrograma } from './programa'
 import type { Etapa } from './hitos'
 
@@ -15,7 +15,10 @@ export type ClienteEnGrilla = {
   semana: number | null
   totalSemanas: number | null
   semaforo: Semaforo
-  columna: Etapa | 'al_dia' | 'sin_datos'
+  /** Dónde tendría que estar por calendario. Es la columna del tablero. */
+  columna: Etapa | 'sin_fecha'
+  /** En qué etapa se corta de verdad. null si no se corta en ninguna. */
+  seCortaEn: Etapa | null
   necesita: string
   /** Qué pasó con lo que vencía en cada semana. */
   porSemana: Record<number, EstadoHito>
@@ -55,7 +58,11 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       semana,
       totalSemanas: semanasDelPrograma(c.programaMeses),
       semaforo,
-      columna: columnaDe(semaforo),
+      // La columna es dónde TENDRÍA que estar, no dónde se corta. Agrupar por
+      // dónde se corta amontonaba 193 de 196 clientes en Definición: una
+      // columna que dice lo mismo en todas las filas no es una columna.
+      columna: (etapaQueLeTocaria(semana) ?? 'sin_fecha') as Etapa | 'sin_fecha',
+      seCortaEn: semaforo.etapa,
       necesita: queNecesita(evaluados, c.faltan),
       porSemana,
       atraso: dondeSeCorta(evaluados)?.atrasoEnSemanas ?? -1,

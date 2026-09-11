@@ -191,3 +191,25 @@ export function queNecesita(evaluados: readonly HitoEvaluado[], faltanDatos: rea
   const seSabe = evaluados.some((e) => e.estado !== 'sin_datos')
   return seSabe ? 'va en tiempo' : 'no hay datos para saber cómo va'
 }
+
+/**
+ * En qué etapa tendría que estar un cliente por calendario.
+ *
+ * La última etapa cuyo primer hito ya venció. No es dónde está: es dónde el
+ * programa dice que debería estar a esta altura. Las dos juntas son la
+ * comparación —«tendría que estar vendiendo y se corta en la oferta»—, y por
+ * separado no dicen nada.
+ *
+ * Sin fecha de inicio no hay semana, y sin semana no hay etapa que le toque.
+ * No se inventa una.
+ */
+export function etapaQueLeTocaria(semana: number | null): Etapa | null {
+  if (semana === null) return null
+
+  let laQueVa: Etapa | null = null
+  for (const etapa of ETAPAS) {
+    const arranca = Math.min(...HITOS.filter((h) => h.etapa === etapa).map((h) => h.semana))
+    if (semana >= arranca) laQueVa = etapa
+  }
+  return laQueVa
+}
