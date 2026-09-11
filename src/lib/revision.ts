@@ -1,4 +1,5 @@
 import { fila, filas, pool } from './db'
+import { sqlDe } from './migraciones'
 
 /**
  * Qué tiene que existir en la base, y qué migración lo crea.
@@ -8,7 +9,7 @@ import { fila, filas, pool } from './db'
  * aplicación conectaba bien y después reventaba contra una tabla que no
  * existía. Un chequeo que sólo mira la primera puerta no sirve.
  */
-const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string, string][] }[] = [
+export const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string, string][] }[] = [
   {
     migracion: '0001_estructura.sql',
     tablas: ['usuarios', 'sesiones_login', 'consultoras', 'clientes', 'cliente_negocio',
@@ -26,6 +27,11 @@ const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string
   { migracion: '0006_diagnosticos.sql', tablas: ['diagnosticos'], columnas: [] },
   { migracion: '0007_propuestas.sql', tablas: ['propuestas_campo'], columnas: [] },
   { migracion: '0008_cada_consultora_ve_lo_suyo.sql', tablas: [], columnas: [['usuarios', 'consultora_id']] },
+  {
+    migracion: '0009_resumen_de_documentos_e_historial.sql',
+    tablas: ['campo_historial'],
+    columnas: [['documentos', 'resumen']],
+  },
 ]
 
 /**
@@ -41,7 +47,20 @@ const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string
 
 export type Revision =
   | { ok: true }
-  | { ok: false; titulo: string; detalle: string; pasos: string[] }
+  | {
+      ok: false
+      titulo: string
+      detalle: string
+      pasos: string[]
+      /**
+       * El SQL que hay que correr, si el problema se arregla con SQL.
+       *
+       * Va en la pantalla y no en un comando: quien ve esto está en el
+       * navegador, no en una terminal. Decirle «corré npm run esquema» es
+       * mandarlo a buscar una computadora con el repo.
+       */
+      sql?: string
+    }
 
 export async function revisarBase(): Promise<Revision> {
   if (!process.env.DATABASE_URL) {
@@ -181,20 +200,14 @@ async function queMigracionFalta(): Promise<Revision | null> {
       : unaSola
         ? `Conecté bien, pero ${faltantes[0]!.cuantas === 1 ? 'falta' : 'faltan'} ${faltantes[0]!.queFalta}.`
         : `Conecté bien, pero faltan ${faltantes.map((f) => f.queFalta).join('; ')}.`,
-    pasos: desdeCero
-      ? [
-          'Corré `npm run esquema` y pegá todo lo que imprime en el SQL Editor de Supabase.',
-          'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL.',
-        ]
-      : [
-          unaSola
-            ? `Pegá supabase/migrations/${faltantes[0]!.migracion} en el SQL Editor de Supabase y ejecutalo.`
-            : `Faltan estas ${faltantes.length}, en este orden: ${faltantes.map((f) => f.migracion).join(', ')}.`,
-          `Para sacarlas todas juntas: \`npm run esquema -- --desde ${faltantes[0]!.migracion.slice(0, 4)}\`, y pegás lo que imprime en el SQL Editor de Supabase.`,
-          'Volver a correr una que ya está no rompe nada: son idempotentes.',
-          'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL, que las aplica todas en orden.',
-          `Si ya las corriste y sigue igual, corriste en otra base: ${dondeMiro} Comparalo con el proyecto de Supabase donde pegaste el SQL.`,
-        ],
+    pasos: [
+      'Copiá el SQL de acá abajo, entero.',
+      'Pegalo en el SQL Editor de Supabase, sin dejar nada seleccionado, y dale Run.',
+      'Volvé a cargar esta página. No hace falta volver a desplegar: esto es la base, no una variable.',
+      'Correr algo que ya está no rompe nada: son idempotentes. Si sale un cartel rojo, no se aplicó nada: mandámelo tal cual.',
+      `Si lo corriste y sigue igual, lo corriste en otra base: ${dondeMiro} Comparalo con el proyecto de Supabase donde lo pegaste.`,
+    ],
+    sql: sqlDe(faltantes.map((f) => f.migracion)),
   }
 }
 
