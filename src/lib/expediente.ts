@@ -29,16 +29,31 @@ export type Expediente = {
   caracteres: number
 }
 
-export async function armarExpediente(clienteId: number, alcance: Alcance): Promise<Expediente | null> {
+/**
+ * El expediente del cliente: la ficha, la comparación y los documentos.
+ *
+ * Con `soloDocumento` entra uno solo. Eso es lo que se usa para completar la
+ * ficha leyendo un documento a la vez: la cita queda atada a un documento
+ * conocido, el modelo no mezcla lo que dijo en la venta con lo que escribió en
+ * el onboarding, y cada tipo se lee con el criterio que le corresponde.
+ */
+export async function armarExpediente(
+  clienteId: number,
+  alcance: Alcance,
+  soloDocumento?: number,
+): Promise<Expediente | null> {
   const cliente = await traerCliente(clienteId, alcance)
   if (!cliente) return null
 
-  const [documentos, conDatos] = await Promise.all([documentosDe(clienteId), fuentesDeLaCartera()])
+  const [todosLosDocumentos, conDatos] = await Promise.all([documentosDe(clienteId), fuentesDeLaCartera()])
+  const documentos = soloDocumento === undefined
+    ? todosLosDocumentos
+    : todosLosDocumentos.filter((d) => d.id === soloDocumento)
   const inicio = cliente.valores.fecha_inicio as string
   const evaluados = evaluarHitos({
     semana: semanaEnLaQueVa(inicio),
     valores: cliente.valores,
-    tiposDeDocumento: new Set(documentos.map((d) => d.tipo)),
+    tiposDeDocumento: new Set(todosLosDocumentos.map((d) => d.tipo)),
     conDatos,
   })
   const semaforo = semaforoDe(evaluados)

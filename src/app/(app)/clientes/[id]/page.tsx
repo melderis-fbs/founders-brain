@@ -110,7 +110,11 @@ export default async function Ficha({
     <>
       <p className="mini"><Link href="/clientes">← Clientes</Link></p>
       {error ? <div className="aviso">{decodeURIComponent(error)}</div> : null}
-      {cargado ? <div className="aviso ok">El documento se cargó.</div> : null}
+      {cargado ? (
+        <div className="aviso ok">
+          {bloque === 'sesiones' ? 'La transcripción se cargó. Analizarla es aparte: cuesta plata.' : 'El documento se cargó.'}
+        </div>
+      ) : null}
 
       {/* ── Lo que se lee de un vistazo ─────────────────────────────────── */}
       <header className="cabecera-ficha tarjeta">
@@ -197,7 +201,7 @@ export default async function Ficha({
                 propuestas={propuestas}
                 faltan={cliente.faltan}
                 etiquetas={Object.fromEntries(CAMPOS.map((c) => [c.clave, c.etiqueta]))}
-                hayDocumentos={documentos.length > 0}
+                documentos={documentos}
               />
             ) : null}
             {pestana === 'diagnostico' ? <DiagnosticoDelCaso clienteId={cliente.id} guardado={diagnostico} /> : null}

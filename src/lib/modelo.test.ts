@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPOS_POR_CLAVE } from './campos'
+import { acotaCampos, camposInventados, camposQueBuscar, LECTURA } from './lectura-de-documentos'
 import { explicarError, partirAnalisis, partirDiagnostico, partirPropuestas, reglasDeFicha } from './modelo'
 
 describe('partir el análisis de una sesión', () => {
@@ -182,5 +183,52 @@ cita: «vos fuiste doce años gerente de finanzas en una empresa de logística»
   it('si no encontró nada, no inventa propuestas', () => {
     const { propuestas } = partirPropuestas('No hay nada en los documentos que complete estos campos.', PERMITIDAS)
     expect(propuestas).toHaveLength(0)
+  })
+})
+
+describe('cada documento se lee distinto', () => {
+  it('ningún tipo nombra un campo que no exista en la ficha', () => {
+    expect(camposInventados()).toEqual([])
+  })
+
+  it('a un contrato no se le piden los datos del negocio', () => {
+    const faltan = [CAMPOS_POR_CLAVE.get('valor_programa')!, CAMPOS_POR_CLAVE.get('cliente_ideal')!]
+    expect(camposQueBuscar('contrato', faltan).map((c) => c.clave)).toEqual(['valor_programa'])
+  })
+
+  it('a un onboarding no se le pide el valor del programa', () => {
+    const faltan = [CAMPOS_POR_CLAVE.get('valor_programa')!, CAMPOS_POR_CLAVE.get('cliente_ideal')!]
+    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toEqual(['cliente_ideal'])
+  })
+
+  it('las horas por semana no salen de una llamada de venta', () => {
+    const faltan = [CAMPOS_POR_CLAVE.get('horas_por_semana')!, CAMPOS_POR_CLAVE.get('problema')!]
+    expect(camposQueBuscar('llamada_venta', faltan).map((c) => c.clave)).toEqual(['problema'])
+    // pero del onboarding sí: ahí las declaró él
+    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toContain('horas_por_semana')
+  })
+
+  it('«notas» y «otro» no acotan, y eso no se cuenta como que pueden dar todo', () => {
+    expect(acotaCampos('notas')).toBe(false)
+    expect(acotaCampos('otro')).toBe(false)
+    expect(acotaCampos('contrato')).toBe(true)
+    expect(acotaCampos('onboarding')).toBe(true)
+  })
+
+  it('un documento sin tipo declarado no acota nada, pero sube la vara en el prompt', () => {
+    const faltan = [CAMPOS_POR_CLAVE.get('valor_programa')!, CAMPOS_POR_CLAVE.get('cliente_ideal')!]
+    expect(camposQueBuscar('otro', faltan)).toHaveLength(2)
+    expect(reglasDeFicha(faltan, LECTURA.otro)).toContain('sólo lo que esté dicho con todas las letras')
+  })
+
+  it('el prompt le dice qué está leyendo y con qué se confunde ese tipo', () => {
+    const reglas = reglasDeFicha([CAMPOS_POR_CLAVE.get('valor_programa')!], LECTURA.contrato)
+    expect(reglas).toContain('QUÉ DOCUMENTO ESTÁS LEYENDO')
+    expect(reglas).toContain('lo que el cliente le paga a FOUNDERS')
+  })
+
+  it('sin documento elegido el prompt no inventa un tipo', () => {
+    const reglas = reglasDeFicha([CAMPOS_POR_CLAVE.get('oferta')!])
+    expect(reglas).not.toContain('QUÉ DOCUMENTO ESTÁS LEYENDO')
   })
 })

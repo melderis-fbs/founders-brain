@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Campo } from './campos'
+import type { LecturaDeTipo } from './lectura-de-documentos'
 import { escribirDevolviendo } from './db'
 
 /**
@@ -354,7 +355,7 @@ export function partirDiagnostico(texto: string): Diagnostico {
  * así no puede proponer nada sobre un campo que ya tiene valor. La regla 9 no
  * queda confiada a que el modelo se porte bien: no le damos la oportunidad.
  */
-export function reglasDeFicha(camposQueFaltan: readonly Campo[]): string {
+export function reglasDeFicha(camposQueFaltan: readonly Campo[], documento?: LecturaDeTipo): string {
   const lista = camposQueFaltan
     .map((c) => `- ${c.clave} — ${c.etiqueta}${c.ayuda ? ` (${c.ayuda})` : ''} → ${comoSeEscribe(c)}`)
     .join('\n')
@@ -363,7 +364,15 @@ export function reglasDeFicha(camposQueFaltan: readonly Campo[]): string {
 
 AHORA ESTÁS COMPLETANDO UNA FICHA A PARTIR DE LOS DOCUMENTOS
 
-Te dan el expediente de un cliente. Buscá en los DOCUMENTOS los datos que faltan y proponelos.
+Te dan el expediente de un cliente. Buscá en los DOCUMENTOS los datos que faltan y proponelos.${documento ? `
+
+QUÉ DOCUMENTO ESTÁS LEYENDO
+
+${documento.queEs}
+
+CUIDADO CON ESTO, QUE ES LO QUE SE CONFUNDE EN ESTE TIPO DE DOCUMENTO
+
+${documento.cuidado}` : ''}
 
 LOS ÚNICOS CAMPOS QUE PODÉS PROPONER SON ESTOS:
 
@@ -412,13 +421,14 @@ export async function* extraerFichaEnVivo(
   expediente: string,
   camposQueFaltan: readonly Campo[],
   registro: Registro,
+  documento?: LecturaDeTipo,
 ): AsyncGenerator<string, void, unknown> {
   const arranque = Date.now()
 
   const stream = anthropic().messages.stream({
     model: MODELO,
     max_tokens: 4000,
-    system: [{ type: 'text', text: reglasDeFicha(camposQueFaltan) }],
+    system: [{ type: 'text', text: reglasDeFicha(camposQueFaltan, documento) }],
     messages: [{
       role: 'user',
       content: [

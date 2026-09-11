@@ -370,3 +370,19 @@ textarea.edicion { min-height: 90px; }
 }
 .siguiente a { color: var(--tinta); font-weight: 600; }
 .propuesta .decidir .boton { padding: 6px 14px; font-size: 13px; }
+
+.subir-transcripcion {
+  margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--borde);
+}
+.subir-transcripcion label { display: block; font-size: 13px; color: var(--gris); margin-bottom: 7px; }
+.subir-transcripcion div { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.subir-transcripcion .mini { display: block; margin-top: 7px; }
+
+.para-leer { display: flex; flex-direction: column; gap: 10px; }
+.documento-a-leer {
+  display: flex; gap: 16px; align-items: center; justify-content: space-between;
+  background: var(--papel); border: 1px solid var(--borde); border-radius: 10px; padding: 13px 15px;
+}
+.documento-a-leer .que { min-width: 0; }
+.documento-a-leer .valor { font-size: 14px; font-weight: 600; margin-top: 3px; }
+.documento-a-leer .boton { flex: none; }

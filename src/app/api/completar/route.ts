@@ -2,6 +2,9 @@ import { type NextRequest } from 'next/server'
 import { quienMira } from '@/lib/quien-mira'
 import { traerCliente } from '@/lib/clientes'
 import { armarExpediente } from '@/lib/expediente'
+import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
+import { documentosDe } from '@/lib/clientes'
+import { camposQueBuscar, LECTURA } from '@/lib/lectura-de-documentos'
 import { explicarError, extraerFichaEnVivo, hayModelo, partirPropuestas } from '@/lib/modelo'
 import { guardarPropuestas } from '@/lib/propuestas'
 
@@ -23,7 +26,7 @@ export async function POST(pedido: NextRequest) {
     return new Response('Falta la clave de Anthropic (ANTHROPIC_API_KEY). Sin eso no se puede completar la ficha.', { status: 503 })
   }
 
-  let cuerpo: { clienteId?: number }
+  let cuerpo: { clienteId?: number; documentoId?: number }
   try { cuerpo = await pedido.json() } catch { return new Response('No se entendió el pedido.', { status: 400 }) }
 
   const clienteId = Number(cuerpo.clienteId)
@@ -35,16 +38,47 @@ export async function POST(pedido: NextRequest) {
     return new Response('A este cliente no le falta ningún dato: no hay nada que completar.', { status: 400 })
   }
 
-  const expediente = await armarExpediente(clienteId, quien.alcance)
-  if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })
-  if (expediente.incluidos.length === 0) {
+  // Se lee un documento a la vez. Cada tipo se lee distinto —un contrato no
+  // dice lo mismo que una llamada de venta, y sobre todo no lo dice con la
+  // misma confianza—, así que primero hay que saber cuál es.
+  const documentoId = cuerpo.documentoId === undefined ? undefined : Number(cuerpo.documentoId)
+  const documentos = await documentosDe(clienteId)
+  if (documentos.length === 0) {
     return new Response(
       'Este cliente no tiene documentos cargados. Primero entran los documentos —pegados o subidos— y después esto propone la ficha.',
       { status: 400 },
     )
   }
 
-  const permitidas = new Set(cliente.faltan.map((c) => c.clave))
+  const elegido = documentoId === undefined ? null : documentos.find((d) => d.id === documentoId) ?? null
+  if (documentoId !== undefined && !elegido) {
+    return new Response('Ese documento no es de este cliente.', { status: 404 })
+  }
+
+  const tipo = (elegido?.tipo ?? 'otro') as TipoDocumento
+  const lectura = elegido ? LECTURA[tipo] ?? LECTURA.otro : undefined
+
+  // De lo que falta, sólo lo que este documento puede tener. Pedirle el valor
+  // del programa a un onboarding es pedirle algo que no tiene: lo va a buscar
+  // igual y, si se esfuerza, lo encuentra donde no está.
+  const aBuscar = elegido ? camposQueBuscar(tipo, cliente.faltan) : [...cliente.faltan]
+  if (aBuscar.length === 0) {
+    return new Response(
+      `De ${ETIQUETA_DOCUMENTO[tipo] ?? tipo} sale otra clase de datos, y los que puede dar ya están cargados. Probá con otro documento.`,
+      { status: 400 },
+    )
+  }
+
+  const expediente = await armarExpediente(clienteId, quien.alcance, documentoId)
+  if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })
+  if (expediente.incluidos.length === 0) {
+    return new Response(
+      elegido ? 'De ese documento no se pudo leer texto.' : 'Este cliente no tiene documentos cargados.',
+      { status: 400 },
+    )
+  }
+
+  const permitidas = new Set(aBuscar.map((c) => c.clave))
   const codificador = new TextEncoder()
 
   const flujo = new ReadableStream<Uint8Array>({
@@ -57,16 +91,20 @@ export async function POST(pedido: NextRequest) {
 
       let completo = ''
       try {
-        escribir(`Leyendo ${expediente.incluidos.length} documento(s), buscando ${cliente.faltan.length} datos que faltan…\n\n`)
-        for await (const pedazo of extraerFichaEnVivo(expediente.texto, cliente.faltan, {
+        escribir(
+          elegido
+            ? `Leyendo ${ETIQUETA_DOCUMENTO[tipo] ?? tipo} «${elegido.titulo}», buscando los ${aBuscar.length} datos que este documento puede dar…\n\n`
+            : `Leyendo ${expediente.incluidos.length} documento(s), buscando ${aBuscar.length} datos que faltan…\n\n`,
+        )
+        for await (const pedazo of extraerFichaEnVivo(expediente.texto, aBuscar, {
           clienteId, usuarioId: usuario.id, para: 'ficha', pregunta: null,
-        })) {
+        }, lectura)) {
           completo += pedazo
           escribir(pedazo)
         }
 
         const { propuestas, descartadas } = partirPropuestas(completo, permitidas)
-        const guardado = await guardarPropuestas({ clienteId, crudas: propuestas })
+        const guardado = await guardarPropuestas({ clienteId, crudas: propuestas, documentoId: elegido?.id ?? null })
 
         const sobraron = [...descartadas, ...guardado.descartadas]
         escribir('\n\n---\n')

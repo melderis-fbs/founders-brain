@@ -17,12 +17,16 @@ export type Propuesta = {
   valor: string
   cita: string | null
   creada_en: string
+  /** De qué documento salió, para poder decirlo al lado de la cita. */
+  documento: string | null
 }
 
 export async function pendientesDe(clienteId: number): Promise<Propuesta[]> {
   return filas<Propuesta>(
-    `select id, campo, valor, cita, creada_en from propuestas_campo
-      where cliente_id = $1 and estado = 'pendiente' order by id`,
+    `select p.id, p.campo, p.valor, p.cita, p.creada_en, d.titulo as documento
+       from propuestas_campo p
+       left join documentos d on d.id = p.documento_id
+      where p.cliente_id = $1 and p.estado = 'pendiente' order by p.id`,
     [clienteId],
   )
 }
@@ -37,6 +41,8 @@ export async function pendientesDe(clienteId: number): Promise<Propuesta[]> {
 export async function guardarPropuestas(datos: {
   clienteId: number
   crudas: readonly PropuestaCruda[]
+  /** De qué documento salieron, cuando se leyó uno solo. */
+  documentoId?: number | null
 }): Promise<{ guardadas: number; descartadas: string[] }> {
   const descartadas: string[] = []
   let guardadas = 0
@@ -56,12 +62,13 @@ export async function guardarPropuestas(datos: {
     }
 
     await escribirDevolviendo(
-      `insert into propuestas_campo (cliente_id, campo, valor, cita)
-       values ($1, $2, $3, $4)
+      `insert into propuestas_campo (cliente_id, campo, valor, cita, documento_id)
+       values ($1, $2, $3, $4, $5)
        on conflict (cliente_id, campo) where estado = 'pendiente'
-       do update set valor = excluded.valor, cita = excluded.cita, creada_en = now()
+       do update set valor = excluded.valor, cita = excluded.cita,
+                     documento_id = excluded.documento_id, creada_en = now()
        returning id`,
-      [datos.clienteId, cruda.campo, cruda.valor, cruda.cita],
+      [datos.clienteId, cruda.campo, cruda.valor, cruda.cita, datos.documentoId ?? null],
     )
     guardadas++
   }
@@ -80,7 +87,7 @@ export type Decision = { ok: true } | { ok: false; error: string }
  */
 export async function aceptar(propuestaId: number, clienteId: number, usuarioId: number): Promise<Decision> {
   const p = await fila<Propuesta>(
-    `select id, campo, valor, cita, creada_en from propuestas_campo
+    `select id, campo, valor, cita, creada_en, null as documento from propuestas_campo
       where id = $1 and cliente_id = $2 and estado = 'pendiente'`,
     [propuestaId, clienteId],
   )

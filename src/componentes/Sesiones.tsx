@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
 import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, type SesionEnLista } from '@/lib/sesiones-tipos'
 
+const EXTENSIONES = '.txt,.md,.vtt,.srt,.json,.log,.pdf,.docx'
+
 /**
  * Las sesiones: una fila cada una, y se abre la que interesa.
  *
@@ -208,6 +210,23 @@ function Detalle({ clienteId, sesionId }: { clienteId: number; sesionId: number 
             <button type="button" className="boton" onClick={() => void guardar()}>Guardar</button>{' '}
             {hayTranscripcion ? <button type="button" className="boton suave" onClick={() => { setEditando(false); setTexto(sesion?.transcripcion ?? '') }}>Cancelar</button> : null}
           </p>
+
+          {/* Una transcripción de Zoom baja como archivo y son cincuenta mil
+              caracteres: pegarlos a mano es un trámite. Va por el endpoint
+              porque una acción de servidor se traba en 1 MB. */}
+          <form action="/api/sesiones/transcripcion" method="post" encType="multipart/form-data"
+                className="subir-transcripcion">
+            <input type="hidden" name="cliente_id" value={clienteId} />
+            <input type="hidden" name="sesion_id" value={sesionId} />
+            <label htmlFor={`archivo-${sesionId}`}>…o subí el archivo de la transcripción</label>
+            <div>
+              <input id={`archivo-${sesionId}`} name="archivo" type="file" accept={EXTENSIONES} required />
+              <button className="boton suave" type="submit">Subir</button>
+            </div>
+            <span className="mini">
+              Lo que baja de Zoom o Meet (.vtt, .txt, .docx, PDF). Reemplaza lo que haya cargado; analizar sigue siendo aparte.
+            </span>
+          </form>
         </>
       ) : (
         <>
