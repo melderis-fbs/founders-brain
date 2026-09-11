@@ -170,7 +170,8 @@ async function queMigracionFalta(): Promise<Revision | null> {
       : [
           unaSola
             ? `Pegá supabase/migrations/${faltantes[0]!.migracion} en el SQL Editor de Supabase y ejecutalo.`
-            : `Corré estas ${faltantes.length}, en este orden, en el SQL Editor de Supabase: ${faltantes.map((f) => f.migracion).join(', ')}.`,
+            : `Faltan estas ${faltantes.length}, en este orden: ${faltantes.map((f) => f.migracion).join(', ')}.`,
+          `Para sacarlas todas juntas: \`npm run esquema -- --desde ${faltantes[0]!.migracion.slice(0, 4)}\`, y pegás lo que imprime en el SQL Editor de Supabase.`,
           'Volver a correr una que ya está no rompe nada: son idempotentes.',
           'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL, que las aplica todas en orden.',
         ],
