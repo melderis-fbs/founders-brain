@@ -60,6 +60,83 @@ export async function anotarOrigen(
   )
 }
 
+
+export type Cambio = { campo: string; anterior: unknown; nuevo: unknown }
+
+/**
+ * Guardar qué decía antes cada dato que cambió.
+ *
+ * `campo_origen` dice de dónde salió el valor de HOY. Esto dice qué decía
+ * ayer. Sin el historial no se puede ver que el cliente ideal cambió tres
+ * veces en dos meses, y eso —que la definición no se sostiene— es más
+ * importante que cualquiera de las tres versiones por separado.
+ *
+ * Sólo entra lo que efectivamente cambió: una importación que reescribe el
+ * mismo valor no es un cambio y no ensucia el historial.
+ */
+export async function anotarCambios(
+  cambios: readonly Cambio[],
+  datos: { clienteId: number; origen: Origen; usuarioId?: number | null; cita?: string | null },
+  cliente?: PoolClient,
+): Promise<void> {
+  const reales = cambios.filter((c) => textoDe(c.anterior) !== textoDe(c.nuevo))
+  if (reales.length === 0) return
+
+  await escribir(
+    `insert into campo_historial (cliente_id, campo, valor_anterior, valor_nuevo, origen, usuario_id, cita)
+     select $1, x.campo, x.anterior, x.nuevo, $2, $3, $4
+       from jsonb_to_recordset($5::jsonb) as x(campo text, anterior text, nuevo text)`,
+    [
+      datos.clienteId, datos.origen, datos.usuarioId ?? null, datos.cita ?? null,
+      JSON.stringify(reales.map((c) => ({ campo: c.campo, anterior: textoDe(c.anterior), nuevo: textoDe(c.nuevo) }))),
+    ],
+    { esperadas: reales.length, cliente },
+  )
+}
+
+export type EnElHistorial = {
+  campo: string
+  valor_anterior: string | null
+  valor_nuevo: string | null
+  origen: Origen
+  cita: string | null
+  creado_en: string
+}
+
+/** Todo lo que cambió en esta ficha, de lo más nuevo a lo más viejo. */
+export async function historialDe(clienteId: number, campo?: string): Promise<EnElHistorial[]> {
+  return campo
+    ? filas<EnElHistorial>(
+        `select campo, valor_anterior, valor_nuevo, origen, cita, creado_en from campo_historial
+          where cliente_id = $1 and campo = $2 order by creado_en desc`, [clienteId, campo])
+    : filas<EnElHistorial>(
+        `select campo, valor_anterior, valor_nuevo, origen, cita, creado_en from campo_historial
+          where cliente_id = $1 order by creado_en desc`, [clienteId])
+}
+
+/**
+ * Cuántas veces cambió cada campo, para poder mirar lo que no se sostiene.
+ *
+ * Un campo que cambió cuatro veces no está «mal cargado»: está diciendo que
+ * esa definición todavía no cerró.
+ */
+export async function loQueNoSeSostiene(clienteId: number, desdeCambios = 2): Promise<{ campo: string; veces: number; ultimo: string }[]> {
+  return filas<{ campo: string; veces: number; ultimo: string }>(
+    `select campo, count(*)::int as veces, max(creado_en)::text as ultimo
+       from campo_historial
+      where cliente_id = $1 and valor_anterior is not null
+      group by campo having count(*) >= $2
+      order by count(*) desc, max(creado_en) desc`,
+    [clienteId, desdeCambios],
+  )
+}
+
+function textoDe(v: unknown): string | null {
+  if (v === null || v === undefined) return null
+  const t = String(v)
+  return t.trim() === '' ? null : t
+}
+
 export type OrigenDeCampo = { origen: Origen; cita: string | null; actualizado_en: string }
 
 export async function origenesDe(clienteId: number): Promise<Map<string, OrigenDeCampo>> {
@@ -101,6 +178,10 @@ export async function guardarUnCampo(datos: {
   if (campo.clave === 'consultora') return guardarConsultora(datos.clienteId, valor, datos.usuarioId)
 
   try {
+    // Se lee lo que había antes de pisarlo: si no, el historial se pierde en el
+    // mismo momento en que se produce.
+    const antes = await valorGuardado(datos.clienteId, campo)
+
     if (campo.tabla === 'clientes') {
       await escribir(
         `update clientes set ${campo.columna} = $2, actualizado_en = now() where id = $1`,
@@ -114,6 +195,8 @@ export async function guardarUnCampo(datos: {
       )
     }
     await anotarOrigen([campo.clave], { clienteId: datos.clienteId, origen: 'persona', usuarioId: datos.usuarioId })
+    await anotarCambios([{ campo: campo.clave, anterior: antes, nuevo: valor }],
+                        { clienteId: datos.clienteId, origen: 'persona', usuarioId: datos.usuarioId })
     return { ok: true }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
@@ -247,4 +330,14 @@ export async function crearCliente(datos: {
 
   await anotarOrigen(puestos, { clienteId: creado.id, origen: 'persona', usuarioId: datos.usuarioId })
   return { ok: true, clienteId: creado.id }
+}
+
+/** Lo que hay guardado hoy en un campo, para poder comparar antes de pisarlo. */
+export async function valorGuardado(clienteId: number, campo: Campo): Promise<unknown> {
+  const r = await fila<Record<string, unknown>>(
+    `select ${campo.columna} as valor from ${campo.tabla}
+      where ${campo.tabla === 'clientes' ? 'id' : 'cliente_id'} = $1`,
+    [clienteId],
+  )
+  return r?.valor ?? null
 }

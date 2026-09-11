@@ -127,3 +127,29 @@ export async function hayAlgunaSesionEnLaCartera(): Promise<boolean> {
   const r = await fila<{ hay: boolean }>('select exists(select 1 from sesiones) as hay')
   return r?.hay ?? false
 }
+
+export type SesionConAnalisis = {
+  numero: number | null
+  fecha: string | null
+  estado: string
+  que_paso: string | null
+  puntos: string[] | null
+  compromisos: string[] | null
+}
+
+/**
+ * Las sesiones con lo que salió de cada una, sin la transcripción.
+ *
+ * Para el expediente: lo que importa de una sesión es qué se decidió y a qué
+ * se comprometió, no los cuarenta mil caracteres de cómo se dijo. Eso ya se
+ * analizó una vez y quedó guardado; volver a mandarlo entero sería pagar dos
+ * veces por lo mismo.
+ */
+export async function sesionesConAnalisis(clienteId: number): Promise<SesionConAnalisis[]> {
+  return filas<SesionConAnalisis>(
+    `select numero, fecha::text as fecha, estado, que_paso, puntos, compromisos
+       from sesiones where cliente_id = $1
+      order by fecha asc nulls last, numero asc nulls last, id asc`,
+    [clienteId],
+  )
+}

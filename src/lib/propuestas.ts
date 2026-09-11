@@ -1,5 +1,5 @@
 import { CAMPOS_POR_CLAVE, type Campo } from './campos'
-import { anotarOrigen, leerCampo } from './campos-escritura'
+import { anotarCambios, anotarOrigen, leerCampo, valorGuardado } from './campos-escritura'
 import { escribir, escribirDevolviendo, fila, filas } from './db'
 import type { PropuestaCruda } from './modelo'
 
@@ -104,6 +104,8 @@ export async function aceptar(propuestaId: number, clienteId: number, usuarioId:
   const lectura = leerCampo(campo, p.valor)
   if (lectura.estado !== 'ok') return { ok: false, error: `«${p.valor}» no es un valor válido para ${campo.etiqueta}.` }
 
+  const antes = await valorGuardado(clienteId, campo)
+
   if (campo.tabla === 'clientes') {
     await escribir(`update clientes set ${campo.columna} = $2, actualizado_en = now() where id = $1`, [clienteId, lectura.valor])
   } else {
@@ -116,6 +118,8 @@ export async function aceptar(propuestaId: number, clienteId: number, usuarioId:
 
   // La cita queda pegada al dato: de acá en adelante se puede ver de dónde salió.
   await anotarOrigen([campo.clave], { clienteId, origen: 'documento', usuarioId, cita: p.cita })
+  await anotarCambios([{ campo: campo.clave, anterior: antes, nuevo: lectura.valor }],
+                      { clienteId, origen: 'documento', usuarioId, cita: p.cita })
   await marcar(propuestaId, 'aceptada', usuarioId)
   return { ok: true }
 }

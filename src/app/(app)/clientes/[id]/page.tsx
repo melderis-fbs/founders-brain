@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
+import { Fases } from '@/componentes/Fases'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
 import { leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
@@ -26,6 +27,7 @@ export const dynamic = 'force-dynamic'
 /** Las pestañas. Cada una es un bloque, no veinte tarjetas apiladas. */
 const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
+  { clave: 'fases', texto: 'Fases' },
   { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
   { clave: 'negocio', texto: 'Su negocio' },
@@ -193,6 +195,8 @@ export default async function Ficha({
               </>
             ) : null}
 
+            {pestana === 'fases' ? <Fases evaluados={evaluados} /> : null}
+
             {pestana === 'negocio' || pestana === 'autoridad' || pestana === 'intentos' ? (
               <>
                 {POR_QUE_EL_GRUPO[pestana] ? <p className="mini" style={{ marginTop: 0 }}>{POR_QUE_EL_GRUPO[pestana]}</p> : null}
@@ -235,7 +239,11 @@ export default async function Ficha({
                 Completar desde los documentos{propuestas.length > 0 ? ` · ${propuestas.length}` : ''}
               </Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=diagnostico`}>Diagnóstico del caso</Link>
+              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=fases`}>Revisar el caso</Link>
               <span className="boton suave apagada" title="Todavía no está">Preparar la próxima sesión</span>
+              <span className="boton suave apagada" title="Todavía no está">Cerrar la sesión</span>
+              <span className="boton suave apagada" title="Todavía no está">Cargar la semana</span>
+              <span className="boton suave apagada" title="Todavía no está">Test de coherencia</span>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import Papa from 'papaparse'
 import type { PoolClient } from 'pg'
 import { CAMPOS, CAMPOS_POR_CLAVE, ETIQUETA_DOCUMENTO, type Campo, type TipoDocumento } from '../campos'
-import { ALIAS_TABLA, anotarOrigen, camposEscritosPorPersonas, leerCampo } from '../campos-escritura'
+import { ALIAS_TABLA, anotarCambios, anotarOrigen, camposEscritosPorPersonas, leerCampo } from '../campos-escritura'
 import { conPuntoDeRetorno, enTransaccion, escribir, escribirDevolviendo, filas } from '../db'
 import { clave as claveDeNombre, plegado } from '../texto'
 import { leerTexto, leerTextoLargo } from '../valores'
@@ -453,6 +453,15 @@ async function procesarUnaFila(
   if (cambiaNombre) clavesEscritas.push('nombre')
   if (cambiaConsultora) clavesEscritas.push('consultora')
   await anotarOrigen(clavesEscritas, { clienteId, origen: 'planilla' }, cli)
+
+  // Y qué decía antes cada uno. Una reimportación que corrige un dato deja
+  // rastro de las dos versiones: sin eso, «se corrigió» y «siempre dijo esto»
+  // se ven iguales.
+  await anotarCambios(
+    cambios.map(([clave, valor]) => ({ campo: clave, anterior: existente?.[clave] ?? null, nuevo: valor })),
+    { clienteId, origen: 'planilla' },
+    cli,
+  )
 
   // ── 5 · Los textos que la planilla trae en columnas ────────────────────────
   let cambiaAlgunDocumento = false

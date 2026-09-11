@@ -382,7 +382,15 @@ Cualquier otro campo ya tiene valor cargado. No lo toques, no lo menciones, no l
 
 CÓMO DEVOLVÉS
 
-Un bloque por campo que encontraste, exactamente así, sin nada antes ni después:
+Primero un resumen del documento, así:
+
+### resumen
+Tres a cinco renglones: qué es este documento, qué dice de este cliente que sirva para
+entender su caso, y qué quedó sin contestar. Sin adjetivos y sin conclusiones tuyas: lo
+que el documento dice. Esto se guarda y se vuelve a leer cada vez que alguien mira este
+cliente, así que tiene que servirle a alguien que no leyó el documento.
+
+Y después un bloque por campo que encontraste, exactamente así:
 
 ### clave_del_campo
 valor: el dato, solo, sin explicación
@@ -394,7 +402,7 @@ REGLAS QUE NO TIENEN EXCEPCIÓN
 2. Lo que no está en el documento, no está. Nada de deducir, estimar, redondear ni completar con lo que suele pasar. Si el documento dice «factura más o menos dos palos», no propongas 2000000: no lo dice.
 3. La cita se copia literal del documento, no se parafrasea. Si la tenés que arreglar para que se entienda, no la uses.
 3 bis. El valor tiene que estar sostenido POR ESA CITA, no por otro pedazo del documento. Si para justificarlo necesitás una segunda frase, entonces o ponés las dos frases en la cita, o dejás en el valor solamente lo que dice la primera. Un valor que dice más que su cita es un dato inventado con apariencia de citado.
-4. Si no encontrás ningún dato, devolvé una sola línea: «No hay nada en los documentos que complete estos campos.»
+4. Si no encontrás ningún dato para completar, el resumen va igual: el resumen es de lo que el documento dice, no de lo que llenó.
 5. El valor va en la forma que pide la flecha de cada campo. Si es un número, va el número solo: «6», no «6 años» ni «seis». La explicación queda en la cita, que es donde tiene que estar.
 6. Si el documento contradice lo que ya está cargado —otro rubro, otros números—, proponé igual lo que dice el documento y avisá al final, en una línea: «Ojo: el documento habla de X y la ficha dice Y». No te guardes las propuestas por eso. La que decide es la consultora: si no proponés nada, le sacás la decisión y encima no se entera de la contradicción.
 7. Mejor proponer tres datos sólidos que doce dudosos: cada uno va a ser confirmado por una persona, y una propuesta floja le hace perder tiempo.`
@@ -452,6 +460,25 @@ export async function* extraerFichaEnVivo(
 }
 
 export type PropuestaCruda = { campo: string; valor: string; cita: string | null }
+
+/**
+ * El resumen del documento, que se guarda para no volver a leerlo.
+ *
+ * Leer un documento cuesta plata. Leerlo otra vez para el diagnóstico, y otra
+ * para preparar la sesión, cuesta tres veces lo mismo por la misma
+ * información. El resumen se hace una vez y de ahí en adelante es lo que
+ * viaja.
+ */
+export function sacarResumen(texto: string): string | null {
+  const bloques = texto.split(/^#{1,4}\s+/m).slice(1)
+  for (const bloque of bloques) {
+    const renglones = bloque.split('\n')
+    if ((renglones[0] ?? '').trim().toLowerCase() !== 'resumen') continue
+    const cuerpo = renglones.slice(1).join('\n').trim()
+    return cuerpo === '' ? null : cuerpo
+  }
+  return null
+}
 
 /**
  * Partir lo que devolvió, y tirar lo que no sirve.

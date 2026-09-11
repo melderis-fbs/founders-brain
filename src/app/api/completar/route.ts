@@ -5,7 +5,8 @@ import { armarExpediente } from '@/lib/expediente'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
 import { documentosDe } from '@/lib/clientes'
 import { camposQueBuscar, LECTURA } from '@/lib/lectura-de-documentos'
-import { explicarError, extraerFichaEnVivo, hayModelo, partirPropuestas } from '@/lib/modelo'
+import { guardarResumen } from '@/lib/documentos'
+import { explicarError, extraerFichaEnVivo, hayModelo, MODELO, partirPropuestas, sacarResumen } from '@/lib/modelo'
 import { guardarPropuestas } from '@/lib/propuestas'
 
 /**
@@ -103,11 +104,19 @@ export async function POST(pedido: NextRequest) {
           escribir(pedazo)
         }
 
+        // El resumen se guarda aunque no haya salido ninguna propuesta: es lo
+        // que evita volver a leer este documento la próxima vez.
+        const resumen = sacarResumen(completo)
+        if (elegido && resumen) {
+          await guardarResumen({ documentoId: elegido.id, clienteId, resumen, modelo: MODELO })
+        }
+
         const { propuestas, descartadas } = partirPropuestas(completo, permitidas)
         const guardado = await guardarPropuestas({ clienteId, crudas: propuestas, documentoId: elegido?.id ?? null })
 
         const sobraron = [...descartadas, ...guardado.descartadas]
         escribir('\n\n---\n')
+        if (resumen && elegido) escribir('\nEl resumen de este documento quedó guardado: el diagnóstico lo va a usar sin volver a leerlo.')
         escribir(
           guardado.guardadas > 0
             ? `${guardado.guardadas} dato(s) para confirmar. Están más abajo, de a uno: el que confirmás entra a la ficha con la frase de donde salió.`
