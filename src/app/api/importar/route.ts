@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { usuarioActual } from '@/lib/auth'
+import { quienMira } from '@/lib/quien-mira'
 import { importarCsv } from '@/lib/importar/importar'
 
 /**
@@ -25,10 +25,18 @@ function irA(ruta: string) {
 }
 
 export async function POST(pedido: NextRequest) {
-  const usuario = await usuarioActual()
+  const quien = await quienMira()
+  const usuario = quien?.usuario ?? null
   if (!usuario) return irA('/login')
 
   const volverConError = (mensaje: string) => irA(`/importar?error=${encodeURIComponent(mensaje)}`)
+
+  // La planilla madre reparte clientes entre consultoras: eso lo hace quien
+  // administra. Una consultora que suba una planilla estaría decidiendo la
+  // cartera de las otras seis.
+  if (usuario.rol !== 'admin') {
+    return volverConError('La planilla la carga quien administra. Vos podés dar de alta un cliente tuyo desde la lista.')
+  }
 
   let archivo: File | null = null
   try {

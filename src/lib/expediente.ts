@@ -1,5 +1,6 @@
 import { CAMPOS, ETIQUETA_DOCUMENTO, ETIQUETA_GRUPO, type Grupo, type TipoDocumento } from './campos'
 import { documentosDe, fuentesDeLaCartera, traerCliente } from './clientes'
+import type { Alcance } from './permisos'
 import { filas } from './db'
 import { evaluarHitos } from './hitos'
 import { semanaEnLaQueVa, textoDeSemana } from './programa'
@@ -28,8 +29,8 @@ export type Expediente = {
   caracteres: number
 }
 
-export async function armarExpediente(clienteId: number): Promise<Expediente | null> {
-  const cliente = await traerCliente(clienteId)
+export async function armarExpediente(clienteId: number, alcance: Alcance): Promise<Expediente | null> {
+  const cliente = await traerCliente(clienteId, alcance)
   if (!cliente) return null
 
   const [documentos, conDatos] = await Promise.all([documentosDe(clienteId), fuentesDeLaCartera()])

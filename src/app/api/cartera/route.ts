@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { usuarioActual } from '@/lib/auth'
+import { quienMira } from '@/lib/quien-mira'
 import { exportarClientes } from '@/lib/clientes'
 import { csvDeCartera } from '@/lib/importar/plantilla'
 
@@ -12,9 +12,12 @@ import { csvDeCartera } from '@/lib/importar/plantilla'
 export const runtime = 'nodejs'
 
 export async function GET() {
-  if (!(await usuarioActual())) return new NextResponse('Hay que entrar primero.', { status: 401 })
+  // La planilla que se baja tiene que traer lo mismo que se ve en la pantalla:
+  // una consultora baja los suyos, el admin baja la cartera entera.
+  const quien = await quienMira()
+  if (!quien) return new NextResponse('Hay que entrar primero.', { status: 401 })
 
-  const clientes = await exportarClientes()
+  const clientes = await exportarClientes(quien.alcance)
   const fecha = new Date().toISOString().slice(0, 10)
   return new NextResponse('﻿' + csvDeCartera(clientes), {
     headers: {

@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { usuarioActual } from '@/lib/auth'
+import { quienMira } from '@/lib/quien-mira'
 import { armarExpediente } from '@/lib/expediente'
 import { explicarError, hayModelo, preguntarEnVivo, type Turno } from '@/lib/modelo'
 
@@ -13,8 +13,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(pedido: NextRequest) {
-  const usuario = await usuarioActual()
-  if (!usuario) return new Response('Hay que entrar primero.', { status: 401 })
+  const quien = await quienMira()
+  if (!quien) return new Response('Hay que entrar primero.', { status: 401 })
+  const usuario = quien.usuario
 
   if (!hayModelo()) {
     return new Response(
@@ -36,7 +37,7 @@ export async function POST(pedido: NextRequest) {
     return new Response('Falta el cliente o la pregunta.', { status: 400 })
   }
 
-  const expediente = await armarExpediente(clienteId)
+  const expediente = await armarExpediente(clienteId, quien.alcance)
   if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })
 
   const ultima = turnos[turnos.length - 1]

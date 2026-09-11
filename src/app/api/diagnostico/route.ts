@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { usuarioActual } from '@/lib/auth'
+import { quienMira } from '@/lib/quien-mira'
 import { guardarDiagnostico } from '@/lib/diagnosticos'
 import { armarExpediente } from '@/lib/expediente'
 import { diagnosticarEnVivo, explicarError, hayModelo, partirDiagnostico } from '@/lib/modelo'
@@ -9,8 +9,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(pedido: NextRequest) {
-  const usuario = await usuarioActual()
-  if (!usuario) return new Response('Hay que entrar primero.', { status: 401 })
+  const quien = await quienMira()
+  if (!quien) return new Response('Hay que entrar primero.', { status: 401 })
+  const usuario = quien.usuario
   if (!hayModelo()) {
     return new Response('Falta la clave de Anthropic (ANTHROPIC_API_KEY). Sin eso no se puede diagnosticar.', { status: 503 })
   }
@@ -21,7 +22,7 @@ export async function POST(pedido: NextRequest) {
   const clienteId = Number(cuerpo.clienteId)
   if (!Number.isInteger(clienteId)) return new Response('Falta el cliente.', { status: 400 })
 
-  const expediente = await armarExpediente(clienteId)
+  const expediente = await armarExpediente(clienteId, quien.alcance)
   if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })
 
   const codificador = new TextEncoder()

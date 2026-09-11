@@ -1,4 +1,5 @@
 import { fuentesDeLaCartera, listarClientes } from './clientes'
+import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
 import { semaforoDe, columnaDe, type Semaforo } from './semaforo'
 import { semanaEnLaQueVa, semanasDelPrograma } from './programa'
@@ -22,9 +23,9 @@ export type ClienteEnGrilla = {
   atraso: number
 }
 
-export async function traerGrilla(filtros: { consultoraId?: number | null } = {}): Promise<ClienteEnGrilla[]> {
+export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: number | null } = {}): Promise<ClienteEnGrilla[]> {
   const [clientes, conDatos] = await Promise.all([
-    listarClientes({ consultoraId: filtros.consultoraId ?? null }),
+    listarClientes(alcance, { consultoraId: filtros.consultoraId ?? null }),
     fuentesDeLaCartera(),
   ])
 

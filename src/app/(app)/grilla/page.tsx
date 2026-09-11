@@ -3,6 +3,7 @@ import { Semaforo } from '@/componentes/Semaforo'
 import { ETAPAS, ETIQUETA_ETAPA, PREGUNTA_ETAPA, type EstadoHito } from '@/lib/hitos'
 import { HITOS } from '@/lib/hitos'
 import { listarConsultoras } from '@/lib/clientes'
+import { quienMira } from '@/lib/quien-mira'
 import { SEMANAS_CON_HITOS, traerGrilla, type ClienteEnGrilla } from '@/lib/grilla'
 import { ETIQUETA_COLUMNA } from '@/lib/semaforo'
 
@@ -18,8 +19,9 @@ export default async function Grilla({
   const { vista, consultora } = await searchParams
   const enKanban = vista !== 'semanas'
   const consultoraId = consultora ? Number(consultora) : null
+  const quien = await quienMira()
   const [clientes, consultoras] = await Promise.all([
-    traerGrilla({ consultoraId }),
+    traerGrilla(quien?.alcance ?? { todo: false, consultoraId: null }, { consultoraId }),
     listarConsultoras(),
   ])
 

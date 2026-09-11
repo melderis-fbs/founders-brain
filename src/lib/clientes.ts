@@ -1,5 +1,6 @@
 import { CAMPOS, type Campo } from './campos'
 import { fila, filas } from './db'
+import { condicionDeAlcance, type Alcance } from './permisos'
 import { fuentesConDatos, type FuentesConDatos } from './hitos'
 import { plegado } from './texto'
 
@@ -63,10 +64,19 @@ export type ClienteDeLista = {
 }
 
 export async function listarClientes(
+  alcance: Alcance,
   filtros: { consultoraId?: number | null; estado?: string | null; buscar?: string | null } = {},
 ): Promise<ClienteDeLista[]> {
   const condiciones: string[] = []
   const parametros: unknown[] = []
+
+  // Lo primero es de quién son estos clientes. El filtro de consultora que
+  // elige el admin en la pantalla va después y sólo puede achicar, nunca
+  // agrandar: una consultora que escriba otro id en la URL sigue sin verlo.
+  const suyo = condicionDeAlcance(alcance, 'c.consultora_id', parametros.length + 1)
+  if (suyo.parametro !== null) parametros.push(suyo.parametro)
+  condiciones.push(suyo.condicion)
+
   if (filtros.consultoraId) {
     parametros.push(filtros.consultoraId)
     condiciones.push(`c.consultora_id = $${parametros.length}`)
@@ -81,7 +91,7 @@ export async function listarClientes(
     parametros.push(`%${plegado(filtros.buscar)}%`)
     condiciones.push(`c.nombre_pleg like $${parametros.length}`)
   }
-  const donde = condiciones.length > 0 ? `where ${condiciones.join(' and ')}` : ''
+  const donde = `where ${condiciones.join(' and ')}`
 
   const encontrados = await filas<FilaDeLista>(
     `select c.id, c.nombre, co.nombre as consultora, c.estado, c.fecha_inicio, c.programa_meses,
@@ -126,18 +136,30 @@ export type ClienteCompleto = {
   faltan: Campo[]
 }
 
-export async function traerCliente(id: number): Promise<ClienteCompleto | null> {
+/**
+ * La ficha entera de un cliente, si quien pregunta puede verla.
+ *
+ * Un cliente de otra consultora devuelve null, igual que uno que no existe:
+ * desde afuera las dos cosas se tienen que ver iguales, si no el «no existe»
+ * y el «existe pero no es tuyo» son dos respuestas distintas y con eso se
+ * puede averiguar quién es cliente de quién.
+ */
+export async function traerCliente(id: number, alcance: Alcance): Promise<ClienteCompleto | null> {
   const seleccion = CAMPOS
     .filter((c) => c.clave !== 'nombre' && c.clave !== 'consultora')
     .map((campo) => `${ALIAS[campo.tabla]}.${campo.columna} as "${campo.clave}"`)
     .join(', ')
 
+  const parametros: unknown[] = [id]
+  const suyo = condicionDeAlcance(alcance, 'c.consultora_id', 2)
+  if (suyo.parametro !== null) parametros.push(suyo.parametro)
+
   const encontrado = await fila<Record<string, unknown>>(
     `select c.id, c.nombre, c.ref_externa, c.creado_en, c.actualizado_en,
             co.nombre as consultora, ${seleccion}
      ${UNIONES}
-     where c.id = $1`,
-    [id],
+     where c.id = $1 and ${suyo.condicion}`,
+    parametros,
   )
   if (!encontrado) return null
 
@@ -167,16 +189,22 @@ export async function traerCliente(id: number): Promise<ClienteCompleto | null> 
  * Acá sí viajan los textos largos, y está bien: el archivo ES el texto. Lo que
  * no se hace nunca es traerlos a una pantalla que se escanea.
  */
-export async function exportarClientes() {
+export async function exportarClientes(alcance: Alcance) {
   const seleccion = CAMPOS
     .filter((c) => c.clave !== 'nombre' && c.clave !== 'consultora')
     .map((campo) => `${ALIAS[campo.tabla]}.${campo.columna} as "${campo.clave}"`)
     .join(', ')
 
+  const parametros: unknown[] = []
+  const suyo = condicionDeAlcance(alcance, 'c.consultora_id', 1)
+  if (suyo.parametro !== null) parametros.push(suyo.parametro)
+
   return filas<{ ref_externa: string | null; consultora: string | null } & Record<string, unknown>>(
     `select c.ref_externa, c.nombre, co.nombre as consultora, ${seleccion}
      ${UNIONES}
+     where ${suyo.condicion}
      order by c.nombre`,
+    parametros,
   )
 }
 
@@ -211,4 +239,10 @@ export async function listarConsultoras() {
     `select co.id, co.nombre, (select count(*)::int from clientes c where c.consultora_id = co.id) as clientes
        from consultoras co order by co.nombre`,
   )
+}
+
+/** El nombre de una consultora por su id, para volver a escribirlo donde se espera texto. */
+export async function nombreDeConsultora(id: number): Promise<string | null> {
+  const c = await fila<{ nombre: string }>('select nombre from consultoras where id = $1', [id])
+  return c?.nombre ?? null
 }

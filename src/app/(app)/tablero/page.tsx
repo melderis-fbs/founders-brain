@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { TOTAL_CAMPOS } from '@/lib/campos'
+import { quienMira } from '@/lib/quien-mira'
 import { traerTablero } from '@/lib/tablero'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +8,9 @@ export const dynamic = 'force-dynamic'
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 export default async function Tablero() {
-  const t = await traerTablero()
+  // El layout ya frenó a quien no entró: acá sólo falta hasta dónde ve.
+  const quien = await quienMira()
+  const t = await traerTablero(quien?.alcance ?? { todo: false, consultoraId: null })
   const hoy = new Date()
 
   if (t.total === 0) {

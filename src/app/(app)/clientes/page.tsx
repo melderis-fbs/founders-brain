@@ -4,6 +4,8 @@ import { Etapas } from '@/componentes/Comparacion'
 import { Semaforo } from '@/componentes/Semaforo'
 import { ESTADOS, TOTAL_CAMPOS } from '@/lib/campos'
 import { fuentesDeLaCartera, listarClientes, listarConsultoras } from '@/lib/clientes'
+import { sinConsultoraAsignada } from '@/lib/permisos'
+import { quienMira } from '@/lib/quien-mira'
 import { dondeSeCorta, estadoDeEtapas, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { semaforoDe } from '@/lib/semaforo'
 import { semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
@@ -18,8 +20,13 @@ export default async function Clientes({
   const { consultora, estado, buscar } = await searchParams
   const consultoraId = consultora ? Number(consultora) : null
 
+  const quien = await quienMira()
+  const alcance = quien?.alcance ?? { todo: false as const, consultoraId: null }
+  const esAdmin = alcance.todo
+  const sinAsignar = sinConsultoraAsignada(alcance)
+
   const [clientes, consultoras, conDatos] = await Promise.all([
-    listarClientes({ consultoraId, estado: estado || null, buscar: buscar || null }),
+    listarClientes(alcance, { consultoraId, estado: estado || null, buscar: buscar || null }),
     listarConsultoras(),
     fuentesDeLaCartera(),
   ])
@@ -62,13 +69,15 @@ export default async function Clientes({
       </header>
 
       <form className="filtros" method="get">
-        <div className="campo">
-          <label htmlFor="consultora">Consultora</label>
-          <select id="consultora" name="consultora" defaultValue={consultora ?? ''}>
-            <option value="">Todas</option>
-            {consultoras.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {c.clientes}</option>)}
-          </select>
-        </div>
+        {esAdmin ? (
+          <div className="campo">
+            <label htmlFor="consultora">Consultora</label>
+            <select id="consultora" name="consultora" defaultValue={consultora ?? ''}>
+              <option value="">Todas</option>
+              {consultoras.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {c.clientes}</option>)}
+            </select>
+          </div>
+        ) : null}
         <div className="campo">
           <label htmlFor="estado">Estado</label>
           <select id="estado" name="estado" defaultValue={estado ?? ''}>
@@ -84,9 +93,13 @@ export default async function Clientes({
       {clientes.length === 0 ? (
         <div className="tarjeta">
           <p style={{ margin: 0 }}>
-            {buscar
-              ? 'Ningún cliente coincide con lo que buscaste.'
-              : <>Todavía no entró ningún cliente. <Link href="/importar">Subí el CSV de la planilla madre</Link>, o cargá uno a mano con «Cliente nuevo».</>}
+            {sinAsignar
+              ? 'Todavía no te asignaron una consultora, así que todavía no ves ningún cliente. No es que no haya: es que falta asignarte. Pedíselo a quien administra.'
+              : buscar
+                ? 'Ningún cliente coincide con lo que buscaste.'
+                : esAdmin
+                  ? <>Todavía no entró ningún cliente. <Link href="/importar">Subí el CSV de la planilla madre</Link>, o cargá uno a mano con «Cliente nuevo».</>
+                  : 'Todavía no hay ningún cliente tuyo cargado. Cargá uno con «Cliente nuevo».'}
           </p>
         </div>
       ) : (

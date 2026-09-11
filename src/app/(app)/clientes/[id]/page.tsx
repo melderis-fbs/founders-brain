@@ -11,6 +11,7 @@ import { Sesiones } from '@/componentes/Sesiones'
 import { CAMPOS, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
+import { quienMira } from '@/lib/quien-mira'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { pendientesDe } from '@/lib/propuestas'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
@@ -67,7 +68,10 @@ export default async function Ficha({
 }) {
   const { id } = await params
   const { bloque, error, cargado } = await searchParams
-  const cliente = await traerCliente(Number(id))
+  // Un cliente de otra consultora da lo mismo que uno que no existe: 404. Si
+  // dijéramos «no tenés permiso», eso ya confirma que el cliente existe.
+  const quien = await quienMira()
+  const cliente = await traerCliente(Number(id), quien?.alcance ?? { todo: false, consultoraId: null })
   if (!cliente) notFound()
 
   const [documentos, origenes, conDatos, sesiones, diagnostico, propuestas] = await Promise.all([

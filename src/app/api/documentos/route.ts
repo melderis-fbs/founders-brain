@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { usuarioActual } from '@/lib/auth'
+import { puedeVerCliente } from '@/lib/permisos'
+import { quienMira } from '@/lib/quien-mira'
 import { guardarDocumento } from '@/lib/documentos'
 import { extraerTextoDeArchivo } from '@/lib/extraer-archivo'
 
@@ -21,8 +22,8 @@ function volver(clienteId: string, mensaje?: string) {
 }
 
 export async function POST(pedido: NextRequest) {
-  const usuario = await usuarioActual()
-  if (!usuario) return new NextResponse(null, { status: 303, headers: { location: '/login' } })
+  const quien = await quienMira()
+  if (!quien) return new NextResponse(null, { status: 303, headers: { location: '/login' } })
 
   let formulario: FormData
   try {
@@ -33,6 +34,9 @@ export async function POST(pedido: NextRequest) {
 
   const clienteId = String(formulario.get('cliente_id') ?? '')
   if (!/^\d+$/.test(clienteId)) return new NextResponse('Falta el cliente.', { status: 400 })
+  if (!(await puedeVerCliente(Number(clienteId), quien.alcance))) {
+    return new NextResponse('Ese cliente no está en tu cartera.', { status: 404 })
+  }
 
   const archivo = formulario.get('archivo')
   if (!(archivo instanceof File) || archivo.size === 0) {

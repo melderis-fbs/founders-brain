@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { usuarioActual } from '@/lib/auth'
+import { quienMira } from '@/lib/quien-mira'
 import { traerCliente } from '@/lib/clientes'
 import { armarExpediente } from '@/lib/expediente'
 import { explicarError, extraerFichaEnVivo, hayModelo, partirPropuestas } from '@/lib/modelo'
@@ -16,8 +16,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(pedido: NextRequest) {
-  const usuario = await usuarioActual()
-  if (!usuario) return new Response('Hay que entrar primero.', { status: 401 })
+  const quien = await quienMira()
+  if (!quien) return new Response('Hay que entrar primero.', { status: 401 })
+  const usuario = quien.usuario
   if (!hayModelo()) {
     return new Response('Falta la clave de Anthropic (ANTHROPIC_API_KEY). Sin eso no se puede completar la ficha.', { status: 503 })
   }
@@ -28,13 +29,13 @@ export async function POST(pedido: NextRequest) {
   const clienteId = Number(cuerpo.clienteId)
   if (!Number.isInteger(clienteId)) return new Response('Falta el cliente.', { status: 400 })
 
-  const cliente = await traerCliente(clienteId)
+  const cliente = await traerCliente(clienteId, quien.alcance)
   if (!cliente) return new Response('Ese cliente no existe.', { status: 404 })
   if (cliente.faltan.length === 0) {
     return new Response('A este cliente no le falta ningún dato: no hay nada que completar.', { status: 400 })
   }
 
-  const expediente = await armarExpediente(clienteId)
+  const expediente = await armarExpediente(clienteId, quien.alcance)
   if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })
   if (expediente.incluidos.length === 0) {
     return new Response(

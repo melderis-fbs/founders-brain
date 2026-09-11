@@ -6,11 +6,18 @@ import { escribir, escribirDevolviendo, fila } from './db'
 export const COOKIE_SESION = 'fb_sesion'
 const DIAS_DE_SESION = 30
 
-export type Usuario = { id: number; email: string; nombre: string; rol: 'admin' | 'consultora' }
+export type Usuario = {
+  id: number
+  email: string
+  nombre: string
+  rol: 'admin' | 'consultora'
+  /** De qué consultora es. En null, todavía no le asignaron ninguna. */
+  consultoraId: number | null
+}
 
 export async function entrar(email: string, clave: string): Promise<Usuario | null> {
-  const encontrado = await fila<{ id: number; email: string; nombre: string; rol: 'admin' | 'consultora'; clave_hash: string }>(
-    'select id, email, nombre, rol, clave_hash from usuarios where lower(email) = lower($1) and activo',
+  const encontrado = await fila<{ id: number; email: string; nombre: string; rol: 'admin' | 'consultora'; consultora_id: number | null; clave_hash: string }>(
+    'select id, email, nombre, rol, consultora_id, clave_hash from usuarios where lower(email) = lower($1) and activo',
     [email.trim()],
   )
   if (!encontrado) return null
@@ -33,7 +40,7 @@ export async function entrar(email: string, clave: string): Promise<Usuario | nu
     maxAge: DIAS_DE_SESION * 24 * 60 * 60,
   })
 
-  return { id: encontrado.id, email: encontrado.email, nombre: encontrado.nombre, rol: encontrado.rol }
+  return { id: encontrado.id, email: encontrado.email, nombre: encontrado.nombre, rol: encontrado.rol, consultoraId: encontrado.consultora_id }
 }
 
 export async function salir(): Promise<void> {
@@ -53,7 +60,7 @@ export async function usuarioActual(): Promise<Usuario | null> {
   const token = bolsa.get(COOKIE_SESION)?.value
   if (!token) return null
   return fila<Usuario>(
-    `select u.id, u.email, u.nombre, u.rol
+    `select u.id, u.email, u.nombre, u.rol, u.consultora_id as "consultoraId"
        from sesiones_login s
        join usuarios u on u.id = s.usuario_id
       where s.token = $1 and s.expira_en > now() and u.activo`,

@@ -22,9 +22,10 @@ export default async function Marco({ children }: { children: React.ReactNode })
   return (
     <div className="marco">
       <aside className="lateral">
-        <BarraLateral />
+        <BarraLateral esAdmin={usuario.rol === 'admin'} />
         <div className="abajo">
           {usuario.nombre}
+          {usuario.rol === 'admin' ? <span className="mini"> · admin</span> : null}
           {' · '}
           <form action={cerrar}><button type="submit">salir</button></form>
         </div>

@@ -1,4 +1,5 @@
 import { listarClientes, fuentesDeLaCartera } from './clientes'
+import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, FUENTES_ETIQUETA, HITOS, type Fuente } from './hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa } from './programa'
 import { semaforoDe, type Color } from './semaforo'
@@ -25,8 +26,8 @@ export type Tablero = {
   sinFuente: { fuente: Fuente; etiqueta: string; hitos: number }[]
 }
 
-export async function traerTablero(): Promise<Tablero> {
-  const [clientes, conDatos] = await Promise.all([listarClientes(), fuentesDeLaCartera()])
+export async function traerTablero(alcance: Alcance): Promise<Tablero> {
+  const [clientes, conDatos] = await Promise.all([listarClientes(alcance), fuentesDeLaCartera()])
 
   let conAtraso = 0
   let sePasaron = 0

@@ -173,7 +173,7 @@ Juan Pérez,lucia fernandez,activo,6,10/03/2025,,,,,`)
 Norma Márquez,Lucía Fernández,activo,4,03/02/2025,5.400.000,1.800.000,1,Proyecto llave en mano,Texto del onboarding
 Juan Pérez,Lucía Fernández,pausado,6,10/03/2025,2.000.000,500.000,0,,`)
 
-    const csv = csvDeCartera(await exportarClientes())
+    const csv = csvDeCartera(await exportarClientes({ todo: true }))
     const r = await importar(csv, 'cartera.csv')
 
     expect(r.errorGeneral).toBeNull()

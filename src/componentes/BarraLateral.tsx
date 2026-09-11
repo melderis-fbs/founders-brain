@@ -5,10 +5,11 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Iconos } from './Iconos'
 
 const AHORA = [
-  { href: '/tablero', texto: 'Tablero', icono: Iconos.tablero },
-  { href: '/clientes', texto: 'Clientes', icono: Iconos.clientes },
-  { href: '/grilla', texto: 'La grilla', icono: Iconos.grilla },
-  { href: '/importar', texto: 'Importar', icono: Iconos.importar },
+  { href: '/tablero', texto: 'Tablero', icono: Iconos.tablero, soloAdmin: false },
+  { href: '/clientes', texto: 'Clientes', icono: Iconos.clientes, soloAdmin: false },
+  { href: '/grilla', texto: 'La grilla', icono: Iconos.grilla, soloAdmin: false },
+  // La planilla madre reparte clientes entre consultoras: no es de cada una.
+  { href: '/importar', texto: 'Importar', icono: Iconos.importar, soloAdmin: true },
 ]
 
 /** Lo que todavía no está. Se ve, pero apagado: no se promete lo que no hay. */
@@ -17,7 +18,7 @@ const DESPUES = [
   { texto: 'Consultoras', icono: Iconos.consultoras },
 ]
 
-export function BarraLateral() {
+export function BarraLateral({ esAdmin }: { esAdmin: boolean }) {
   const ruta = usePathname()
   const parametros = useSearchParams()
   return (
@@ -40,7 +41,7 @@ export function BarraLateral() {
       </form>
 
       <nav>
-        {AHORA.map((e) => (
+        {AHORA.filter((e) => esAdmin || !e.soloAdmin).map((e) => (
           <Link key={e.href} href={e.href} className={ruta.startsWith(e.href) ? 'activo' : undefined}>
             <e.icono />
             {e.texto}

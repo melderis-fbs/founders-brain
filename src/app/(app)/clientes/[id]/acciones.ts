@@ -1,11 +1,32 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { usuarioActual } from '@/lib/auth'
+import type { Usuario } from '@/lib/auth'
+import { puedeVerCliente } from '@/lib/permisos'
+import { quienMira } from '@/lib/quien-mira'
 import { guardarUnCampo, type ResultadoEdicion } from '@/lib/campos-escritura'
 import { guardarDocumento } from '@/lib/documentos'
 import { aceptar, rechazar } from '@/lib/propuestas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
+
+/**
+ * Quién está tocando este cliente, y si tiene permiso de tocarlo.
+ *
+ * El id del cliente lo manda el navegador, así que es lo que escribió
+ * cualquiera, no lo que vio en la pantalla. Toda acción que escribe empieza
+ * por acá: una consultora no le puede cambiar un dato a un cliente de otra
+ * aunque adivine el número.
+ */
+async function quienPuedeTocar(clienteId: number): Promise<
+  { ok: true; usuario: Usuario } | { ok: false; error: string }
+> {
+  const quien = await quienMira()
+  if (!quien) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar y probá de nuevo.' }
+  if (!(await puedeVerCliente(clienteId, quien.alcance))) {
+    return { ok: false, error: 'Ese cliente no está en tu cartera.' }
+  }
+  return { ok: true, usuario: quien.usuario }
+}
 
 /**
  * Guardar un dato editado en la ficha.
@@ -14,10 +35,10 @@ import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
  * por acá es un archivo, que tiene tope de 1 MB y se traba sin avisar.
  */
 export async function guardarCampo(clienteId: number, clave: string, bruto: string): Promise<ResultadoEdicion> {
-  const usuario = await usuarioActual()
-  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar y probá de nuevo.' }
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
 
-  const resultado = await guardarUnCampo({ clienteId, clave, bruto, usuarioId: usuario.id })
+  const resultado = await guardarUnCampo({ clienteId, clave, bruto, usuarioId: puede.usuario.id })
   if (resultado.ok) revalidatePath(`/clientes/${clienteId}`)
   return resultado
 }
@@ -31,8 +52,8 @@ export async function guardarCampo(clienteId: number, clave: string, bruto: stri
  * original está en un Google Doc que nadie va a exportar.
  */
 export async function pegarDocumento(clienteId: number, datos: FormData): Promise<{ ok: boolean; error?: string }> {
-  const usuario = await usuarioActual()
-  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
 
   const guardado = await guardarDocumento({
     clienteId,
@@ -51,8 +72,8 @@ export async function pegarDocumento(clienteId: number, datos: FormData): Promis
 // ── Sesiones ────────────────────────────────────────────────────────────────
 
 export async function nuevaSesion(clienteId: number, datos: FormData): Promise<{ ok: boolean; error?: string }> {
-  const usuario = await usuarioActual()
-  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
 
   const r = await crearSesion({
     clienteId,
@@ -69,8 +90,8 @@ export async function nuevaSesion(clienteId: number, datos: FormData): Promise<{
 export async function pegarTranscripcion(
   clienteId: number, sesionId: number, texto: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const usuario = await usuarioActual()
-  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
 
   const r = await guardarTranscripcion(sesionId, clienteId, texto)
   if (!r.ok) return { ok: false, error: r.error }
@@ -83,12 +104,12 @@ export async function pegarTranscripcion(
 export async function decidirPropuesta(
   clienteId: number, propuestaId: number, decision: 'aceptar' | 'rechazar',
 ): Promise<{ ok: boolean; error?: string }> {
-  const usuario = await usuarioActual()
-  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
 
   const r = decision === 'aceptar'
-    ? await aceptar(propuestaId, clienteId, usuario.id)
-    : await rechazar(propuestaId, clienteId, usuario.id)
+    ? await aceptar(propuestaId, clienteId, puede.usuario.id)
+    : await rechazar(propuestaId, clienteId, puede.usuario.id)
 
   revalidatePath(`/clientes/${clienteId}`)
   return r.ok ? { ok: true } : { ok: false, error: r.error }
