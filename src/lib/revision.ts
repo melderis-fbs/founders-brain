@@ -100,7 +100,13 @@ function aDondeVa(): { host: string; puerto: string } | null {
 
 const PLACEHOLDERS = ['REGION', 'PROYECTO', 'PROJECT', 'YOUR', 'CLAVE', 'PASSWORD']
 
-/** La primera migración que falta, con lo que le falta nombrado. */
+/**
+ * Todas las migraciones que faltan, con lo que le falta a cada una.
+ *
+ * Nombrar sólo la primera ya hizo tropezar dos veces: se corre esa, se vuelve
+ * a desplegar y aparece la misma pantalla con la siguiente. Si faltan cuatro,
+ * la pantalla dice cuatro y se corren las cuatro de una.
+ */
 async function queMigracionFalta(): Promise<Revision | null> {
   const columnas = await filas<{ table_name: string; column_name: string }>(
     `select table_name, column_name from information_schema.columns where table_schema = 'public'`,
@@ -123,6 +129,8 @@ async function queMigracionFalta(): Promise<Revision | null> {
     }
   }
 
+  const faltantes: { migracion: string; queFalta: string; cuantas: number }[] = []
+
   for (const paso of ESQUEMA_ESPERADO) {
     const tablasQueFaltan = paso.tablas.filter((t) => !tablas.has(t))
     const columnasQueFaltan = paso.columnas
@@ -131,27 +139,42 @@ async function queMigracionFalta(): Promise<Revision | null> {
 
     if (tablasQueFaltan.length === 0 && columnasQueFaltan.length === 0) continue
 
-    const esLaPrimera = paso.migracion.startsWith('0001')
-    const cuantas = tablasQueFaltan.length + columnasQueFaltan.length
     const queFalta = [
       tablasQueFaltan.length > 0 ? `${tablasQueFaltan.length === 1 ? 'la tabla' : 'las tablas'} ${tablasQueFaltan.join(', ')}` : null,
       columnasQueFaltan.length > 0 ? `${columnasQueFaltan.length === 1 ? 'la columna' : 'las columnas'} ${columnasQueFaltan.join(', ')}` : null,
     ].filter(Boolean).join(' y ')
 
-    return {
-      ok: false,
-      titulo: esLaPrimera ? 'La base está conectada pero vacía' : 'A la base le falta una migración',
-      detalle: esLaPrimera
-        ? 'Conecté bien, pero las tablas no están creadas.'
-        : `Conecté bien, pero ${cuantas === 1 ? 'falta' : 'faltan'} ${queFalta}.`,
-      pasos: [
-        `Pegá supabase/migrations/${paso.migracion} en el SQL Editor de Supabase y ejecutalo.`,
-        'Si te salteaste alguna anterior, corré todas en orden: son idempotentes, volver a correr una que ya está no rompe nada.',
-        'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL, que las aplica todas en orden.',
-      ],
-    }
+    faltantes.push({ migracion: paso.migracion, queFalta, cuantas: tablasQueFaltan.length + columnasQueFaltan.length })
   }
-  return null
+
+  if (faltantes.length === 0) return null
+
+  const desdeCero = faltantes.length === ESQUEMA_ESPERADO.length
+  const unaSola = faltantes.length === 1
+
+  return {
+    ok: false,
+    titulo: desdeCero
+      ? 'La base está conectada pero vacía'
+      : unaSola ? 'A la base le falta una migración' : `A la base le faltan ${faltantes.length} migraciones`,
+    detalle: desdeCero
+      ? 'Conecté bien, pero las tablas no están creadas.'
+      : unaSola
+        ? `Conecté bien, pero ${faltantes[0]!.cuantas === 1 ? 'falta' : 'faltan'} ${faltantes[0]!.queFalta}.`
+        : `Conecté bien, pero faltan ${faltantes.map((f) => f.queFalta).join('; ')}.`,
+    pasos: desdeCero
+      ? [
+          'Corré `npm run esquema` y pegá todo lo que imprime en el SQL Editor de Supabase.',
+          'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL.',
+        ]
+      : [
+          unaSola
+            ? `Pegá supabase/migrations/${faltantes[0]!.migracion} en el SQL Editor de Supabase y ejecutalo.`
+            : `Corré estas ${faltantes.length}, en este orden, en el SQL Editor de Supabase: ${faltantes.map((f) => f.migracion).join(', ')}.`,
+          'Volver a correr una que ya está no rompe nada: son idempotentes.',
+          'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL, que las aplica todas en orden.',
+        ],
+  }
 }
 
 function noSePudoConectar(error: unknown): Revision {
