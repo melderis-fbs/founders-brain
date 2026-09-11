@@ -84,7 +84,37 @@ export function leerFecha(bruto: unknown): Lectura<string> {
     return armarFecha(anio, Number(latino[2]), Number(latino[1]), texto)
   }
 
+  // «6 de abril de 2026»: así exporta Notion en español, y así está escrita la
+  // planilla de trabajo. Rechazarla es perder la fecha de inicio de cada
+  // cliente, que es de donde sale toda la comparación.
+  const enPalabras = texto.match(/^(\d{1,2})\s+de\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)\.?\s+(?:de\s+)?(\d{4})$/)
+  if (enPalabras) {
+    const mes = MESES.get(plegadoSimple(enPalabras[2]!))
+    if (mes) return armarFecha(Number(enPalabras[3]), mes, Number(enPalabras[1]), texto)
+    return { estado: 'error', motivo: `"${texto}": no reconozco el mes «${enPalabras[2]}»` }
+  }
+
   return { estado: 'error', motivo: `"${texto}" no es una fecha (esperaba dd/mm/aaaa)` }
+}
+
+const MESES = new Map<string, number>([
+  ['enero', 1], ['ene', 1],
+  ['febrero', 2], ['feb', 2],
+  ['marzo', 3], ['mar', 3],
+  ['abril', 4], ['abr', 4],
+  ['mayo', 5], ['may', 5],
+  ['junio', 6], ['jun', 6],
+  ['julio', 7], ['jul', 7],
+  ['agosto', 8], ['ago', 8],
+  ['septiembre', 9], ['setiembre', 9], ['sep', 9], ['set', 9],
+  ['octubre', 10], ['oct', 10],
+  ['noviembre', 11], ['nov', 11],
+  ['diciembre', 12], ['dic', 12],
+])
+
+/** Minúsculas y sin acentos, sólo para reconocer el nombre de un mes. */
+function plegadoSimple(texto: string): string {
+  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
 function armarFecha(anio: number, mes: number, dia: number, original: string): Lectura<string> {

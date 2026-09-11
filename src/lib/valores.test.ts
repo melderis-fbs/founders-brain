@@ -87,3 +87,33 @@ describe('opciones cerradas', () => {
     if (r.estado === 'error') expect(r.motivo).toContain('activo')
   })
 })
+
+describe('fechas escritas en palabras, como las exporta Notion', () => {
+  it('lee «6 de abril de 2026»', () => {
+    expect(leerFecha('6 de abril de 2026')).toEqual({ estado: 'ok', valor: '2026-04-06' })
+  })
+
+  it('lee el mes con acento y en mayúsculas', () => {
+    expect(leerFecha('13 de Julio de 2026')).toEqual({ estado: 'ok', valor: '2026-07-13' })
+    expect(leerFecha('2 de Diciembre de 2025')).toEqual({ estado: 'ok', valor: '2025-12-02' })
+  })
+
+  it('acepta la abreviatura y el «de» del medio como opcional', () => {
+    expect(leerFecha('6 de abr 2026')).toEqual({ estado: 'ok', valor: '2026-04-06' })
+    expect(leerFecha('1 de set. de 2026')).toEqual({ estado: 'ok', valor: '2026-09-01' })
+  })
+
+  it('un mes que no existe se dice con su nombre, no como «no es una fecha»', () => {
+    const r = leerFecha('6 de abrilio de 2026')
+    expect(r.estado).toBe('error')
+    expect(r.estado === 'error' && r.motivo).toContain('abrilio')
+  })
+
+  it('un día que no existe en ese mes sigue siendo un error', () => {
+    expect(leerFecha('31 de febrero de 2026').estado).toBe('error')
+  })
+
+  it('no se traga cualquier texto', () => {
+    expect(leerFecha('el martes que viene').estado).toBe('error')
+  })
+})

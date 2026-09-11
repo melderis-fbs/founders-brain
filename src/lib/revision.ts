@@ -32,6 +32,7 @@ export const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: 
     tablas: ['campo_historial'],
     columnas: [['documentos', 'resumen']],
   },
+  { migracion: '0010_etapa_declarada.sql', tablas: [], columnas: [['clientes', 'etapa_declarada']] },
 ]
 
 /**
