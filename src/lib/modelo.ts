@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { Campo } from './campos'
 import { escribirDevolviendo } from './db'
 
 /**
@@ -342,4 +343,203 @@ export function partirDiagnostico(texto: string): Diagnostico {
     acciones: seccion('Qué hacer').slice(0, 3),   // ni una más de tres
     faltaCargar: seccion('Qué falta cargar'),
   }
+}
+
+// ── Completar la ficha desde los documentos ─────────────────────────────────
+
+/**
+ * El prompt de extracción se arma con los campos que FALTAN, no con todos.
+ *
+ * Dos razones: no tiene sentido pedirle que lea lo que ya está, y sobre todo
+ * así no puede proponer nada sobre un campo que ya tiene valor. La regla 9 no
+ * queda confiada a que el modelo se porte bien: no le damos la oportunidad.
+ */
+export function reglasDeFicha(camposQueFaltan: readonly Campo[]): string {
+  const lista = camposQueFaltan
+    .map((c) => `- ${c.clave} — ${c.etiqueta}${c.ayuda ? ` (${c.ayuda})` : ''} → ${comoSeEscribe(c)}`)
+    .join('\n')
+
+  return `${REGLAS}
+
+AHORA ESTÁS COMPLETANDO UNA FICHA A PARTIR DE LOS DOCUMENTOS
+
+Te dan el expediente de un cliente. Buscá en los DOCUMENTOS los datos que faltan y proponelos.
+
+LOS ÚNICOS CAMPOS QUE PODÉS PROPONER SON ESTOS:
+
+${lista}
+
+Cualquier otro campo ya tiene valor cargado. No lo toques, no lo menciones, no lo propongas.
+
+CÓMO DEVOLVÉS
+
+Un bloque por campo que encontraste, exactamente así, sin nada antes ni después:
+
+### clave_del_campo
+valor: el dato, solo, sin explicación
+cita: «la frase textual del documento, copiada tal cual»
+
+REGLAS QUE NO TIENEN EXCEPCIÓN
+
+1. Sin cita no hay propuesta. Si no podés copiar una frase del documento que lo diga, ese campo no va.
+2. Lo que no está en el documento, no está. Nada de deducir, estimar, redondear ni completar con lo que suele pasar. Si el documento dice «factura más o menos dos palos», no propongas 2000000: no lo dice.
+3. La cita se copia literal del documento, no se parafrasea. Si la tenés que arreglar para que se entienda, no la uses.
+4. Si no encontrás ningún dato, devolvé una sola línea: «No hay nada en los documentos que complete estos campos.»
+5. El valor va en la forma que pide la flecha de cada campo. Si es un número, va el número solo: «6», no «6 años» ni «seis». La explicación queda en la cita, que es donde tiene que estar.
+6. Si el documento contradice lo que ya está cargado —otro rubro, otros números—, proponé igual lo que dice el documento y avisá al final, en una línea: «Ojo: el documento habla de X y la ficha dice Y». No te guardes las propuestas por eso. La que decide es la consultora: si no proponés nada, le sacás la decisión y encima no se entera de la contradicción.
+7. Mejor proponer tres datos sólidos que doce dudosos: cada uno va a ser confirmado por una persona, y una propuesta floja le hace perder tiempo.`
+}
+
+/**
+ * Decirle en qué forma esperamos el valor.
+ *
+ * Sin esto propone «6 años» para un campo que es un número y la propuesta se
+ * descarta en la validación: el dato estaba bien leído y se perdía por la forma.
+ */
+function comoSeEscribe(campo: Campo): string {
+  switch (campo.tipo) {
+    case 'numero': return 'el número solo, sin unidad ni texto (1800000)'
+    case 'entero': return 'un número entero solo (2)'
+    case 'fecha': return 'la fecha en dd/mm/aaaa'
+    case 'booleano': return 'sí o no'
+    case 'opcion': return `una de estas, tal cual: ${(campo.opciones ?? []).join(', ')}`
+    case 'texto_largo': return 'una o dos frases'
+    default: return 'texto corto'
+  }
+}
+
+export async function* extraerFichaEnVivo(
+  expediente: string,
+  camposQueFaltan: readonly Campo[],
+  registro: Registro,
+): AsyncGenerator<string, void, unknown> {
+  const arranque = Date.now()
+
+  const stream = anthropic().messages.stream({
+    model: MODELO,
+    max_tokens: 4000,
+    system: [{ type: 'text', text: reglasDeFicha(camposQueFaltan) }],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: expediente, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: 'Completá lo que puedas de los campos que faltan.' },
+      ],
+    }],
+  })
+
+  try {
+    for await (const evento of stream) {
+      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') yield evento.delta.text
+    }
+    const final = await stream.finalMessage()
+    await anotarLlamada(registro, final.usage, Date.now() - arranque, null)
+  } catch (error) {
+    await anotarLlamada(registro, null, Date.now() - arranque, error instanceof Error ? error.message : String(error))
+    throw error
+  }
+}
+
+export type PropuestaCruda = { campo: string; valor: string; cita: string | null }
+
+/**
+ * Partir lo que devolvió, y tirar lo que no sirve.
+ *
+ * No se confía en que el modelo acierte el formato exacto: a veces escribe
+ * «### que_vende», a veces «**que_vende**» y a veces «campo: que_vende». Las
+ * tres se leen igual. Lo que no se afloja es la validación: se descarta un
+ * campo que no existe, un campo que no estaba faltando, o una propuesta sin
+ * cita. Es la regla 5 aplicada de este lado —sin cita textual no se afirma
+ * nada sobre un cliente— y no alcanza con pedírselo al modelo.
+ */
+export function partirPropuestas(
+  texto: string,
+  clavesPermitidas: ReadonlySet<string>,
+): { propuestas: PropuestaCruda[]; descartadas: string[] } {
+  const propuestas: PropuestaCruda[] = []
+  const descartadas: string[] = []
+
+  for (const bloque of partirEnBloques(texto, clavesPermitidas)) {
+    const valor = leerRenglon(bloque.cuerpo, 'valor')
+    const cita = leerRenglon(bloque.cuerpo, 'cita')
+
+    if (!clavesPermitidas.has(bloque.campo)) { descartadas.push(`${bloque.campo}: no es un campo que estuviera faltando`); continue }
+    if (valor === '') { descartadas.push(`${bloque.campo}: vino sin valor`); continue }
+    if (cita === '') { descartadas.push(`${bloque.campo}: vino sin cita, así que no entra`); continue }
+
+    propuestas.push({ campo: bloque.campo, valor, cita })
+  }
+
+  return { propuestas, descartadas }
+}
+
+/**
+ * Encontrar dónde empieza cada campo.
+ *
+ * Un renglón abre un campo si, sacándole la decoración de markdown, queda una
+ * sola palabra en minúscula: «### que_vende», «**que_vende**», «- que_vende:»,
+ * «campo: que_vende». Para no confundir una palabra suelta del texto con un
+ * campo, sólo se toma en serio si venía marcada (con # o con **), si es uno de
+ * los campos que faltaban, o si tiene forma de clave (con guión bajo).
+ */
+function partirEnBloques(
+  texto: string,
+  clavesPermitidas: ReadonlySet<string>,
+): { campo: string; cuerpo: string }[] {
+  const bloques: { campo: string; cuerpo: string }[] = []
+  let actual: { campo: string; cuerpo: string[] } | null = null
+
+  for (const renglon of texto.split('\n')) {
+    const campo = leerEncabezado(renglon, clavesPermitidas)
+    if (campo) {
+      if (actual) bloques.push({ campo: actual.campo, cuerpo: actual.cuerpo.join('\n') })
+      actual = { campo, cuerpo: [] }
+    } else if (actual) {
+      actual.cuerpo.push(renglon)
+    }
+  }
+  if (actual) bloques.push({ campo: actual.campo, cuerpo: actual.cuerpo.join('\n') })
+
+  return bloques
+}
+
+function leerEncabezado(renglon: string, clavesPermitidas: ReadonlySet<string>): string | null {
+  const crudo = renglon.trim()
+  if (crudo === '') return null
+
+  const marcado = /^#{1,6}\s/.test(crudo) || /^\*\*.+\*\*:?$/.test(crudo)
+  const limpio = crudo
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/[*`_]{1,2}$/, '')
+    .replace(/^[*`]{1,2}/, '')
+    .replace(/\s*:\s*$/, '')
+    .replace(/^campo\s*:\s*/i, '')
+    .trim()
+
+  if (!/^[a-z][a-z0-9_]*$/.test(limpio)) return null
+  if (marcado || clavesPermitidas.has(limpio) || limpio.includes('_')) return limpio
+  return null
+}
+
+/**
+ * Leer «valor:» o «cita:», aunque la frase siga en el renglón de abajo.
+ *
+ * Una cita larga puede venir cortada en varias líneas. Se junta todo hasta el
+ * renglón en blanco o hasta que arranca otra etiqueta, y recién ahí se le
+ * sacan las comillas de los extremos.
+ */
+function leerRenglon(cuerpo: string, etiqueta: 'valor' | 'cita'): string {
+  const renglones = cuerpo.split('\n')
+  const desde = renglones.findIndex((r) => new RegExp(`^\\s*[-*]?\\s*\\*{0,2}${etiqueta}\\*{0,2}\\s*:`, 'i').test(r))
+  if (desde === -1) return ''
+
+  const juntadas = [renglones[desde]!.replace(new RegExp(`^\\s*[-*]?\\s*\\*{0,2}${etiqueta}\\*{0,2}\\s*:\\s*`, 'i'), '')]
+  for (const siguiente of renglones.slice(desde + 1)) {
+    if (siguiente.trim() === '') break
+    if (/^\s*[-*]?\s*\*{0,2}(valor|cita|campo)\*{0,2}\s*:/i.test(siguiente)) break
+    juntadas.push(siguiente.trim())
+  }
+
+  return juntadas.join(' ').trim().replace(/^[«"\u2018\u201c']+|[»"\u2019\u201d']+$/g, '').trim()
 }

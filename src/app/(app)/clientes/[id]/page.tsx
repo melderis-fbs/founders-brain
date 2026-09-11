@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
+import { CompletarFicha } from '@/componentes/CompletarFicha'
 import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
 import { Preguntar } from '@/componentes/Preguntar'
@@ -11,6 +12,7 @@ import { CAMPOS, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
+import { pendientesDe } from '@/lib/propuestas'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
 import { semaforoDe } from '@/lib/semaforo'
@@ -21,6 +23,7 @@ export const dynamic = 'force-dynamic'
 /** Las pestañas. Cada una es un bloque, no veinte tarjetas apiladas. */
 const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
+  { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
   { clave: 'negocio', texto: 'Su negocio' },
   { clave: 'autoridad', texto: 'Su autoridad' },
@@ -67,9 +70,9 @@ export default async function Ficha({
   const cliente = await traerCliente(Number(id))
   if (!cliente) notFound()
 
-  const [documentos, origenes, conDatos, sesiones, diagnostico] = await Promise.all([
+  const [documentos, origenes, conDatos, sesiones, diagnostico, propuestas] = await Promise.all([
     documentosDe(cliente.id), origenesDe(cliente.id), fuentesDeLaCartera(),
-    listarSesiones(cliente.id), ultimoDiagnostico(cliente.id),
+    listarSesiones(cliente.id), ultimoDiagnostico(cliente.id), pendientesDe(cliente.id),
   ])
 
   const inicio = cliente.valores.fecha_inicio as string
@@ -146,6 +149,7 @@ export default async function Ficha({
             {PESTANAS.map((p) => (
               <Link key={p.clave} href={`/clientes/${cliente.id}?bloque=${p.clave}`} className={p.clave === pestana ? 'activa' : undefined}>
                 {p.texto}
+                {p.clave === 'completar' && propuestas.length > 0 ? <span className="cuantos">{propuestas.length}</span> : null}
                 {p.clave === 'sesiones' && sesiones.length > 0 ? <span className="cuantos">{sesiones.length}</span> : null}
                 {p.clave === 'documentos' && documentos.length > 0 ? <span className="cuantos">{documentos.length}</span> : null}
               </Link>
@@ -183,6 +187,15 @@ export default async function Ficha({
               </>
             ) : null}
 
+            {pestana === 'completar' ? (
+              <CompletarFicha
+                clienteId={cliente.id}
+                propuestas={propuestas}
+                faltan={cliente.faltan}
+                etiquetas={Object.fromEntries(CAMPOS.map((c) => [c.clave, c.etiqueta]))}
+                hayDocumentos={documentos.length > 0}
+              />
+            ) : null}
             {pestana === 'diagnostico' ? <DiagnosticoDelCaso clienteId={cliente.id} guardado={diagnostico} /> : null}
             {pestana === 'sesiones' ? <Sesiones clienteId={cliente.id} sesiones={sesiones} /> : null}
             {pestana === 'documentos' ? <Documentos clienteId={cliente.id} documentos={documentos} suelto /> : null}
@@ -196,7 +209,9 @@ export default async function Ficha({
             <div className="lista-acciones">
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=sesiones`}>Cargar o analizar una sesión</Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=documentos`}>Cargar un documento</Link>
-              <span className="boton suave apagada" title="Todavía no está">Completar desde los documentos</span>
+              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=completar`}>
+                Completar desde los documentos{propuestas.length > 0 ? ` · ${propuestas.length}` : ''}
+              </Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=diagnostico`}>Diagnóstico del caso</Link>
               <span className="boton suave apagada" title="Todavía no está">Preparar la próxima sesión</span>
             </div>

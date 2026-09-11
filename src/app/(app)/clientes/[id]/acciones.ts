@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { usuarioActual } from '@/lib/auth'
 import { guardarUnCampo, type ResultadoEdicion } from '@/lib/campos-escritura'
 import { guardarDocumento } from '@/lib/documentos'
+import { aceptar, rechazar } from '@/lib/propuestas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 
 /**
@@ -75,4 +76,20 @@ export async function pegarTranscripcion(
   if (!r.ok) return { ok: false, error: r.error }
   revalidatePath(`/clientes/${clienteId}`)
   return { ok: true }
+}
+
+// ── Propuestas de la ficha ──────────────────────────────────────────────────
+
+export async function decidirPropuesta(
+  clienteId: number, propuestaId: number, decision: 'aceptar' | 'rechazar',
+): Promise<{ ok: boolean; error?: string }> {
+  const usuario = await usuarioActual()
+  if (!usuario) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+
+  const r = decision === 'aceptar'
+    ? await aceptar(propuestaId, clienteId, usuario.id)
+    : await rechazar(propuestaId, clienteId, usuario.id)
+
+  revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
 }
