@@ -1,4 +1,4 @@
-import type { Lectura, Parte } from '@/lib/lectura'
+import type { Expedientito, Lectura, Parte } from '@/lib/lectura'
 
 /**
  * Lo que se puede afirmar con aritmética, antes de gastar un peso en el modelo.
@@ -7,7 +7,7 @@ import type { Lectura, Parte } from '@/lib/lectura'
  * «9» no le dice nada a nadie, «la oferta falta hace 27 semanas» se puede
  * confirmar, corregir o llevar a la sesión del martes.
  */
-export function LecturaDelCaso({ lectura }: { lectura: Lectura }) {
+export function LecturaDelCaso({ lectura, ficha }: { lectura: Lectura; ficha: Expedientito }) {
   return (
     <section className="lectura">
       <header>
@@ -29,6 +29,16 @@ export function LecturaDelCaso({ lectura }: { lectura: Lectura }) {
           <p className="no-hacer"><b>Qué no hacer:</b> {lectura.corte.queNoHacer}</p>
         </div>
       ) : null}
+
+      <div className="bloques">
+        {ficha.bloques.map((b) => (
+          <div className={`bloque ${b.estado}`} key={b.grupo} title={`${b.cargados} de ${b.total} datos`}>
+            <span className="que">{b.etiqueta}</span>
+            <span className="cuantos">{b.cargados}/{b.total}</span>
+          </div>
+        ))}
+      </div>
+      <p className="que-va-a-poder">{ficha.queVaAPoder}</p>
 
       <div className="partes">
         {lectura.partes.map((p) => <ParteDeLaLectura key={p.clave} parte={p} />)}

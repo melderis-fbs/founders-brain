@@ -1,3 +1,4 @@
+import { CAMPOS, ETIQUETA_GRUPO, type Grupo } from './campos'
 import type { HitoEvaluado } from './hitos'
 import { ETIQUETA_ETAPA } from './hitos'
 import type { SesionEnLista } from './sesiones-tipos'
@@ -280,4 +281,70 @@ function numero(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v)) return v
   if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v)
   return null
+}
+
+// ── Los bloques de la ficha ─────────────────────────────────────────────────
+
+export type Bloque = {
+  grupo: Grupo
+  etiqueta: string
+  cargados: number
+  total: number
+  estado: 'completo' | 'a_medias' | 'vacio'
+}
+
+export type Expedientito = {
+  bloques: Bloque[]
+  conAlgo: number
+  /** Qué va a poder contestar el diagnóstico con esto, dicho sin vueltas. */
+  queVaAPoder: string
+  /** Si vale la pena gastar en el modelo, o la respuesta ya se sabe. */
+  valeLaPena: boolean
+}
+
+/**
+ * En qué estado está la ficha, por bloques.
+ *
+ * Seis bloques, tres estados, una frase. No hace falta más: la lista de los
+ * 49 campos que faltan ya está en la ficha, y repetirla acá no ayuda a
+ * decidir nada. Lo que sí ayuda es saber si el diagnóstico va a contestar
+ * algo o va a decir «eso no está cargado» cuarenta veces.
+ */
+export function bloquesDeLaFicha(
+  valores: Record<string, unknown>,
+  hay: { documentos: number; sesiones: number },
+): Expedientito {
+  const bloques: Bloque[] = ([...new Set(CAMPOS.map((c) => c.grupo))] as Grupo[]).map((grupo) => {
+    const suyos = CAMPOS.filter((c) => c.grupo === grupo && c.cuenta)
+    const cargados = suyos.filter((c) => tieneAlgo(valores[c.clave])).length
+    return {
+      grupo,
+      etiqueta: ETIQUETA_GRUPO[grupo],
+      cargados,
+      total: suyos.length,
+      estado: cargados === 0 ? 'vacio' : cargados === suyos.length ? 'completo' : 'a_medias',
+    }
+  })
+
+  const conAlgo = bloques.filter((b) => b.estado !== 'vacio').length
+  const nada = conAlgo === 0 && hay.documentos === 0 && hay.sesiones === 0
+
+  return {
+    bloques,
+    conAlgo,
+    valeLaPena: !nada,
+    queVaAPoder: nada
+      ? 'No hay nada cargado de este cliente: ni ficha, ni documentos, ni sesiones. El diagnóstico no tiene sobre qué trabajar y no hace falta gastar en pedirlo.'
+      : conAlgo <= 2 && hay.documentos === 0
+        ? `Con ${conAlgo} de 6 bloques y ningún documento, el diagnóstico va a contestar «eso no está cargado» más de lo que te va a servir. Cargá un documento y completá la ficha desde ahí primero.`
+        : hay.documentos === 0
+          ? `Hay ${conAlgo} de 6 bloques con datos, pero ningún documento cargado. El diagnóstico va a poder comparar contra el programa; de la cabeza del cliente no va a poder decir nada.`
+          : `Hay ${conAlgo} de 6 bloques con datos y ${hay.documentos} ${hay.documentos === 1 ? 'documento' : 'documentos'}. Alcanza para diagnosticar.`,
+  }
+}
+
+function tieneAlgo(v: unknown): boolean {
+  if (v === null || v === undefined) return false
+  if (typeof v === 'string') return v.trim() !== ''
+  return true
 }

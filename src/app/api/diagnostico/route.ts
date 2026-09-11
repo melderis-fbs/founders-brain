@@ -1,7 +1,10 @@
 import { type NextRequest } from 'next/server'
 import { quienMira } from '@/lib/quien-mira'
 import { guardarDiagnostico } from '@/lib/diagnosticos'
+import { documentosDe, traerCliente } from '@/lib/clientes'
 import { armarExpediente } from '@/lib/expediente'
+import { bloquesDeLaFicha } from '@/lib/lectura'
+import { listarSesiones } from '@/lib/sesiones'
 import { diagnosticarEnVivo, explicarError, hayModelo, partirDiagnostico } from '@/lib/modelo'
 
 /** El diagnóstico del caso. Sólo cuando alguien lo pide. */
@@ -21,6 +24,16 @@ export async function POST(pedido: NextRequest) {
 
   const clienteId = Number(cuerpo.clienteId)
   if (!Number.isInteger(clienteId)) return new Response('Falta el cliente.', { status: 400 })
+
+  // Si no hay absolutamente nada cargado, la respuesta ya se sabe y no hace
+  // falta pagarla: el modelo va a contestar «no hay datos» en trescientas
+  // palabras y eso cuesta lo mismo que una respuesta útil.
+  const cliente = await traerCliente(clienteId, quien.alcance)
+  if (!cliente) return new Response('Ese cliente no existe.', { status: 404 })
+
+  const [docs, ses] = await Promise.all([documentosDe(clienteId), listarSesiones(clienteId)])
+  const ficha = bloquesDeLaFicha(cliente.valores, { documentos: docs.length, sesiones: ses.length })
+  if (!ficha.valeLaPena) return new Response(ficha.queVaAPoder, { status: 400 })
 
   const expediente = await armarExpediente(clienteId, quien.alcance)
   if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })

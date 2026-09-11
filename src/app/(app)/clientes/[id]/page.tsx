@@ -4,7 +4,7 @@ import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
 import { Fases } from '@/componentes/Fases'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
-import { leerElCaso } from '@/lib/lectura'
+import { bloquesDeLaFicha, leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
 import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
@@ -103,6 +103,7 @@ export default async function Ficha({
     hayAlgunaSesionEnLaCartera: haySesiones,
     hayDiagnostico: diagnostico !== null,
   })
+  const ficha = bloquesDeLaFicha(cliente.valores, { documentos: documentos.length, sesiones: sesiones.length })
   const corte = dondeSeCorta(evaluados)
   const pestana: Pestana = (PESTANAS.find((p) => p.clave === bloque)?.clave ?? 'resumen') as Pestana
 
@@ -182,7 +183,7 @@ export default async function Ficha({
           <div className="tarjeta panel">
             {pestana === 'resumen' ? (
               <>
-                <LecturaDelCaso lectura={lectura} />
+                <LecturaDelCaso lectura={lectura} ficha={ficha} />
                 <Comparacion evaluados={evaluados} suelto />
                 <h2 style={{ marginTop: 26 }}>Identidad y programa</h2>
                 <dl className="dos-columnas">{campos('identidad').map(dato)}</dl>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { HitoEvaluado } from './hitos'
 import { HITOS } from './hitos'
-import { leerElCaso } from './lectura'
+import { bloquesDeLaFicha, leerElCaso } from './lectura'
 import type { SesionEnLista } from './sesiones-tipos'
 
 function hito(clave: string, estado: HitoEvaluado['estado'], atraso: number | null = null): HitoEvaluado {
@@ -109,5 +109,39 @@ describe('la lectura del caso, con aritmética', () => {
   it('sin ningún hito vencido no inventa un corte', () => {
     const l = leerElCaso({ ...NADA, hitos: [hito('onboarding', 'hecho'), hito('oferta', 'todavia_no')] })
     expect(l.corte).toBeNull()
+  })
+})
+
+describe('los bloques de la ficha', () => {
+  it('seis bloques, y cuenta cuántos tienen algo', () => {
+    const e = bloquesDeLaFicha({ oferta: 'algo', meta_mensual: 100 }, { documentos: 0, sesiones: 0 })
+    expect(e.bloques).toHaveLength(6)
+    expect(e.conAlgo).toBe(2)
+    expect(e.bloques.find((b) => b.grupo === 'negocio')!.estado).toBe('a_medias')
+    expect(e.bloques.find((b) => b.grupo === 'autoridad')!.estado).toBe('vacio')
+  })
+
+  it('sin nada cargado no vale la pena pagar el diagnóstico', () => {
+    const e = bloquesDeLaFicha({}, { documentos: 0, sesiones: 0 })
+    expect(e.valeLaPena).toBe(false)
+    expect(e.queVaAPoder).toContain('no hace falta gastar')
+  })
+
+  it('con un documento cargado ya vale la pena, aunque la ficha esté vacía', () => {
+    const e = bloquesDeLaFicha({}, { documentos: 1, sesiones: 0 })
+    expect(e.valeLaPena).toBe(true)
+  })
+
+  it('con ficha y documentos dice que alcanza', () => {
+    const e = bloquesDeLaFicha(
+      { oferta: 'x', meta_mensual: 1, hace_bien: 'y', que_funciono: 'z' },
+      { documentos: 2, sesiones: 1 },
+    )
+    expect(e.queVaAPoder).toContain('Alcanza para diagnosticar')
+  })
+
+  it('un string vacío no es un dato cargado', () => {
+    const e = bloquesDeLaFicha({ oferta: '   ' }, { documentos: 0, sesiones: 0 })
+    expect(e.bloques.find((b) => b.grupo === 'negocio')!.cargados).toBe(0)
   })
 })
