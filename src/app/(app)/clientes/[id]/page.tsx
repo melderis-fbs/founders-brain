@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { Comparacion } from '@/componentes/Comparacion'
+import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
+import { leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
 import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
@@ -17,7 +19,7 @@ import { pendientesDe } from '@/lib/propuestas'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
 import { semaforoDe } from '@/lib/semaforo'
-import { listarSesiones } from '@/lib/sesiones'
+import { hayAlgunaSesionEnLaCartera, listarSesiones } from '@/lib/sesiones'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,9 +76,10 @@ export default async function Ficha({
   const cliente = await traerCliente(Number(id), quien?.alcance ?? { todo: false, consultoraId: null })
   if (!cliente) notFound()
 
-  const [documentos, origenes, conDatos, sesiones, diagnostico, propuestas] = await Promise.all([
+  const [documentos, origenes, conDatos, sesiones, diagnostico, propuestas, haySesiones] = await Promise.all([
     documentosDe(cliente.id), origenesDe(cliente.id), fuentesDeLaCartera(),
     listarSesiones(cliente.id), ultimoDiagnostico(cliente.id), pendientesDe(cliente.id),
+    hayAlgunaSesionEnLaCartera(),
   ])
 
   const inicio = cliente.valores.fecha_inicio as string
@@ -88,6 +91,16 @@ export default async function Ficha({
     conDatos,
   })
   const semaforo = semaforoDe(evaluados)
+
+  // Esto corre siempre: es aritmética, no cuesta nada. El modelo se llama
+  // después, con un botón, y para lo que la aritmética no puede contestar.
+  const lectura = leerElCaso({
+    hitos: evaluados,
+    valores: cliente.valores,
+    sesiones,
+    hayAlgunaSesionEnLaCartera: haySesiones,
+    hayDiagnostico: diagnostico !== null,
+  })
   const corte = dondeSeCorta(evaluados)
   const pestana: Pestana = (PESTANAS.find((p) => p.clave === bloque)?.clave ?? 'resumen') as Pestana
 
@@ -167,6 +180,7 @@ export default async function Ficha({
           <div className="tarjeta panel">
             {pestana === 'resumen' ? (
               <>
+                <LecturaDelCaso lectura={lectura} />
                 <Comparacion evaluados={evaluados} suelto />
                 <h2 style={{ marginTop: 26 }}>Identidad y programa</h2>
                 <dl className="dos-columnas">{campos('identidad').map(dato)}</dl>

@@ -115,3 +115,15 @@ export async function guardarAnalisis(datos: {
     [datos.id, datos.clienteId, datos.analisis, datos.puntos, datos.compromisos, datos.quePaso ?? ''],
   )
 }
+
+/**
+ * ¿Hay alguna sesión cargada en toda la cartera?
+ *
+ * Regla 2: mientras nadie cargue una sola sesión, «cero sesiones» de un cliente
+ * no se puede leer como «no se reunieron». Recién cuando la fuente existe en
+ * algún lado, un cero pasa a ser un cero.
+ */
+export async function hayAlgunaSesionEnLaCartera(): Promise<boolean> {
+  const r = await fila<{ hay: boolean }>('select exists(select 1 from sesiones) as hay')
+  return r?.hay ?? false
+}
