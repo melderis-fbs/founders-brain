@@ -89,13 +89,26 @@ export async function revisarBase(): Promise<Revision> {
  * A dónde está intentando conectarse, para poder decirlo en la pantalla.
  * Sólo el servidor y el puerto: el usuario y la contraseña no salen nunca.
  */
-function aDondeVa(): { host: string; puerto: string } | null {
+function aDondeVa(): { host: string; puerto: string; base: string } | null {
   try {
     const url = new URL(process.env.DATABASE_URL ?? '')
-    return { host: url.hostname, puerto: url.port || '5432' }
+    return { host: url.hostname, puerto: url.port || '5432', base: url.pathname.replace(/^\//, '') || 'postgres' }
   } catch {
     return null
   }
+}
+
+/**
+ * Contra qué base está mirando, dicho para comparar de un vistazo.
+ *
+ * Sin esto, «corrí la migración y sigue igual» no se puede resolver: puede ser
+ * que no haya corrido, o que haya corrido en otro proyecto de Supabase. Esta
+ * línea separa los dos casos sin tener que preguntar nada. Nunca sale el
+ * usuario ni la contraseña.
+ */
+function contraQueBase(): string {
+  const d = aDondeVa()
+  return d ? `Estoy mirando la base «${d.base}» en ${d.host}:${d.puerto}.` : ''
 }
 
 const PLACEHOLDERS = ['REGION', 'PROYECTO', 'PROJECT', 'YOUR', 'CLAVE', 'PASSWORD']
@@ -121,7 +134,7 @@ async function queMigracionFalta(): Promise<Revision | null> {
     return {
       ok: false,
       titulo: 'No veo ninguna tabla',
-      detalle: 'La conexión funciona, pero en el esquema public no aparece nada.',
+      detalle: `La conexión funciona, pero en el esquema public no aparece nada. ${contraQueBase()}`,
       pasos: [
         'Si la base es nueva: corré las migraciones de supabase/migrations/ en orden, o `npm run esquema` y pegá todo junto en el SQL Editor.',
         'Si ya las corriste: el usuario de la cadena de conexión no tiene permisos sobre el esquema public. En Supabase la cadena tiene que ser la del usuario postgres.',
@@ -152,6 +165,11 @@ async function queMigracionFalta(): Promise<Revision | null> {
   const desdeCero = faltantes.length === ESQUEMA_ESPERADO.length
   const unaSola = faltantes.length === 1
 
+  // «La corrí y sigue igual» casi siempre es que corrió en otra base. Decir a
+  // cuál estamos mirando y qué tablas hay ahí lo resuelve de un vistazo, sin
+  // que nadie tenga que ir a comparar cadenas de conexión a mano.
+  const dondeMiro = `${contraQueBase()} Las tablas que veo ahí son: ${[...tablas].sort().join(', ')}.`
+
   return {
     ok: false,
     titulo: desdeCero
@@ -174,6 +192,7 @@ async function queMigracionFalta(): Promise<Revision | null> {
           `Para sacarlas todas juntas: \`npm run esquema -- --desde ${faltantes[0]!.migracion.slice(0, 4)}\`, y pegás lo que imprime en el SQL Editor de Supabase.`,
           'Volver a correr una que ya está no rompe nada: son idempotentes.',
           'O corré `npm run migrar` desde tu máquina con la misma DATABASE_URL, que las aplica todas en orden.',
+          `Si ya las corriste y sigue igual, corriste en otra base: ${dondeMiro} Comparalo con el proyecto de Supabase donde pegaste el SQL.`,
         ],
   }
 }
