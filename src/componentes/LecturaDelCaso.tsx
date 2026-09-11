@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { PESTANA_DEL_GRUPO } from '@/lib/campos'
 import type { Expedientito, Lectura, Parte } from '@/lib/lectura'
 
 /**
@@ -7,7 +9,7 @@ import type { Expedientito, Lectura, Parte } from '@/lib/lectura'
  * «9» no le dice nada a nadie, «la oferta falta hace 27 semanas» se puede
  * confirmar, corregir o llevar a la sesión del martes.
  */
-export function LecturaDelCaso({ lectura, ficha }: { lectura: Lectura; ficha: Expedientito }) {
+export function LecturaDelCaso({ lectura, ficha, clienteId }: { lectura: Lectura; ficha: Expedientito; clienteId: number }) {
   return (
     <section className="lectura">
       <header>
@@ -32,10 +34,14 @@ export function LecturaDelCaso({ lectura, ficha }: { lectura: Lectura; ficha: Ex
 
       <div className="bloques">
         {ficha.bloques.map((b) => (
-          <div className={`bloque ${b.estado}`} key={b.grupo} title={`${b.cargados} de ${b.total} datos`}>
+          <Link
+            className={`bloque ${b.estado}`} key={b.grupo}
+            href={`/clientes/${clienteId}?bloque=${PESTANA_DEL_GRUPO[b.grupo]}`}
+            title={`${b.cargados} de ${b.total} datos · tocá para ir a cargarlos`}
+          >
             <span className="que">{b.etiqueta}</span>
             <span className="cuantos">{b.cargados}/{b.total}</span>
-          </div>
+          </Link>
         ))}
       </div>
       <p className="que-va-a-poder">{ficha.queVaAPoder}</p>

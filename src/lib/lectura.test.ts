@@ -3,6 +3,7 @@ import type { HitoEvaluado } from './hitos'
 import { HITOS } from './hitos'
 import { bloquesDeLaFicha, leerElCaso } from './lectura'
 import type { SesionEnLista } from './sesiones-tipos'
+import { semanaDeLaSesion } from './sesiones-tipos'
 
 function hito(clave: string, estado: HitoEvaluado['estado'], atraso: number | null = null): HitoEvaluado {
   const h = HITOS.find((x) => x.clave === clave) ?? HITOS[0]!
@@ -143,5 +144,29 @@ describe('los bloques de la ficha', () => {
   it('un string vacío no es un dato cargado', () => {
     const e = bloquesDeLaFicha({ oferta: '   ' }, { documentos: 0, sesiones: 0 })
     expect(e.bloques.find((b) => b.grupo === 'negocio')!.cargados).toBe(0)
+  })
+})
+
+describe('en qué semana del programa cayó cada sesión', () => {
+  it('el mismo día del arranque es la semana 1', () => {
+    expect(semanaDeLaSesion('2026-01-05', '2026-01-05')).toBe(1)
+  })
+
+  it('seis días después sigue siendo la semana 1; el séptimo empieza la 2', () => {
+    expect(semanaDeLaSesion('2026-01-05', '2026-01-11')).toBe(1)
+    expect(semanaDeLaSesion('2026-01-05', '2026-01-12')).toBe(2)
+  })
+
+  it('una sesión anterior al arranque no tiene semana: no se inventa', () => {
+    expect(semanaDeLaSesion('2026-01-05', '2026-01-04')).toBeNull()
+  })
+
+  it('sin fecha de sesión o sin inicio del programa, no hay semana', () => {
+    expect(semanaDeLaSesion('2026-01-05', null)).toBeNull()
+    expect(semanaDeLaSesion(null, '2026-01-05')).toBeNull()
+  })
+
+  it('una fecha que no se entiende no da una semana cualquiera', () => {
+    expect(semanaDeLaSesion('2026-01-05', 'el martes')).toBeNull()
   })
 })

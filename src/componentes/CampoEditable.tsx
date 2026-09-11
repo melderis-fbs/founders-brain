@@ -13,7 +13,7 @@ import type { TipoCampo } from '@/lib/campos'
  * y se dice por qué, con las mismas palabras que usa la importación.
  */
 export function CampoEditable({
-  clienteId, clave, tipo, opciones, valorCrudo, valorMostrado, ayuda, deDonde,
+  clienteId, clave, tipo, opciones, valorCrudo, valorMostrado, ayuda, deDonde, apuntado = false,
 }: {
   clienteId: number
   clave: string
@@ -23,9 +23,11 @@ export function CampoEditable({
   valorMostrado: string | null
   ayuda?: string
   deDonde?: string
+  /** Alguien vino desde otra pantalla a cargar justo este dato. */
+  apuntado?: boolean
 }) {
   const router = useRouter()
-  const [editando, setEditando] = useState(false)
+  const [editando, setEditando] = useState(apuntado)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const campoRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null)
@@ -36,6 +38,13 @@ export function CampoEditable({
   useEffect(() => {
     if (editando) campoRef.current?.focus()
   }, [editando])
+
+  // Si vino apuntado desde otro lado, que quede a la vista: llegar a la
+  // pestaña correcta y tener que buscar el campo con la vista es la mitad del
+  // trabajo sin hacer.
+  useEffect(() => {
+    if (apuntado) campoRef.current?.scrollIntoView({ block: 'center' })
+  }, [apuntado])
 
   async function guardar() {
     if (enVuelo.current) return

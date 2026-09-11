@@ -46,3 +46,23 @@ export function colorDeSesion(s: SesionEnLista): { color: Color; palabra: string
   return { color: 'verde', palabra: 'analizada', porque: 'Se hizo, quedó la transcripción y está analizada.' }
 }
 
+/**
+ * En qué semana del programa cayó una sesión.
+ *
+ * La fecha de la sesión contra la fecha de inicio del cliente. Con eso una
+ * transcripción cargada se ubica sola en la semana que le toca, y se puede
+ * mirar contra lo que tendría que haber pasado esa semana.
+ *
+ * Sin fecha de sesión o sin inicio del programa, null: no se inventa una
+ * semana. Una sesión en la semana equivocada es peor que una sesión sin
+ * semana.
+ */
+export function semanaDeLaSesion(fechaInicio: string | null, fechaSesion: string | null): number | null {
+  if (!fechaInicio || !fechaSesion) return null
+  const a = Date.parse(`${fechaInicio.slice(0, 10)}T00:00:00Z`)
+  const b = Date.parse(`${fechaSesion.slice(0, 10)}T00:00:00Z`)
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null
+  const dias = Math.floor((b - a) / 86_400_000)
+  if (dias < 0) return null  // la sesión es anterior al programa
+  return Math.floor(dias / 7) + 1
+}

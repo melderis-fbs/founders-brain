@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
+import { CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO } from '@/lib/campos'
 import { Comparacion } from '@/componentes/Comparacion'
 import { Fases } from '@/componentes/Fases'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
@@ -68,10 +69,10 @@ export default async function Ficha({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ bloque?: string; error?: string; cargado?: string }>
+  searchParams: Promise<{ bloque?: string; error?: string; cargado?: string; campo?: string }>
 }) {
   const { id } = await params
-  const { bloque, error, cargado } = await searchParams
+  const { bloque, error, cargado, campo: apuntado } = await searchParams
   // Un cliente de otra consultora da lo mismo que uno que no existe: 404. Si
   // dijéramos «no tenés permiso», eso ya confirma que el cliente existe.
   const quien = await quienMira()
@@ -105,7 +106,11 @@ export default async function Ficha({
   })
   const ficha = bloquesDeLaFicha(cliente.valores, { documentos: documentos.length, sesiones: sesiones.length })
   const corte = dondeSeCorta(evaluados)
-  const pestana: Pestana = (PESTANAS.find((p) => p.clave === bloque)?.clave ?? 'resumen') as Pestana
+  // Si vinieron a cargar un dato puntual, la pestaña la manda el dato: así el
+  // enlace «falta la oferta» no depende de que quien lo escribió se acuerde de
+  // en qué pestaña vive la oferta.
+  const bloqueDelCampo = apuntado ? PESTANA_DEL_GRUPO[CAMPOS_POR_CLAVE.get(apuntado)?.grupo ?? 'identidad'] : null
+  const pestana: Pestana = (PESTANAS.find((p) => p.clave === (bloqueDelCampo ?? bloque))?.clave ?? 'resumen') as Pestana
 
   const campos = (grupo: Grupo) => CAMPOS.filter((c) => c.grupo === grupo)
   const dato = (campo: Campo) => (
@@ -117,6 +122,7 @@ export default async function Ficha({
           valorCrudo={comoSeEdita(campo, cliente.valores[campo.clave])}
           valorMostrado={comoSeLee(campo, cliente.valores[campo.clave])}
           deDonde={deDonde(origenes.get(campo.clave))}
+          apuntado={apuntado === campo.clave}
         />
       </dd>
     </div>
@@ -183,14 +189,19 @@ export default async function Ficha({
           <div className="tarjeta panel">
             {pestana === 'resumen' ? (
               <>
-                <LecturaDelCaso lectura={lectura} ficha={ficha} />
+                <LecturaDelCaso lectura={lectura} ficha={ficha} clienteId={cliente.id} />
                 <Comparacion evaluados={evaluados} suelto />
                 <h2 style={{ marginTop: 26 }}>Identidad y programa</h2>
                 <dl className="dos-columnas">{campos('identidad').map(dato)}</dl>
                 {cliente.faltan.length > 0 ? (
                   <p className="faltantes">
-                    Faltan <b>{cliente.faltan.length} de {TOTAL_CAMPOS}</b> datos:{' '}
-                    {cliente.faltan.map((c) => c.etiqueta.toLowerCase()).join(', ')}.
+                    Faltan <b>{cliente.faltan.length} de {TOTAL_CAMPOS}</b> datos. Tocá cualquiera y te deja escribiéndolo:{' '}
+                    {cliente.faltan.map((c, i) => (
+                      <span key={c.clave}>
+                        {i > 0 ? ', ' : ''}
+                        <Link href={dondeSeCarga(cliente.id, c.clave) ?? '#'}>{c.etiqueta.toLowerCase()}</Link>
+                      </span>
+                    ))}.
                   </p>
                 ) : null}
               </>
@@ -224,7 +235,16 @@ export default async function Ficha({
               />
             ) : null}
             {pestana === 'diagnostico' ? <DiagnosticoDelCaso clienteId={cliente.id} guardado={diagnostico} /> : null}
-            {pestana === 'sesiones' ? <Sesiones clienteId={cliente.id} sesiones={sesiones} /> : null}
+            {pestana === 'sesiones' ? (
+              <Sesiones
+                clienteId={cliente.id} sesiones={sesiones}
+                fechaInicio={inicio ?? null}
+                hitosPorSemana={evaluados.reduce<Record<number, string[]>>((acc, e) => {
+                  ;(acc[e.hito.semana] ??= []).push(e.hito.etiqueta)
+                  return acc
+                }, {})}
+              />
+            ) : null}
             {pestana === 'documentos' ? <Documentos clienteId={cliente.id} documentos={documentos} suelto /> : null}
           </div>
         </div>

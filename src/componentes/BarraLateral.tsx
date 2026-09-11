@@ -10,12 +10,12 @@ const AHORA = [
   { href: '/grilla', texto: 'La grilla', icono: Iconos.grilla, soloAdmin: false },
   // La planilla madre reparte clientes entre consultoras: no es de cada una.
   { href: '/importar', texto: 'Importar', icono: Iconos.importar, soloAdmin: true },
+  { href: '/equipo', texto: 'El equipo', icono: Iconos.consultoras, soloAdmin: true },
 ]
 
 /** Lo que todavía no está. Se ve, pero apagado: no se promete lo que no hay. */
 const DESPUES = [
   { texto: 'Alertas', icono: Iconos.alertas },
-  { texto: 'Consultoras', icono: Iconos.consultoras },
 ]
 
 export function BarraLateral({ esAdmin }: { esAdmin: boolean }) {

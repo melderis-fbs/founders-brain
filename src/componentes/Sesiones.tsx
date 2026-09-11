@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
-import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, type SesionEnLista } from '@/lib/sesiones-tipos'
+import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, semanaDeLaSesion, type SesionEnLista } from '@/lib/sesiones-tipos'
 
 const EXTENSIONES = '.txt,.md,.vtt,.srt,.json,.log,.pdf,.docx'
 
@@ -13,7 +13,16 @@ const EXTENSIONES = '.txt,.md,.vtt,.srt,.json,.log,.pdf,.docx'
  * Adentro está lo que pasó, el lugar para pegar la transcripción y el botón
  * Analizar. El análisis cuesta plata, así que corre sólo al apretarlo.
  */
-export function Sesiones({ clienteId, sesiones }: { clienteId: number; sesiones: SesionEnLista[] }) {
+export function Sesiones({
+  clienteId, sesiones, fechaInicio, hitosPorSemana,
+}: {
+  clienteId: number
+  sesiones: SesionEnLista[]
+  /** El arranque del programa: con eso cada sesión se ubica en su semana. */
+  fechaInicio: string | null
+  /** Qué tendría que haber pasado en cada semana, para mirarlo al lado. */
+  hitosPorSemana: Record<number, string[]>
+}) {
   const router = useRouter()
   const [abierta, setAbierta] = useState<number | null>(null)
   const [nueva, setNueva] = useState(false)
@@ -71,6 +80,7 @@ export function Sesiones({ clienteId, sesiones }: { clienteId: number; sesiones:
               <tr>
                 <th style={{ width: 70 }}>Sesión</th>
                 <th style={{ width: 110 }}>Fecha</th>
+                <th style={{ width: 190 }}>Semana del programa</th>
                 <th style={{ width: 150 }}>Cómo quedó</th>
                 <th>Qué pasó</th>
                 <th style={{ width: 90 }} />
@@ -81,6 +91,7 @@ export function Sesiones({ clienteId, sesiones }: { clienteId: number; sesiones:
                 const color = colorDeSesion(s)
                 return (
                   <Fila key={s.id} sesion={s} color={color} clienteId={clienteId}
+                        semana={semanaDeLaSesion(fechaInicio, s.fecha)} hitosPorSemana={hitosPorSemana}
                         abierta={abierta === s.id} alAbrir={() => setAbierta(abierta === s.id ? null : s.id)} />
                 )
               })}
@@ -93,19 +104,36 @@ export function Sesiones({ clienteId, sesiones }: { clienteId: number; sesiones:
 }
 
 function Fila({
-  sesion, color, clienteId, abierta, alAbrir,
+  sesion, color, clienteId, semana, hitosPorSemana, abierta, alAbrir,
 }: {
   sesion: SesionEnLista
   color: { color: string; palabra: string; porque: string }
   clienteId: number
+  semana: number | null
+  hitosPorSemana: Record<number, string[]>
   abierta: boolean
   alAbrir: () => void
 }) {
+  const loDeEsaSemana = semana === null ? [] : hitosPorSemana[semana] ?? []
   return (
     <>
       <tr className={abierta ? 'abierta' : undefined}>
         <td className="num">{sesion.numero ?? '—'}</td>
         <td className="mini">{sesion.fecha ? sesion.fecha.split('-').reverse().join('/') : <span className="apagado">sin fecha</span>}</td>
+        <td className="mini">
+          {semana === null ? (
+            <span className="apagado" title={sesion.fecha ? 'El programa no tiene fecha de inicio cargada' : 'Cargale la fecha a la sesión'}>
+              {sesion.fecha ? 'falta el inicio del programa' : 'sin fecha, sin semana'}
+            </span>
+          ) : (
+            <>
+              <b>semana {semana}</b>
+              {loDeEsaSemana.length > 0
+                ? <div className="apagado">tocaba: {loDeEsaSemana.join(' · ')}</div>
+                : <div className="apagado">no vencía nada esa semana</div>}
+            </>
+          )}
+        </td>
         <td>
           <span className={`semaforo ${color.color}`} title={color.porque}><i />{color.palabra}</span>
         </td>
@@ -120,7 +148,7 @@ function Fila({
       </tr>
       {abierta ? (
         <tr className="detalle-sesion">
-          <td colSpan={5}><Detalle clienteId={clienteId} sesionId={sesion.id} /></td>
+          <td colSpan={6}><Detalle clienteId={clienteId} sesionId={sesion.id} /></td>
         </tr>
       ) : null}
     </>

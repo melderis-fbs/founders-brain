@@ -192,3 +192,25 @@ export const ETIQUETA_DOCUMENTO: Record<TipoDocumento, string> = {
   notas: 'Notas',
   otro: 'Otro',
 }
+
+/**
+ * En qué pestaña de la ficha se carga cada dato.
+ *
+ * Es lo que permite que «falta la oferta» sea un enlace que te deja escribiendo
+ * la oferta. Decir qué falta y no decir dónde se carga es la mitad del trabajo.
+ */
+export const PESTANA_DEL_GRUPO: Record<Grupo, string> = {
+  identidad: 'resumen',
+  negocio: 'negocio',
+  autoridad: 'autoridad',
+  intentos: 'intentos',
+  numeros: 'numeros',
+  comercial: 'numeros',
+}
+
+/** El enlace que lleva a cargar ese dato, ya abierto para escribir. */
+export function dondeSeCarga(clienteId: number, clave: string): string | null {
+  const campo = CAMPOS_POR_CLAVE.get(clave)
+  if (!campo) return null
+  return `/clientes/${clienteId}?bloque=${PESTANA_DEL_GRUPO[campo.grupo]}&campo=${campo.clave}`
+}
