@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { levantarBandera, pasarDeCoach, resolverBandera } from '@/app/(app)/clientes/[id]/acciones'
-import { COLORES, QUE_DICE, type Bandera, type ColorDeBandera } from '@/lib/banderas-tipos'
+import { COLORES, CUANDO_SE_LEVANTA, QUE_DICE, type Bandera, type ColorDeBandera } from '@/lib/banderas-tipos'
 import type { CambioDeCoach } from '@/lib/usuarios'
 
 /**
@@ -87,6 +87,7 @@ export function Banderas({
           {COLORES.map((c) => (
             <button key={c} type="button" className={`boton suave bandera-${c}`} onClick={() => { setPoniendo(c); setError(null) }}>
               <i className="marca-bandera" /> {QUE_DICE[c]}
+              <em>{CUANDO_SE_LEVANTA[c]}</em>
             </button>
           ))}
         </p>
@@ -94,7 +95,9 @@ export function Banderas({
 
       {poniendo ? (
         <div className="al-levantar">
-          <label htmlFor="motivo-bandera">¿Por qué? — {QUE_DICE[poniendo]}</label>
+          <label htmlFor="motivo-bandera">
+            {QUE_DICE[poniendo]} — {CUANDO_SE_LEVANTA[poniendo]}. ¿Por qué?
+          </label>
           <textarea id="motivo-bandera" className="edicion" rows={3} value={motivo} autoFocus
                     onChange={(e) => setMotivo(e.target.value)}
                     placeholder="Lo que pasó, con las palabras del cliente si las tenés. Esto es lo que va a leer el que la mire dentro de dos semanas." />

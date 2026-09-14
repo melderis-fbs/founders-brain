@@ -58,6 +58,8 @@ export type ClienteDeLista = {
   programaMeses: number | null
   documentos: number
   tieneOnboarding: boolean
+  /** La etapa que eligió la consultora a mano, si eligió alguna. */
+  etapaActual: string | null
   /** Presencia de cada dato, sin traer el texto: alcanza para comparar. */
   presencia: Record<string, unknown>
   faltan: Campo[]
@@ -98,7 +100,7 @@ export async function listarClientes(
   const donde = `where ${condiciones.join(' and ')}`
 
   const encontrados = await filas<FilaDeLista>(
-    `select c.id, c.nombre, co.nombre as consultora, c.estado, c.fecha_inicio, c.programa_meses,
+    `select c.id, c.nombre, co.nombre as consultora, c.estado, c.fecha_inicio, c.programa_meses, c.etapa_actual,
             (select count(*)::int from documentos d where d.cliente_id = c.id) as documentos,
             exists(select 1 from documentos d where d.cliente_id = c.id and d.tipo = 'onboarding') as tiene_onboarding,
             ${seleccionDeTenencia()}
@@ -123,6 +125,7 @@ export async function listarClientes(
       programaMeses: f.programa_meses,
       documentos: f.documentos,
       tieneOnboarding: f.tiene_onboarding,
+      etapaActual: (f.etapa_actual as string) ?? null,
       presencia,
       faltan: CAMPOS_QUE_CUENTAN.filter((campo) => f[`tiene_${campo.clave}`] !== true),
     }

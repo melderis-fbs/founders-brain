@@ -1,7 +1,7 @@
 import { fuentesDeLaCartera, listarClientes } from './clientes'
 import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
-import { faseDeLaSemana, SEMANAS_DEL_PROGRAMA } from './modulos'
+import { ETAPAS, etapasDeLaSemana, SEMANAS_DEL_PROGRAMA } from './modulos'
 import { semaforoDe, type Semaforo } from './semaforo'
 import { semanaEnLaQueVa, semanasDelPrograma } from './programa'
 
@@ -27,8 +27,10 @@ export type ClienteEnGrilla = {
   semana: number | null
   totalSemanas: number | null
   semaforo: Semaforo
-  /** En qué fase tendría que estar por calendario. Es la columna del tablero. */
-  columna: number | 'sin_fecha' | 'termino'
+  /** En qué etapa tendría que estar por calendario. Es la columna del tablero. */
+  columna: string
+  /** La que eligió la consultora a mano, si eligió alguna. */
+  etapaElegida: string | null
   /** En qué fase se corta de verdad. null si no se corta en ninguna. */
   seCortaEn: number | null
   necesita: string
@@ -45,6 +47,7 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
   ])
 
   const armados = clientes.map((c) => {
+    const elegida = ETAPAS.find((e) => e.nombre === c.etapaActual)
     const semana = semanaEnLaQueVa(c.fechaInicio)
     const evaluados = evaluarHitos({
       semana,
@@ -76,8 +79,13 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       // Un cliente que pasó las dieciséis semanas SÍ tiene fecha de inicio: lo
       // que pasó es que se le terminó el programa. Meterlo en «sin fecha»
       // sería decir que falta un dato que está.
-      columna: (faseDeLaSemana(semana)?.numero
-        ?? (semana === null ? 'sin_fecha' : 'termino')) as number | 'sin_fecha' | 'termino',
+      // La columna es la etapa que le toca por calendario. Si eligieron una a
+      // mano, esa manda: la consultora sabe dónde está de verdad, y el
+      // calendario sólo sabe qué día es.
+      columna: elegida?.clave
+        ?? etapasDeLaSemana(semana)[0]?.clave
+        ?? (semana === null ? 'sin_fecha' : 'termino'),
+      etapaElegida: elegida?.clave ?? null,
       seCortaEn: semaforo.fase,
       necesita: queNecesita(evaluados, c.faltan),
       porSemana,

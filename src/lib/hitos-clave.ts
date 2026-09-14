@@ -1,5 +1,5 @@
 import { escribir, escribirDevolviendo, filas } from './db'
-import { FASES, faseDeLaSemana, HITOS_CLAVE, type Fase } from './modulos'
+import { ETAPAS, etapasDeLaSemana, FASES, faseDeLaSemana, HITOS_CLAVE, type Etapa, type Fase } from './modulos'
 
 /**
  * Los hitos clave del programa, marcados por cliente.
@@ -89,5 +89,38 @@ export function estadoDeLasFases(semana: number | null, hechos: ReadonlySet<stri
       return { fase, estado: 'pendiente' as const, hechos: cuantos, total, porque: 'Sin fecha de inicio no se sabe si ya le tocaba.' }
     }
     return { fase, estado: 'pendiente' as const, hechos: cuantos, total, porque: `Arranca en la semana ${fase.desdeSemana}.` }
+  })
+}
+
+export type EtapaConEstado = {
+  etapa: Etapa
+  estado: 'pasada' | 'es_la_de_ahora' | 'todavia_no' | 'elegida'
+  porque: string
+}
+
+/**
+ * Las catorce etapas, con dónde va el cliente.
+ *
+ * Dos marcas distintas y las dos importan: la que le tocaría por calendario y
+ * la que eligió la consultora. Cuando no coinciden, eso es la conversación —y
+ * por eso no se elige una y se esconde la otra.
+ */
+export function estadoDeLasEtapas(semana: number | null, elegida: string | null): EtapaConEstado[] {
+  const laDeAhora = etapasDeLaSemana(semana)
+
+  return ETAPAS.map((etapa) => {
+    if (elegida && etapa.nombre === elegida) {
+      return { etapa, estado: 'elegida' as const, porque: 'Acá dice la consultora que está.' }
+    }
+    if (laDeAhora.some((e) => e.clave === etapa.clave)) {
+      return { etapa, estado: 'es_la_de_ahora' as const, porque: 'Es la que le toca por calendario.' }
+    }
+    if (semana === null) {
+      return { etapa, estado: 'todavia_no' as const, porque: 'Sin fecha de inicio no se sabe si ya le tocaba.' }
+    }
+    if (semana > etapa.hastaSemana) {
+      return { etapa, estado: 'pasada' as const, porque: `Le tocaba en la semana ${etapa.desdeSemana}.` }
+    }
+    return { etapa, estado: 'todavia_no' as const, porque: `Le toca en la semana ${etapa.desdeSemana}.` }
   })
 }

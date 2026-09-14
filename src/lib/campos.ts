@@ -7,6 +7,8 @@
  *  3. cómo se dibuja y se edita la ficha.
  */
 
+import { NOMBRES_DE_ETAPAS } from './modulos'
+
 export type TipoCampo = 'texto' | 'texto_largo' | 'numero' | 'entero' | 'fecha' | 'booleano' | 'opcion'
 
 export type Grupo = 'identidad' | 'negocio' | 'autoridad' | 'intentos' | 'numeros' | 'comercial'
@@ -58,7 +60,11 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'horas_por_semana', etiqueta: 'Horas por semana', grupo: 'identidad', tabla: 'clientes', columna: 'horas_por_semana', tipo: 'numero', cuenta: true,
     sinonimos: ['horas', 'horas por semana', 'horas semanales', 'disponibilidad'],
     ayuda: 'Las que declaró en la sesión 1, no las que dijo en la venta' },
-  { clave: 'etapa_declarada', etiqueta: 'Etapa que dice la consultora', grupo: 'identidad', tabla: 'clientes',
+  { clave: 'etapa_actual', etiqueta: 'Etapa en la que está', grupo: 'identidad', tabla: 'clientes',
+    columna: 'etapa_actual', tipo: 'opcion', cuenta: true, opciones: NOMBRES_DE_ETAPAS,
+    sinonimos: ['etapa actual', 'etapa en la que esta', 'en que etapa esta'],
+    ayuda: 'La que elige la consultora. La aplicación deduce la suya del calendario; cuando no coinciden, eso es la conversación' },
+  { clave: 'etapa_declarada', etiqueta: 'Etapa según la planilla', grupo: 'identidad', tabla: 'clientes',
     columna: 'etapa_declarada', tipo: 'texto', cuenta: false,
     sinonimos: ['etapa', 'etapa sequoia', 'etapa del metodo', 'fase', 'etapa actual', 'etapa declarada'],
     ayuda: 'La que escribe la consultora en su planilla. La aplicación deduce la suya de lo que está hecho; cuando no coinciden, eso es la conversación' },

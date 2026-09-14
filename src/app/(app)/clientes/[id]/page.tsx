@@ -11,7 +11,7 @@ import { banderaDe, historialDeBanderas, QUE_DICE } from '@/lib/banderas'
 import { cambiosDeCoach } from '@/lib/usuarios'
 import { Fases } from '@/componentes/Fases'
 import { FasesDelPrograma } from '@/componentes/FasesDelPrograma'
-import { estadoDeLasFases, hechosDe } from '@/lib/hitos-clave'
+import { estadoDeLasEtapas, estadoDeLasFases, hechosDe } from '@/lib/hitos-clave'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
 import { bloquesDeLaFicha, leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
@@ -110,6 +110,10 @@ export default async function Ficha({
   })
   const semaforo = semaforoDe(evaluados)
   const fasesDelPrograma = estadoDeLasFases(semanaEnLaQueVa(inicio), new Set(hechos.keys()))
+  const etapasDelPrograma = estadoDeLasEtapas(
+    semanaEnLaQueVa(inicio),
+    (cliente.valores.etapa_actual as string) ?? null,
+  )
 
   // Esto corre siempre: es aritmética, no cuesta nada. El modelo se llama
   // después, con un botón, y para lo que la aritmética no puede contestar.
@@ -177,19 +181,16 @@ export default async function Ficha({
             <b>{textoDeSemana(inicio, meses)}</b>
           </div>
           <div>
-            <span className="rotulo">Fase del programa</span>
+            <span className="rotulo">Etapa</span>
             <b>
-              {enQueFaseVa(semanaEnLaQueVa(inicio)).fase ? (
-                <>
-                  Fase {enQueFaseVa(semanaEnLaQueVa(inicio)).fase!.numero} de 4
-                  <div className="mini">
-                    {etapasDeLaSemana(semanaEnLaQueVa(inicio)).map(nombreDeEtapa).join(' · ') ||
-                      enQueFaseVa(semanaEnLaQueVa(inicio)).fase!.periodo}
-                  </div>
-                </>
-              ) : (
-                <span className="apagado">{enQueFaseVa(semanaEnLaQueVa(inicio)).porque}</span>
-              )}
+              {cliente.valores.etapa_actual
+                ? String(cliente.valores.etapa_actual)
+                : <span className="apagado">sin elegir</span>}
+              <div className="mini">
+                {etapasDeLaSemana(semanaEnLaQueVa(inicio)).length > 0
+                  ? `por calendario: ${etapasDeLaSemana(semanaEnLaQueVa(inicio)).map(nombreDeEtapa).join(' · ')}`
+                  : enQueFaseVa(semanaEnLaQueVa(inicio)).porque}
+              </div>
             </b>
           </div>
           <div>
@@ -249,7 +250,7 @@ export default async function Ficha({
 
             {pestana === 'programa' ? (
               <FasesDelPrograma
-                clienteId={cliente.id} fases={fasesDelPrograma}
+                clienteId={cliente.id} etapas={etapasDelPrograma} fases={fasesDelPrograma}
                 hechos={Object.fromEntries(hechos)}
               />
             ) : null}

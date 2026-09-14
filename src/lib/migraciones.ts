@@ -56,6 +56,10 @@ export const MIGRACIONES: readonly Migracion[] = [
     archivo: "0013_hitos_clave_del_programa.sql",
     sql: "-- Los hitos clave de cada fase, marcados por cliente.\n--\n-- El programa dice qué tiene que quedar hecho en cada fase: la presentación en\n-- Telegram el día 1, la oferta en video con #mioferta, el reto de 21 días, la\n-- primera venta. Eso no sale de ningún campo de la ficha ni de ningún\n-- documento: lo sabe la consultora, y hasta acá no tenía dónde ponerlo.\n--\n-- La fila existe cuando está hecho. No hay «pendiente» guardado: pendiente es\n-- la ausencia de fila, y así no hay dos lugares donde pueda decir cosas\n-- distintas.\n\ncreate table if not exists hitos_clave (\n  id          bigint generated always as identity primary key,\n  cliente_id  bigint not null references clientes(id) on delete cascade,\n  clave       text not null,\n  hecho_en    date not null default current_date,\n  usuario_id  bigint references usuarios(id) on delete set null,\n  creado_en   timestamptz not null default now(),\n  unique (cliente_id, clave)\n);\ncreate index if not exists idx_hitos_clave_cliente on hitos_clave(cliente_id);\n\nalter table hitos_clave enable row level security;",
   },
+  {
+    archivo: "0014_etapa_del_cliente.sql",
+    sql: "-- En qué etapa está el cliente, elegida a mano.\n--\n-- La aplicación deduce en qué etapa tendría que estar por el calendario. Pero\n-- la consultora sabe en cuál está de verdad, que muchas veces no es la misma:\n-- el cliente se atrasó, se saltó una, o la está rehaciendo.\n--\n-- Las dos se guardan y ninguna pisa a la otra. Cuando no coinciden, eso no es\n-- un error: es la conversación. «Por calendario le tocaría Ventas y Cierre y\n-- está en Match de Marca» dice más que cualquiera de las dos sola.\n--\n-- Es distinto de `etapa_declarada`, que es el texto que venía en la planilla\n-- de trabajo y no usa este vocabulario.\n\nalter table clientes add column if not exists etapa_actual text;",
+  },
 ]
 
 /** El SQL de las migraciones que faltan, en orden, listo para pegar. */

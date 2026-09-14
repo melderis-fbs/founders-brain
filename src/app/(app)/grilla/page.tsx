@@ -5,11 +5,13 @@ import { HITOS } from '@/lib/hitos'
 import { listarConsultoras } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
 import { SEMANAS_CON_HITOS, traerGrilla, type ClienteEnGrilla } from '@/lib/grilla'
-import { etapasDeLaSemana, FASES, faseDeLaSemana, nombreDeEtapa } from '@/lib/modulos'
+import {
+  etapasDeLaSemana, ETAPAS, ETAPA_POR_CLAVE, faseDeLaSemana, nombreDeEtapa, type ClaveEtapa,
+} from '@/lib/modulos'
 
 export const dynamic = 'force-dynamic'
 
-const COLUMNAS = [...FASES.map((f) => f.numero), 'termino', 'sin_fecha'] as const
+const COLUMNAS: string[] = [...ETAPAS.map((e) => e.clave), 'termino', 'sin_fecha']
 
 export default async function Grilla({
   searchParams,
@@ -75,15 +77,19 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
               <span className="titulo">
                 {columna === 'sin_fecha' ? 'Sin fecha de inicio'
                   : columna === 'termino' ? 'Se le terminó el programa'
-                  : `Fase ${columna} · ${FASES[columna - 1]!.periodo}`}
+                  : ETAPA_POR_CLAVE.get(columna as ClaveEtapa)!.nombre}
               </span>
               <span className={`cuantos ${suyos.length === 0 ? 'apagado' : ''}`}>{suyos.length}</span>
               {columna === 'sin_fecha' ? (
                 <div className="pregunta">No se puede comparar contra nada hasta que se cargue el inicio.</div>
               ) : columna === 'termino' ? (
-                <div className="pregunta">Pasaron las 16 semanas. Lo que falte acá ya no se recupera dentro del programa.</div>
+                <div className="pregunta">Pasaron las 16 semanas.</div>
               ) : (
-                <div className="pregunta">{FASES[columna - 1]!.queConstruimos}</div>
+                <div className="pregunta">
+                  semana {ETAPA_POR_CLAVE.get(columna as ClaveEtapa)!.desdeSemana}
+                  {ETAPA_POR_CLAVE.get(columna as ClaveEtapa)!.hastaSemana !== ETAPA_POR_CLAVE.get(columna as ClaveEtapa)!.desdeSemana
+                    ? ` a ${ETAPA_POR_CLAVE.get(columna as ClaveEtapa)!.hastaSemana}` : ''}
+                </div>
               )}
               {suyos.length > 0 ? (
                 <div className="cuantos-llegaron">
@@ -106,7 +112,8 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
                     {c.consultora ? ` · ${c.consultora}` : ''}
                   </div>
                   <div className="necesita">{c.necesita}</div>
-                  {c.seCortaEn !== null && c.seCortaEn !== c.columna ? (
+                  {c.etapaElegida ? <div className="mini se-corta">la eligió la consultora</div> : null}
+                  {c.seCortaEn !== null ? (
                     <div className="mini se-corta">se corta en la fase {c.seCortaEn}</div>
                   ) : null}
                 </Link>

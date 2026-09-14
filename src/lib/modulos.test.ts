@@ -128,3 +128,43 @@ describe('dónde cae cada cliente en el tablero', () => {
     expect(faseDeLaSemana(null)).toBeNull()
   })
 })
+
+describe('la etapa que elige la consultora', () => {
+  it('las catorce se ofrecen como opciones de la ficha', async () => {
+    const { NOMBRES_DE_ETAPAS } = await import('./modulos')
+    const { CAMPOS_POR_CLAVE } = await import('./campos')
+    expect(NOMBRES_DE_ETAPAS).toHaveLength(14)
+    expect(CAMPOS_POR_CLAVE.get('etapa_actual')!.opciones).toEqual(NOMBRES_DE_ETAPAS)
+  })
+
+  it('la elegida manda sobre la del calendario, pero no la tapa', async () => {
+    const { estadoDeLasEtapas } = await import('./hitos-clave')
+    // Va en la semana 11 (le tocaría Ventas y Cierre) y la consultora dice
+    // que está en Match de Marca: las dos se ven, ninguna se esconde.
+    const r = estadoDeLasEtapas(11, 'Match de Marca')
+    expect(r.find((e) => e.estado === 'elegida')!.etapa.nombre).toBe('Match de Marca')
+    expect(r.find((e) => e.estado === 'es_la_de_ahora')!.etapa.nombre).toBe('Ventas y Cierre')
+  })
+
+  it('sin elegir ninguna, sólo está la del calendario', async () => {
+    const { estadoDeLasEtapas } = await import('./hitos-clave')
+    const r = estadoDeLasEtapas(11, null)
+    expect(r.some((e) => e.estado === 'elegida')).toBe(false)
+    expect(r.find((e) => e.estado === 'es_la_de_ahora')!.etapa.nombre).toBe('Ventas y Cierre')
+  })
+
+  it('sin fecha de inicio no se inventa una etapa', async () => {
+    const { estadoDeLasEtapas } = await import('./hitos-clave')
+    const r = estadoDeLasEtapas(null, null)
+    expect(r.every((e) => e.estado === 'todavia_no')).toBe(true)
+  })
+})
+
+describe('los colores de las banderas', () => {
+  it('se llaman como los llama el equipo', async () => {
+    const { QUE_DICE } = await import('./banderas-tipos')
+    expect(QUE_DICE.roja).toBe('Red flag')
+    expect(QUE_DICE.naranja).toBe('Orange flag')
+    expect(QUE_DICE.amarilla).toBe('Yellow flag')
+  })
+})

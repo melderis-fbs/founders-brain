@@ -121,6 +121,9 @@ export const FASES: readonly Fase[] = [
 
 export const SEMANAS_DEL_PROGRAMA = FASES[FASES.length - 1]!.hastaSemana
 
+/** Los nombres de las catorce, para elegir una en la ficha. */
+export const NOMBRES_DE_ETAPAS: readonly string[] = ETAPAS.map((e) => e.nombre)
+
 export const ETAPA_POR_CLAVE: ReadonlyMap<ClaveEtapa, Etapa> = new Map(ETAPAS.map((e) => [e.clave, e]))
 
 export const HITOS_CLAVE: readonly (HitoClave & { fase: 1 | 2 | 3 | 4 })[] =

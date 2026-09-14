@@ -3,28 +3,28 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { marcarHitoClave } from '@/app/(app)/clientes/[id]/acciones'
-import type { FaseConEstado } from '@/lib/hitos-clave'
-import { ETAPAS, nombreDeEtapa } from '@/lib/modulos'
+import type { EtapaConEstado, FaseConEstado } from '@/lib/hitos-clave'
+import { nombreDeEtapa } from '@/lib/modulos'
 
-const COMO_SE_LEE: Record<FaseConEstado['estado'], string> = {
-  terminada: 'Terminada',
-  en_curso: 'Es la de ahora',
-  pendiente: 'Todavía no le toca',
-  quedo_a_medias: 'Quedó a medias',
+const COMO_SE_LEE: Record<EtapaConEstado['estado'], string> = {
+  elegida: 'acá está',
+  es_la_de_ahora: 'le toca por calendario',
+  pasada: 'ya pasó',
+  todavia_no: 'todavía no le toca',
 }
 
 /**
- * Las cuatro fases del programa, con lo que se trabaja y lo que quedó hecho.
+ * Las catorce etapas del programa, en orden, y los hitos clave.
  *
- * Los hitos clave no salen de ningún campo ni de ningún documento: los marca
- * la consultora. Por eso son casillas y no un cálculo — y por eso el estado de
- * la fase sale de ellos más el calendario, no de una columna «Estado» que
- * alguien tenga que acordarse de mover.
+ * Dos marcas y las dos importan: dónde le tocaría estar por calendario, y
+ * dónde dice la consultora que está. Cuando no coinciden, eso es la
+ * conversación; por eso se ven las dos y no se esconde ninguna.
  */
 export function FasesDelPrograma({
-  clienteId, fases, hechos,
+  clienteId, etapas, fases, hechos,
 }: {
   clienteId: number
+  etapas: EtapaConEstado[]
   fases: FaseConEstado[]
   hechos: Record<string, { hecho_en: string; quien: string | null }>
 }) {
@@ -40,67 +40,64 @@ export function FasesDelPrograma({
     else setError(r.error ?? 'No se pudo.')
   }
 
-  return (
-    <div className="fases-programa">
-      <p className="mini" style={{ marginTop: 0 }}>
-        Las cuatro fases del programa. Los hitos clave los marcás vos: no salen de ningún dato.
-      </p>
+  const elegida = etapas.find((e) => e.estado === 'elegida')
+  const porCalendario = etapas.find((e) => e.estado === 'es_la_de_ahora')
 
+  return (
+    <div className="programa">
       {error ? <div className="error-campo" style={{ marginBottom: 12 }}>{error}</div> : null}
 
-      {fases.map(({ fase, estado, hechos: cuantos, total, porque }) => (
-        <section className={`fase-programa ${estado}`} key={fase.numero}>
-          <header>
+      {elegida && porCalendario && elegida.etapa.clave !== porCalendario.etapa.clave ? (
+        <p className="no-coinciden">
+          Por calendario le tocaría <b>{porCalendario.etapa.nombre}</b> y está en{' '}
+          <b>{elegida.etapa.nombre}</b>. Ahí está la conversación.
+        </p>
+      ) : null}
+
+      <ol className="las-etapas">
+        {etapas.map(({ etapa, estado, porque }) => (
+          <li className={`una-etapa ${estado}`} key={etapa.clave} title={porque}>
+            <span className="num">{etapa.numero}</span>
             <div>
-              <h3>Fase {fase.numero} · {fase.periodo}</h3>
-              <span className="construye">{fase.queConstruimos}</span>
+              <span className="nombre">{nombreDeEtapa(etapa)}</span>
+              <span className="mini">
+                semana {etapa.desdeSemana}{etapa.hastaSemana !== etapa.desdeSemana ? ` a ${etapa.hastaSemana}` : ''}
+                {estado !== 'todavia_no' && estado !== 'pasada' ? ` · ${COMO_SE_LEE[estado]}` : ''}
+              </span>
             </div>
-            <div className="estado-fase">
-              <b>{COMO_SE_LEE[estado]}</b>
-              <span className="mini">{cuantos} de {total}</span>
-            </div>
-          </header>
+          </li>
+        ))}
+      </ol>
 
-          <p className="mini porque">{porque}</p>
+      <h3>Hitos clave</h3>
+      <p className="mini" style={{ marginTop: 0 }}>
+        No salen de ningún dato: los marcás vos.
+      </p>
 
-          <div className="que-se-trabaja">
-            <span className="rotulo">Qué se trabaja</span>
-            <ul>
-              {ETAPAS.filter((e) => e.fase === fase.numero).map((e) => (
-                <li key={e.clave}>
-                  {nombreDeEtapa(e)}
-                  <i className="cuando">
-                    {' '}· semana {e.desdeSemana}{e.hastaSemana !== e.desdeSemana ? ` a ${e.hastaSemana}` : ''}
-                  </i>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="hitos-clave">
-            <span className="rotulo">Hitos clave</span>
-            {fase.hitosClave.map((h) => {
-              const hecho = hechos[h.clave]
-              return (
-                <label className={`hito-clave ${hecho ? 'hecho' : ''}`} key={h.clave}>
-                  <input
-                    type="checkbox" checked={Boolean(hecho)} disabled={tocando === h.clave}
-                    onChange={(e) => void marcar(h.clave, e.target.checked)}
-                  />
-                  <span>
-                    {h.etiqueta}
-                    {h.cuando ? <i className="cuando"> · se espera {h.cuando}</i> : null}
-                    {hecho ? (
-                      <i className="cuando">
-                        {' '}· lo marcó {hecho.quien ?? 'alguien'} el {hecho.hecho_en.split('-').reverse().join('/')}
-                      </i>
-                    ) : null}
-                  </span>
-                </label>
-              )
-            })}
-          </div>
-        </section>
+      {fases.map(({ fase, hechos: cuantos, total }) => (
+        <div className="hitos-de" key={fase.numero}>
+          <span className="rotulo">{fase.periodo} · {cuantos} de {total}</span>
+          {fase.hitosClave.map((h) => {
+            const hecho = hechos[h.clave]
+            return (
+              <label className={`hito-clave ${hecho ? 'hecho' : ''}`} key={h.clave}>
+                <input
+                  type="checkbox" checked={Boolean(hecho)} disabled={tocando === h.clave}
+                  onChange={(e) => void marcar(h.clave, e.target.checked)}
+                />
+                <span>
+                  {h.etiqueta}
+                  {h.cuando ? <i className="cuando"> · se espera {h.cuando}</i> : null}
+                  {hecho ? (
+                    <i className="cuando">
+                      {' '}· lo marcó {hecho.quien ?? 'alguien'} el {hecho.hecho_en.split('-').reverse().join('/')}
+                    </i>
+                  ) : null}
+                </span>
+              </label>
+            )
+          })}
+        </div>
       ))}
     </div>
   )
