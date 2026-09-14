@@ -9,6 +9,7 @@ import { guardarDocumento } from '@/lib/documentos'
 import { aceptar, rechazar } from '@/lib/propuestas'
 import { bajarBandera, ponerBandera } from '@/lib/banderas'
 import type { ColorDeBandera } from '@/lib/banderas-tipos'
+import { desmarcarHito, marcarHito } from '@/lib/hitos-clave'
 import { borrarNota, escribirNota } from '@/lib/notas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 import { cambiarDeCoach } from '@/lib/usuarios'
@@ -178,5 +179,21 @@ export async function sacarNota(clienteId: number, notaId: number): Promise<{ ok
 
   const r = await borrarNota(notaId, clienteId, puede.usuario.id)
   if (r.ok) revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── Los hitos clave del programa ────────────────────────────────────────────
+
+export async function marcarHitoClave(
+  clienteId: number, clave: string, hecho: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = hecho
+    ? await marcarHito({ clienteId, clave, usuarioId: puede.usuario.id })
+    : await desmarcarHito(clienteId, clave)
+
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

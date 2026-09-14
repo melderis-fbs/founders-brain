@@ -6,10 +6,12 @@ import { Comparacion } from '@/componentes/Comparacion'
 import { Banderas } from '@/componentes/Banderas'
 import { Notas } from '@/componentes/Notas'
 import { notasDe } from '@/lib/notas'
-import { enQueModuloVa, nombreCompleto } from '@/lib/modulos'
+import { enQueFaseVa, modulosDeLaSemana, SEMANAS_DEL_PROGRAMA } from '@/lib/modulos'
 import { banderaDe, historialDeBanderas, QUE_DICE } from '@/lib/banderas'
 import { cambiosDeCoach } from '@/lib/usuarios'
 import { Fases } from '@/componentes/Fases'
+import { FasesDelPrograma } from '@/componentes/FasesDelPrograma'
+import { estadoDeLasFases, hechosDe } from '@/lib/hitos-clave'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
 import { bloquesDeLaFicha, leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
@@ -34,7 +36,8 @@ export const dynamic = 'force-dynamic'
 /** Las pestañas. Cada una es un bloque, no veinte tarjetas apiladas. */
 const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
-  { clave: 'fases', texto: 'Fases' },
+  { clave: 'programa', texto: 'El programa' },
+  { clave: 'fases', texto: 'Etapas del negocio' },
   { clave: 'atencion', texto: 'Bandera y consultora' },
   { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
@@ -95,6 +98,7 @@ export default async function Ficha({
     banderaDe(cliente.id), historialDeBanderas(cliente.id), cambiosDeCoach(cliente.id), listarConsultoras(),
   ])
   const notas = await notasDe(cliente.id)
+  const hechos = await hechosDe(cliente.id)
 
   const inicio = cliente.valores.fecha_inicio as string
   const meses = cliente.valores.programa_meses as number
@@ -105,6 +109,7 @@ export default async function Ficha({
     conDatos,
   })
   const semaforo = semaforoDe(evaluados)
+  const fasesDelPrograma = estadoDeLasFases(semanaEnLaQueVa(inicio), new Set(hechos.keys()))
 
   // Esto corre siempre: es aritmética, no cuesta nada. El modelo se llama
   // después, con un botón, y para lo que la aritmética no puede contestar.
@@ -172,11 +177,19 @@ export default async function Ficha({
             <b>{textoDeSemana(inicio, meses)}</b>
           </div>
           <div>
-            <span className="rotulo">Módulo de esta semana</span>
+            <span className="rotulo">Fase del programa</span>
             <b>
-              {enQueModuloVa(semanaEnLaQueVa(inicio)).modulo
-                ? nombreCompleto(enQueModuloVa(semanaEnLaQueVa(inicio)).modulo!)
-                : <span className="apagado">{enQueModuloVa(semanaEnLaQueVa(inicio)).porque}</span>}
+              {enQueFaseVa(semanaEnLaQueVa(inicio)).fase ? (
+                <>
+                  Fase {enQueFaseVa(semanaEnLaQueVa(inicio)).fase!.numero} de 4
+                  <div className="mini">
+                    {modulosDeLaSemana(semanaEnLaQueVa(inicio)).join(' · ') ||
+                      enQueFaseVa(semanaEnLaQueVa(inicio)).fase!.periodo}
+                  </div>
+                </>
+              ) : (
+                <span className="apagado">{enQueFaseVa(semanaEnLaQueVa(inicio)).porque}</span>
+              )}
             </b>
           </div>
           <div>
@@ -232,6 +245,13 @@ export default async function Ficha({
                   </p>
                 ) : null}
               </>
+            ) : null}
+
+            {pestana === 'programa' ? (
+              <FasesDelPrograma
+                clienteId={cliente.id} fases={fasesDelPrograma}
+                hechos={Object.fromEntries(hechos)}
+              />
             ) : null}
 
             {pestana === 'fases' ? <Fases evaluados={evaluados} /> : null}
@@ -296,6 +316,7 @@ export default async function Ficha({
                 Completar desde los documentos{propuestas.length > 0 ? ` · ${propuestas.length}` : ''}
               </Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=diagnostico`}>Diagnóstico del caso</Link>
+              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=programa`}>Dónde va en el programa</Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=fases`}>Revisar el caso</Link>
               <span className="boton suave apagada" title="Todavía no está">Preparar la próxima sesión</span>
               <span className="boton suave apagada" title="Todavía no está">Cerrar la sesión</span>

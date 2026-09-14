@@ -1,12 +1,25 @@
 import { fuentesDeLaCartera, listarClientes } from './clientes'
 import type { Alcance } from './permisos'
 import { dondeSeCorta, etapaQueLeTocaria, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
+import { SEMANAS_DEL_PROGRAMA } from './modulos'
 import { semaforoDe, type Semaforo } from './semaforo'
 import { semanaEnLaQueVa, semanasDelPrograma } from './programa'
 import type { Etapa } from './hitos'
 
-/** Las semanas en las que el método espera algo. Las otras no son columnas. */
-export const SEMANAS_CON_HITOS = [...new Set(HITOS.map((h) => h.semana))].sort((a, b) => a - b)
+/**
+ * Las semanas que son columna: las que tienen un hito o un módulo.
+ *
+ * Antes eran sólo las de los hitos, y la grilla saltaba de la 1 a la 3 y de la
+ * 9 a la 13. Una semana en la que se trabaja un módulo es una semana del
+ * programa aunque no venza nada: si no está, la fila no se puede leer como una
+ * línea de tiempo.
+ */
+export const SEMANAS_CON_HITOS = [
+  ...new Set([
+    ...HITOS.map((h) => h.semana),
+    ...Array.from({ length: SEMANAS_DEL_PROGRAMA }, (_, i) => i + 1),
+  ]),
+].sort((a, b) => a - b)
 
 export type ClienteEnGrilla = {
   id: number

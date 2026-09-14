@@ -590,3 +590,32 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
   text-decoration: underline;
 }
 .notas .borrar-nota:hover { color: #9b3434; }
+
+/* ── Las cuatro fases del programa ────────────────────────────────────────── */
+.fase-programa {
+  border: 1px solid var(--borde); border-left-width: 3px; border-radius: 11px;
+  padding: 15px 17px; margin-bottom: 12px; background: var(--papel);
+}
+.fase-programa.en_curso { border-left-color: var(--tinta); }
+.fase-programa.terminada { border-left-color: #3f8f5f; }
+.fase-programa.quedo_a_medias { border-left-color: #b44; }
+.fase-programa.pendiente { opacity: .8; }
+.fase-programa > header {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap;
+}
+.fase-programa h3 { margin: 0; font-size: 15px; }
+.fase-programa .construye { font-size: 12.5px; color: var(--gris); font-style: italic; }
+.fase-programa .estado-fase { text-align: right; white-space: nowrap; }
+.fase-programa .estado-fase b { display: block; font-size: 13px; }
+.fase-programa .porque { margin: 8px 0 12px; }
+.fase-programa .rotulo {
+  font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--gris);
+  display: block; margin-bottom: 6px;
+}
+.fase-programa .que-se-trabaja ul { margin: 0 0 14px; padding-left: 18px; font-size: 13.5px; }
+.fase-programa .que-se-trabaja li { margin-bottom: 3px; }
+.fase-programa .hito-clave {
+  display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; padding: 5px 0; cursor: pointer;
+}
+.fase-programa .hito-clave.hecho > span { color: var(--gris); text-decoration: line-through; }
+.fase-programa .hito-clave .cuando { font-style: normal; color: var(--gris); font-size: 12px; }

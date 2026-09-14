@@ -39,6 +39,7 @@ export const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: 
     columnas: [],
   },
   { migracion: '0012_notas_del_coach.sql', tablas: ['notas'], columnas: [] },
+  { migracion: '0013_hitos_clave_del_programa.sql', tablas: ['hitos_clave'], columnas: [] },
 ]
 
 /**
