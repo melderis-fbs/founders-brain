@@ -1,5 +1,11 @@
 import { CAMPOS, ETIQUETA_DOCUMENTO, ETIQUETA_GRUPO, type Grupo, type TipoDocumento } from './campos'
+import { banderaDe } from './banderas'
+import { QUE_DICE } from './banderas-tipos'
 import { loQueNoSeSostiene } from './campos-escritura'
+import { estadoDeLasFases, hechosDe } from './hitos-clave'
+import { ETAPAS, nombreDeEtapa } from './modulos'
+import { notasDe } from './notas'
+import { cambiosDeCoach } from './usuarios'
 import { fuentesDeLaCartera, traerCliente } from './clientes'
 import { documentosResumidos } from './documentos'
 import { leerElCaso } from './lectura'
@@ -58,13 +64,18 @@ export async function armarExpediente(
   const cliente = await traerCliente(clienteId, alcance)
   if (!cliente) return null
 
-  const [todosLosDocumentos, conDatos, sesiones, enLista, haySesiones, noSeSostiene] = await Promise.all([
+  const [todosLosDocumentos, conDatos, sesiones, enLista, haySesiones, noSeSostiene,
+         bandera, notas, cambios, hechos] = await Promise.all([
     documentosResumidos(clienteId),
     fuentesDeLaCartera(),
     sesionesConAnalisis(clienteId),
     listarSesiones(clienteId),
     hayAlgunaSesionEnLaCartera(),
     loQueNoSeSostiene(clienteId),
+    banderaDe(clienteId),
+    notasDe(clienteId),
+    cambiosDeCoach(clienteId),
+    hechosDe(clienteId),
   ])
   const documentos = soloDocumento === undefined
     ? todosLosDocumentos
@@ -94,6 +105,21 @@ export async function armarExpediente(
   )
 
   // ── La ficha, bloque por bloque, diciendo qué falta ────────────────────────
+  // La bandera va antes que todo lo demás. Es lo único del expediente que no
+  // se calcula: lo sabe una persona que estuvo en la sesión, y muchas veces es
+  // lo que explica todo lo que sigue.
+  if (bandera) {
+    partes.push('\n## BANDERA LEVANTADA')
+    partes.push(
+      `${QUE_DICE[bandera.color]}. La levantó ${bandera.puesta_por_nombre ?? 'alguien del equipo'} ` +
+      `el ${bandera.puesta_en.slice(0, 10)}: «${bandera.motivo}»`,
+    )
+    partes.push(
+      'Esto no sale de ningún dato: lo escribió una persona que habló con el cliente. ' +
+      'Si lo que dice acá contradice lo que muestran los números, la bandera tiene razón y los números están viejos.',
+    )
+  }
+
   partes.push('\n## La ficha')
   const grupos = [...new Set(CAMPOS.map((c) => c.grupo))] as Grupo[]
   for (const grupo of grupos) {
@@ -104,6 +130,27 @@ export async function armarExpediente(
     })
     partes.push(`\n### ${ETIQUETA_GRUPO[grupo]}\n${lineas.join('\n')}`)
   }
+
+  // ── El programa: en qué fase va y qué quedó hecho ─────────────────────────
+  partes.push('\n## El programa')
+  const semanaHoy = semanaEnLaQueVa(inicio)
+  for (const { fase, estado, hechos: cuantos, total, porque } of estadoDeLasFases(semanaHoy, new Set(hechos.keys()))) {
+    const etapas = ETAPAS.filter((e) => e.fase === fase.numero).map(nombreDeEtapa).join(', ')
+    partes.push(`\n### Fase ${fase.numero} · ${fase.periodo} · ${estado.replace('_', ' ')}`)
+    partes.push(`Se trabaja: ${etapas}.`)
+    partes.push(porque)
+    for (const h of fase.hitosClave) {
+      const marcado = hechos.get(h.clave)
+      partes.push(
+        `- ${h.etiqueta}${h.cuando ? ` (se espera ${h.cuando})` : ''}: ` +
+        (marcado ? `hecho, marcado el ${marcado.hecho_en}` : 'SIN MARCAR'),
+      )
+    }
+  }
+  partes.push(
+    '\nOJO: «SIN MARCAR» quiere decir que nadie lo marcó, que no es lo mismo que que no haya pasado. ' +
+    'Estos hitos los marca la consultora a mano.',
+  )
 
   // ── La comparación con lo esperado ─────────────────────────────────────────
   partes.push('\n## Lo que tendría que estar hecho, y lo que está')
@@ -210,6 +257,24 @@ export async function armarExpediente(
     for (const c of noSeSostiene) {
       const etiqueta = CAMPOS.find((x) => x.clave === c.campo)?.etiqueta ?? c.campo
       partes.push(`- ${etiqueta}: cambió ${c.veces} ${c.veces === 1 ? 'vez' : 'veces'}, la última el ${c.ultimo.slice(0, 10)}`)
+    }
+  }
+
+  // ── Lo que escribió la consultora entre sesiones ──────────────────────────
+  if (notas.length > 0) {
+    partes.push('\n## Notas de la consultora')
+    partes.push('Lo que fue escribiendo entre sesiones, de lo más nuevo a lo más viejo.')
+    for (const n of notas.slice(0, 20)) {
+      partes.push(`- ${n.creado_en.slice(0, 10)} · ${n.quien ?? 'alguien'}: ${n.texto}`)
+    }
+  }
+
+  // ── Por cuántas manos pasó ────────────────────────────────────────────────
+  if (cambios.length > 0) {
+    partes.push('\n## Cambios de consultora')
+    partes.push('Un cliente que cambió de manos arranca de nuevo cada vez: eso explica atrasos que no son del cliente.')
+    for (const c of cambios) {
+      partes.push(`- ${c.creado_en.slice(0, 10)}: de ${c.de ?? 'nadie'} a ${c.a ?? 'nadie'}. Motivo: ${c.motivo}`)
     }
   }
 

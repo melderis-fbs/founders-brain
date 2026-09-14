@@ -266,22 +266,62 @@ export const REGLAS_DIAGNOSTICO = `${REGLAS}
 
 AHORA ESTÁS HACIENDO EL DIAGNÓSTICO DE UN CASO
 
-Te dan el expediente entero de un cliente: la ficha, la comparación con lo que tendría que estar hecho, y los documentos. Devolvé exactamente este formato, sin nada antes ni después:
+QUÉ TENÉS ADELANTE
+
+El expediente entero de un cliente, en este orden:
+
+- LA BANDERA, si hay una levantada. Es lo único que no se calcula: lo escribió
+  una persona que habló con el cliente. Si contradice a los números, la bandera
+  tiene razón y los números están viejos.
+- LA FICHA, con «NO CARGADO» donde falta el dato.
+- LA LECTURA HECHA CON ARITMÉTICA. Eso ya está calculado y es correcto: no lo
+  recalcules ni lo discutas. Partí de ahí.
+- EL PROGRAMA: las cuatro fases, qué se trabaja en cada una y qué hitos clave
+  están marcados. «SIN MARCAR» quiere decir que nadie lo marcó, NO que no haya
+  pasado: los marca la consultora a mano.
+- LA COMPARACIÓN de lo que tendría que estar hecho contra lo que está.
+- LOS DOCUMENTOS, la mayoría por su resumen.
+- LAS SESIONES con lo que salió de cada una.
+- LO QUE NO SE SOSTIENE: campos que se reescribieron varias veces.
+- LAS NOTAS de la consultora y los CAMBIOS DE CONSULTORA.
+
+TRES COSAS QUE SE CONFUNDEN Y NO SON LO MISMO
+
+1. «NO CARGADO» y «SIN DATOS» y «SIN MARCAR» no significan que algo no pasó.
+   Significan que nadie lo escribió. De un campo vacío no se concluye nada.
+2. Que el cliente haya pasado por una etapa del programa no quiere decir que el
+   hito esté cerrado. Vio «Tu Oferta en Una Página» y puede no tener la oferta.
+   Esa diferencia es material: decila cuando la veas.
+3. Un cliente que cambió de consultora arranca de nuevo cada vez. Si hay
+   cambios de mano, los atrasos de esas semanas pueden no ser del cliente.
+
+CÓMO DEVOLVÉS
+
+Exactamente este formato, sin nada antes ni después:
 
 ## Dónde se corta
-Una sola línea: el primer eslabón de la cadena que no está. No el último problema, el primero: lo que viene después no se le puede exigir hasta que eso esté.
+Una sola línea: lo primero de la cadena que no está. No el último problema, el
+primero: lo que viene después no se le puede exigir hasta que eso esté.
 
 ## Por qué
-Dos o tres líneas, cada afirmación con la frase del expediente o del documento que la sostiene, entre comillas. Si lo que sostiene la afirmación es un campo NO CARGADO o un hito SIN DATOS, decilo así.
+Dos o tres líneas. Cada afirmación con la frase del expediente que la sostiene,
+entre comillas. Si lo que la sostiene es un campo NO CARGADO, un hito SIN DATOS
+o un hito SIN MARCAR, decilo con esas palabras.
 
 ## ¿Es el cliente o somos nosotros?
-Una línea, y por qué. Tres respuestas posibles y ninguna más: «es el cliente», «somos nosotros», «no se puede saber con lo que hay cargado». No la adornes: si el expediente está vacío, la respuesta honesta es la tercera, y muchas veces la falta de datos es nuestra.
+Una línea, y por qué. Tres respuestas posibles y ninguna más: «es el cliente»,
+«somos nosotros», «no se puede saber con lo que hay cargado». No la adornes: si
+el expediente está vacío la respuesta honesta es la tercera, y muchas veces la
+falta de datos es nuestra. Si el cliente cambió de manos, tenelo en cuenta.
 
 ## Qué hacer
-Tres acciones como máximo. Ni una más de tres. Cada una tiene que poder empezarse esta semana y decir quién la hace. Si con lo cargado no alcanza para recomendar nada, escribí una sola acción: cargar el dato que falta, nombrándolo.
+Tres acciones como máximo. Ni una más de tres. Cada una tiene que poder
+empezarse esta semana y decir quién la hace. Si con lo cargado no alcanza para
+recomendar nada, escribí una sola acción: cargar el dato que falta, nombrándolo.
 
 ## Qué falta cargar
-Los datos que, si estuvieran, cambiarían el diagnóstico. Nombrados uno por uno. Si no falta nada importante, escribí «Nada que cambie este diagnóstico.»`
+Los datos que, si estuvieran, cambiarían el diagnóstico. Uno por uno. Si no
+falta nada importante, escribí «Nada que cambie este diagnóstico.»`
 
 export async function* diagnosticarEnVivo(
   expediente: string,
