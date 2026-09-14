@@ -109,7 +109,10 @@ export function CampoEditable({
       {tipo === 'texto_largo' ? (
         <textarea {...comunes} rows={3} />
       ) : tipo === 'opcion' || tipo === 'booleano' ? (
-        <select {...comunes}>
+        // Un select guarda al elegir, no al perder el foco: elegir una opción
+        // no saca el foco de ningún lado, así que con el onBlur solo se veía
+        // elegida y no se guardaba nada.
+        <select {...comunes} onChange={() => void guardar()}>
           <option value="">— sin dato —</option>
           {(tipo === 'booleano' ? ['sí', 'no'] : (opciones ?? [])).map((o) => (
             <option key={o} value={o}>{o}</option>
