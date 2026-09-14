@@ -7,7 +7,10 @@ import { quienMira } from '@/lib/quien-mira'
 import { guardarUnCampo, type ResultadoEdicion } from '@/lib/campos-escritura'
 import { guardarDocumento } from '@/lib/documentos'
 import { aceptar, rechazar } from '@/lib/propuestas'
+import { bajarBandera, ponerBandera } from '@/lib/banderas'
+import type { ColorDeBandera } from '@/lib/banderas-tipos'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
+import { cambiarDeCoach } from '@/lib/usuarios'
 
 /**
  * Quién está tocando este cliente, y si tiene permiso de tocarlo.
@@ -112,5 +115,47 @@ export async function decidirPropuesta(
     : await rechazar(propuestaId, clienteId, puede.usuario.id)
 
   revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── Banderas y cambio de coach ──────────────────────────────────────────────
+
+export async function levantarBandera(
+  clienteId: number, color: ColorDeBandera, motivo: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await ponerBandera({ clienteId, color, motivo, usuarioId: puede.usuario.id })
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/tablero'); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function resolverBandera(
+  clienteId: number, comoSeResolvio: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await bajarBandera({ clienteId, comoSeResolvio, usuarioId: puede.usuario.id })
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/tablero'); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+/**
+ * Cambiar de coach lo hace quien administra.
+ *
+ * Una consultora que pudiera pasarse un cliente a sí misma, o sacárselo a
+ * otra, estaría repartiendo la cartera. Eso lo decide quien administra.
+ */
+export async function pasarDeCoach(
+  clienteId: number, aConsultoraId: number | null, motivo: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const quien = await quienMira()
+  if (!quien) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar.' }
+  if (quien.usuario.rol !== 'admin') return { ok: false, error: 'El cambio de consultora lo hace quien administra.' }
+
+  const r = await cambiarDeCoach({ clienteId, aConsultoraId, motivo, usuarioId: quien.usuario.id })
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes'); revalidatePath('/equipo') }
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

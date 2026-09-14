@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { TOTAL_CAMPOS } from '@/lib/campos'
+import { QUE_DICE } from '@/lib/banderas-tipos'
 import { quienMira } from '@/lib/quien-mira'
 import { traerTablero } from '@/lib/tablero'
 
@@ -51,6 +52,40 @@ export default async function Tablero() {
         <div className="pie">
           Clientes con algo vencido de lo que tendría que estar hecho a esta altura del programa.
           {' '}<Link href="/clientes">Ver la lista, ordenada por quién primero</Link>.
+        </div>
+      </div>
+
+      <div className="tarjeta" style={{ marginBottom: 14 }}>
+        <div className="rotulo" style={{ marginBottom: 12 }}>Banderas levantadas</div>
+        <div className="semaforo-cartera">
+          {([
+            ['roja', QUE_DICE.roja, t.banderas.roja],
+            ['naranja', QUE_DICE.naranja, t.banderas.naranja],
+            ['amarilla', QUE_DICE.amarilla, t.banderas.amarilla],
+          ] as const).map(([color, palabra, cuantas]) => (
+            <div key={color}>
+              <span className={`semaforo bandera-${color}`}><i />{palabra}</span>
+              <div className={`cifra ${cuantas === 0 ? 'apagado' : color === 'roja' ? 'rojo' : 'ambar'}`}>
+                {cuantas} <span className="de">de {t.total}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {t.losQueLevantaron.length > 0 ? (
+          <ul className="con-bandera">
+            {t.losQueLevantaron.map((b) => (
+              <li key={b.id}>
+                <Link href={`/clientes/${b.cliente_id}?bloque=atencion`} className={`punto ${b.color}`}>
+                  {b.cliente}
+                </Link>
+                <span className="mini"> · {b.motivo}{b.consultora ? ` · ${b.consultora}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="pie">
+          Esto no lo calcula nadie: lo levanta una persona que estuvo en la sesión. Un cliente en verde
+          con la bandera roja es exactamente el caso para el que existe.
         </div>
       </div>
 

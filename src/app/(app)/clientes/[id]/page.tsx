@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO } from '@/lib/campos'
 import { Comparacion } from '@/componentes/Comparacion'
+import { Banderas } from '@/componentes/Banderas'
+import { banderaDe, historialDeBanderas, QUE_DICE } from '@/lib/banderas'
+import { cambiosDeCoach } from '@/lib/usuarios'
 import { Fases } from '@/componentes/Fases'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
 import { bloquesDeLaFicha, leerElCaso } from '@/lib/lectura'
@@ -14,7 +17,7 @@ import { Semaforo } from '@/componentes/Semaforo'
 import { Sesiones } from '@/componentes/Sesiones'
 import { CAMPOS, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
-import { documentosDe, fuentesDeLaCartera, traerCliente } from '@/lib/clientes'
+import { documentosDe, fuentesDeLaCartera, listarConsultoras, traerCliente } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { pendientesDe } from '@/lib/propuestas'
@@ -29,6 +32,7 @@ export const dynamic = 'force-dynamic'
 const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
   { clave: 'fases', texto: 'Fases' },
+  { clave: 'atencion', texto: 'Bandera y consultora' },
   { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
   { clave: 'negocio', texto: 'Su negocio' },
@@ -83,6 +87,9 @@ export default async function Ficha({
     documentosDe(cliente.id), origenesDe(cliente.id), fuentesDeLaCartera(),
     listarSesiones(cliente.id), ultimoDiagnostico(cliente.id), pendientesDe(cliente.id),
     hayAlgunaSesionEnLaCartera(),
+  ])
+  const [bandera, historialBanderas, cambios, lasConsultoras] = await Promise.all([
+    banderaDe(cliente.id), historialDeBanderas(cliente.id), cambiosDeCoach(cliente.id), listarConsultoras(),
   ])
 
   const inicio = cliente.valores.fecha_inicio as string
@@ -147,6 +154,14 @@ export default async function Ficha({
         </div>
         <p className="porque">{semaforo.porque}</p>
 
+        {bandera ? (
+          <Link className={`bandera-arriba ${bandera.color}`} href={`/clientes/${cliente.id}?bloque=atencion`}
+                title={bandera.motivo}>
+            <i className="marca-bandera" />
+            <span><b>{QUE_DICE[bandera.color]}</b> · {bandera.motivo}</span>
+          </Link>
+        ) : null}
+
         <div className="datos-clave">
           <div>
             <span className="rotulo">Va en</span>
@@ -208,6 +223,15 @@ export default async function Ficha({
             ) : null}
 
             {pestana === 'fases' ? <Fases evaluados={evaluados} /> : null}
+
+            {pestana === 'atencion' ? (
+              <Banderas
+                clienteId={cliente.id} bandera={bandera} historial={historialBanderas}
+                cambios={cambios} consultoraActual={cliente.consultora}
+                consultoras={lasConsultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
+                esAdmin={quien?.usuario.rol === 'admin'}
+              />
+            ) : null}
 
             {pestana === 'negocio' || pestana === 'autoridad' || pestana === 'intentos' ? (
               <>

@@ -120,6 +120,7 @@ function PorSemanas({ clientes }: { clientes: ClienteEnGrilla[] }) {
       <div className="referencias mini">
         <span><i className="celda hecho" /> hecho</span>
         <span><i className="celda falta" /> falta</span>
+        <span><i className="celda esta_semana" /> es de esta semana</span>
         <span><i className="celda todavia_no" /> todavía no le toca</span>
         <span><i className="celda sin_datos" /> sin datos para saberlo</span>
       </div>
@@ -160,6 +161,7 @@ function PorSemanas({ clientes }: { clientes: ClienteEnGrilla[] }) {
 function enPalabras(estado: EstadoHito): string {
   if (estado === 'hecho') return 'hecho'
   if (estado === 'falta') return 'falta'
+  if (estado === 'esta_semana') return 'es de esta semana, todavía está a tiempo'
   if (estado === 'todavia_no') return 'todavía no le toca'
   return 'sin datos para saberlo'
 }

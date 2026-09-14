@@ -16,6 +16,7 @@ export function Etapas({ estados }: { estados: Record<string, EstadoHito> }) {
 function enPalabras(estado: EstadoHito): string {
   if (estado === 'hecho') return 'hecho'
   if (estado === 'falta') return 'falta'
+  if (estado === 'esta_semana') return 'es de esta semana'
   if (estado === 'todavia_no') return 'todavía no le toca'
   return 'sin datos para saberlo'
 }
@@ -49,6 +50,7 @@ export function Comparacion({
               {estado === 'falta'
                 ? `✗ falta hace ${atrasoEnSemanas} ${atrasoEnSemanas === 1 ? 'semana' : 'semanas'}`
                 : null}
+              {estado === 'esta_semana' ? 'es de esta semana' : null}
               {estado === 'todavia_no' ? 'todavía no le toca' : null}
               {estado === 'sin_datos' ? 'sin datos' : null}
             </span>

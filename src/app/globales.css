@@ -517,3 +517,59 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 
 .boton.peligro { color: #9b3434; }
 .boton.peligro:hover:not(:disabled) { border-color: #9b3434; }
+
+/* Lo que vence esta misma semana: ni hecho ni atrasado. */
+.celda.esta_semana, .grilla-semanas td.esta_semana { background: #cfe3f5; }
+.etapas i.esta_semana { background: #7aa7d0; }
+.fases .hito.esta_semana .marca { background: #7aa7d0; }
+
+/* ── Banderas ─────────────────────────────────────────────────────────────── */
+.marca-bandera {
+  display: inline-block; width: 9px; height: 9px; border-radius: 2px; flex: none;
+  background: currentColor; vertical-align: -1px; margin-right: 2px;
+}
+.boton.bandera-roja { color: #b03030; }
+.boton.bandera-naranja { color: #b8701f; }
+.boton.bandera-amarilla { color: #8a6d1f; }
+
+.bandera-arriba {
+  display: flex; align-items: center; gap: 9px; text-decoration: none;
+  border: 1px solid var(--borde); border-left-width: 3px; border-radius: 9px;
+  padding: 9px 13px; margin: 12px 0; font-size: 13.5px; color: var(--tinta);
+}
+.bandera-arriba.roja { border-left-color: #b03030; color: #b03030; }
+.bandera-arriba.naranja { border-left-color: #b8701f; color: #b8701f; }
+.bandera-arriba.amarilla { border-left-color: #8a6d1f; color: #8a6d1f; }
+.bandera-arriba span { color: var(--tinta); }
+
+.banderas .bandera-puesta {
+  display: flex; gap: 16px; align-items: flex-start; justify-content: space-between;
+  border: 1px solid var(--borde); border-left-width: 3px; border-radius: 10px;
+  padding: 14px 16px; margin-top: 12px; background: var(--papel);
+}
+.banderas .bandera-puesta.roja { border-left-color: #b03030; }
+.banderas .bandera-puesta.naranja { border-left-color: #b8701f; }
+.banderas .bandera-puesta.amarilla { border-left-color: #8a6d1f; }
+.banderas .chip-bandera {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--gris);
+}
+.banderas .motivo { margin: 6px 0; font-size: 14px; line-height: 1.5; }
+.banderas .al-levantar { margin-top: 12px; }
+.banderas .al-levantar label { display: block; font-size: 13px; margin-bottom: 6px; }
+.banderas .antes { margin-top: 14px; }
+.banderas .una-antes { padding: 10px 0; border-top: 1px solid var(--borde); }
+.banderas h3 { margin-top: 26px; }
+.banderas .cambios { margin-top: 12px; }
+.banderas .un-cambio {
+  display: flex; gap: 14px; padding: 9px 0; border-top: 1px solid var(--borde); font-size: 13.5px;
+}
+.banderas .un-cambio > span { flex: none; width: 88px; }
+
+.semaforo.bandera-roja i { background: #b03030; }
+.semaforo.bandera-naranja i { background: #b8701f; }
+.semaforo.bandera-amarilla i { background: #d9a441; }
+.con-bandera { list-style: none; margin: 14px 0 0; padding: 0; }
+.con-bandera li { padding: 7px 0; border-top: 1px solid var(--borde); font-size: 13.5px; }
+.con-bandera .punto { font-weight: 600; text-decoration: none; color: var(--tinta); }
+.con-bandera .punto.roja { color: #b03030; }
+.con-bandera .punto.naranja { color: #b8701f; }

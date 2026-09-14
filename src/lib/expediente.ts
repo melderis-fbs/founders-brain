@@ -110,6 +110,7 @@ export async function armarExpediente(
   for (const e of evaluados) {
     const estado = e.estado === 'hecho' ? 'hecho'
       : e.estado === 'falta' ? `FALTA hace ${e.atrasoEnSemanas} semanas`
+      : e.estado === 'esta_semana' ? 'ES DE ESTA SEMANA (todavía está a tiempo, no es un atraso)'
       : e.estado === 'todavia_no' ? 'todavía no le toca'
       : `SIN DATOS (${e.porQueNoSeSabe})`
     partes.push(`- semana ${e.hito.semana} · ${e.hito.etiqueta}${e.hito.bloquea ? ' (bloquea lo que sigue)' : ''}: ${estado}`)

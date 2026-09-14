@@ -55,6 +55,7 @@ function UnHito({ e }: { e: HitoEvaluado }) {
   const cuando =
     e.estado === 'hecho' ? 'hecho'
     : e.estado === 'falta' ? `falta hace ${e.atrasoEnSemanas} ${e.atrasoEnSemanas === 1 ? 'semana' : 'semanas'}`
+    : e.estado === 'esta_semana' ? 'es de esta semana: todavía está a tiempo'
     : e.estado === 'todavia_no' ? `le toca en la semana ${e.hito.semana}`
     : `sin datos · ${e.porQueNoSeSabe}`
 

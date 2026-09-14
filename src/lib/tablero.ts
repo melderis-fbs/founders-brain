@@ -1,4 +1,5 @@
 import { listarClientes, fuentesDeLaCartera } from './clientes'
+import { banderasLevantadas, contarBanderas, type BanderaEnLaLista } from './banderas'
 import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, FUENTES_ETIQUETA, HITOS, type Fuente } from './hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa } from './programa'
@@ -24,10 +25,20 @@ export type Tablero = {
   porConsultora: { nombre: string; clientes: number; conAtraso: number; fichasAMedias: number }[]
   /** Qué fuentes todavía no se cargan, y cuántos hitos no se pueden medir por eso. */
   sinFuente: { fuente: Fuente; etiqueta: string; hitos: number }[]
+  /** Las banderas levantadas: lo que sabe una persona y no sale de ningún dato. */
+  banderas: { roja: number; naranja: number; amarilla: number }
+  /** Las rojas y naranjas, con nombre y motivo: son a quién llamar hoy. */
+  losQueLevantaron: BanderaEnLaLista[]
 }
 
 export async function traerTablero(alcance: Alcance): Promise<Tablero> {
-  const [clientes, conDatos] = await Promise.all([listarClientes(alcance), fuentesDeLaCartera()])
+  // Las banderas se cuentan dentro del alcance de quien mira: una consultora
+  // ve las de sus clientes, no las de la cartera entera.
+  const deQuien = alcance.todo ? null : alcance.consultoraId
+  const [clientes, conDatos, banderas, losQueLevantaron] = await Promise.all([
+    listarClientes(alcance), fuentesDeLaCartera(),
+    contarBanderas(deQuien), banderasLevantadas(deQuien),
+  ])
 
   let conAtraso = 0
   let sePasaron = 0
@@ -90,5 +101,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
     corteMasComun: [...cortes.values()].sort((a, b) => b.cuantos - a.cuantos)[0] ?? null,
     porConsultora: [...porConsultora.values()].sort((a, b) => b.conAtraso - a.conAtraso || b.clientes - a.clientes),
     sinFuente,
+    banderas,
+    losQueLevantaron: losQueLevantaron.filter((b) => b.color !== 'amarilla'),
   }
 }

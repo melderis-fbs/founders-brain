@@ -277,3 +277,70 @@ export async function borrarConsultora(consultoraId: number): Promise<Resultado>
   await escribir('delete from consultoras where id = $1', [consultoraId])
   return { ok: true }
 }
+
+// ── Cambiar de coach ────────────────────────────────────────────────────────
+
+export type CambioDeCoach = {
+  id: number
+  de: string | null
+  a: string | null
+  motivo: string
+  quien: string | null
+  creado_en: string
+}
+
+/**
+ * Pasar un cliente a otra consultora, con el motivo.
+ *
+ * Es distinto de repartir la cartera en tanda: eso es acomodar la planilla,
+ * esto es una decisión sobre un cliente. Por eso pide motivo y queda con su
+ * fecha: dentro de tres meses «¿por qué este cliente cambió de consultora?»
+ * es una pregunta que alguien va a hacer, y la respuesta no está en ningún
+ * otro lado.
+ */
+export async function cambiarDeCoach(datos: {
+  clienteId: number
+  aConsultoraId: number | null
+  motivo: string
+  usuarioId: number
+}): Promise<Resultado> {
+  const motivo = datos.motivo.trim()
+  if (motivo === '') return { ok: false, error: 'Poné por qué cambia de consultora. Dentro de tres meses nadie se va a acordar.' }
+
+  const cliente = await fila<{ consultora_id: number | null }>(
+    'select consultora_id from clientes where id = $1', [datos.clienteId],
+  )
+  if (!cliente) return { ok: false, error: 'Ese cliente no existe.' }
+  if (cliente.consultora_id === datos.aConsultoraId) {
+    return { ok: false, error: 'Ya es de esa consultora: no hay nada que cambiar.' }
+  }
+
+  if (datos.aConsultoraId !== null) {
+    const existe = await fila<{ id: number }>('select id from consultoras where id = $1', [datos.aConsultoraId])
+    if (!existe) return { ok: false, error: 'Esa consultora ya no existe.' }
+  }
+
+  await escribir(
+    'update clientes set consultora_id = $2, actualizado_en = now() where id = $1',
+    [datos.clienteId, datos.aConsultoraId],
+  )
+  await escribirDevolviendo(
+    `insert into cambios_de_consultora (cliente_id, de_consultora, a_consultora, motivo, usuario_id)
+     values ($1, $2, $3, $4, $5) returning id`,
+    [datos.clienteId, cliente.consultora_id, datos.aConsultoraId, motivo, datos.usuarioId],
+  )
+  return { ok: true }
+}
+
+/** Por cuántas manos pasó este cliente, y por qué. */
+export async function cambiosDeCoach(clienteId: number): Promise<CambioDeCoach[]> {
+  return filas<CambioDeCoach>(
+    `select ca.id, de.nombre as de, a.nombre as a, ca.motivo, u.nombre as quien, ca.creado_en::text as creado_en
+       from cambios_de_consultora ca
+       left join consultoras de on de.id = ca.de_consultora
+       left join consultoras a on a.id = ca.a_consultora
+       left join usuarios u on u.id = ca.usuario_id
+      where ca.cliente_id = $1 order by ca.creado_en desc`,
+    [clienteId],
+  )
+}

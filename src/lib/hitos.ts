@@ -104,7 +104,7 @@ export const HITOS: readonly Hito[] = [
     bloquea: false, fuente: 'seguimiento' },
 ]
 
-export type EstadoHito = 'hecho' | 'falta' | 'sin_datos' | 'todavia_no'
+export type EstadoHito = 'hecho' | 'falta' | 'esta_semana' | 'sin_datos' | 'todavia_no'
 
 export type HitoEvaluado = {
   hito: Hito
@@ -148,6 +148,12 @@ export function evaluarHitos(datos: {
     if (hecho) return { hito, estado: 'hecho', atrasoEnSemanas: null }
     if (datos.semana === null) return { hito, estado: 'sin_datos', atrasoEnSemanas: null, porQueNoSeSabe: 'no hay fecha de inicio, así que no se sabe si ya correspondía' }
     if (datos.semana < hito.semana) return { hito, estado: 'todavia_no', atrasoEnSemanas: null }
+
+    // Lo que vence esta misma semana todavía no está atrasado: se está
+    // trabajando. Contarlo como falta hace que un cliente que va en tiempo se
+    // ponga en rojo el lunes por algo que tiene toda la semana para hacer.
+    if (datos.semana === hito.semana) return { hito, estado: 'esta_semana', atrasoEnSemanas: 0 }
+
     return { hito, estado: 'falta', atrasoEnSemanas: datos.semana - hito.semana }
   })
 }
@@ -170,6 +176,7 @@ export function estadoDeEtapas(evaluados: readonly HitoEvaluado[]): Record<Etapa
     const suyos = evaluados.filter((e) => e.hito.etapa === etapa)
     if (suyos.some((e) => e.estado === 'falta')) salida[etapa] = 'falta'
     else if (suyos.every((e) => e.estado === 'hecho')) salida[etapa] = 'hecho'
+    else if (suyos.some((e) => e.estado === 'esta_semana')) salida[etapa] = 'esta_semana'
     else if (suyos.some((e) => e.estado === 'hecho')) salida[etapa] = 'hecho'
     else if (suyos.every((e) => e.estado === 'todavia_no')) salida[etapa] = 'todavia_no'
     else salida[etapa] = 'sin_datos'
