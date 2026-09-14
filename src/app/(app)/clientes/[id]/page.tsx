@@ -4,6 +4,9 @@ import { CampoEditable } from '@/componentes/CampoEditable'
 import { CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO } from '@/lib/campos'
 import { Comparacion } from '@/componentes/Comparacion'
 import { Banderas } from '@/componentes/Banderas'
+import { Notas } from '@/componentes/Notas'
+import { notasDe } from '@/lib/notas'
+import { enQueModuloVa, nombreCompleto } from '@/lib/modulos'
 import { banderaDe, historialDeBanderas, QUE_DICE } from '@/lib/banderas'
 import { cambiosDeCoach } from '@/lib/usuarios'
 import { Fases } from '@/componentes/Fases'
@@ -91,6 +94,7 @@ export default async function Ficha({
   const [bandera, historialBanderas, cambios, lasConsultoras] = await Promise.all([
     banderaDe(cliente.id), historialDeBanderas(cliente.id), cambiosDeCoach(cliente.id), listarConsultoras(),
   ])
+  const notas = await notasDe(cliente.id)
 
   const inicio = cliente.valores.fecha_inicio as string
   const meses = cliente.valores.programa_meses as number
@@ -166,6 +170,14 @@ export default async function Ficha({
           <div>
             <span className="rotulo">Va en</span>
             <b>{textoDeSemana(inicio, meses)}</b>
+          </div>
+          <div>
+            <span className="rotulo">Módulo de esta semana</span>
+            <b>
+              {enQueModuloVa(semanaEnLaQueVa(inicio)).modulo
+                ? nombreCompleto(enQueModuloVa(semanaEnLaQueVa(inicio)).modulo!)
+                : <span className="apagado">{enQueModuloVa(semanaEnLaQueVa(inicio)).porque}</span>}
+            </b>
           </div>
           <div>
             <span className="rotulo">Consultora</span>
@@ -291,6 +303,8 @@ export default async function Ficha({
               <span className="boton suave apagada" title="Todavía no está">Test de coherencia</span>
             </div>
           </div>
+
+          <Notas clienteId={cliente.id} notas={notas} yo={quien?.usuario.id ?? 0} />
 
           <Preguntar clienteId={cliente.id} nombre={cliente.nombre} />
         </aside>

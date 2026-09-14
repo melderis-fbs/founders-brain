@@ -38,6 +38,7 @@ export const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: 
     tablas: ['banderas', 'cambios_de_consultora'],
     columnas: [],
   },
+  { migracion: '0012_notas_del_coach.sql', tablas: ['notas'], columnas: [] },
 ]
 
 /**

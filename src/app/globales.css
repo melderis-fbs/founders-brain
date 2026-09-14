@@ -573,3 +573,20 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .con-bandera .punto { font-weight: 600; text-decoration: none; color: var(--tinta); }
 .con-bandera .punto.roja { color: #b03030; }
 .con-bandera .punto.naranja { color: #b8701f; }
+
+.grilla-semanas th.semana-col { vertical-align: bottom; }
+.grilla-semanas th.semana-col i {
+  display: block; font-style: normal; font-weight: 400; font-size: 10px;
+  color: var(--gris); max-width: 78px; line-height: 1.25; margin-top: 3px;
+  white-space: normal;
+}
+
+.notas .las-notas { list-style: none; margin: 14px 0 0; padding: 0; }
+.notas .las-notas li { padding: 10px 0; border-top: 1px solid var(--borde); }
+.notas .texto { margin: 0 0 5px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
+.notas .pie-nota { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.notas .borrar-nota {
+  background: none; border: 0; padding: 0; cursor: pointer; font-size: 12px; color: var(--gris);
+  text-decoration: underline;
+}
+.notas .borrar-nota:hover { color: #9b3434; }

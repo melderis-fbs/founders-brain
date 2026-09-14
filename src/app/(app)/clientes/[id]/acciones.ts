@@ -9,6 +9,7 @@ import { guardarDocumento } from '@/lib/documentos'
 import { aceptar, rechazar } from '@/lib/propuestas'
 import { bajarBandera, ponerBandera } from '@/lib/banderas'
 import type { ColorDeBandera } from '@/lib/banderas-tipos'
+import { borrarNota, escribirNota } from '@/lib/notas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 import { cambiarDeCoach } from '@/lib/usuarios'
 
@@ -157,5 +158,25 @@ export async function pasarDeCoach(
 
   const r = await cambiarDeCoach({ clienteId, aConsultoraId, motivo, usuarioId: quien.usuario.id })
   if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes'); revalidatePath('/equipo') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── Notas ───────────────────────────────────────────────────────────────────
+
+export async function dejarNota(clienteId: number, texto: string): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await escribirNota({ clienteId, texto, usuarioId: puede.usuario.id })
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function sacarNota(clienteId: number, notaId: number): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarNota(notaId, clienteId, puede.usuario.id)
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

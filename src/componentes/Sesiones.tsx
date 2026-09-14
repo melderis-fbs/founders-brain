@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
 import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, semanaDeLaSesion, type SesionEnLista } from '@/lib/sesiones-tipos'
 
+import { moduloDe, nombreCompleto } from '@/lib/modulos'
+
 const EXTENSIONES = '.txt,.md,.vtt,.srt,.json,.log,.pdf,.docx'
 
 /**
@@ -128,9 +130,10 @@ function Fila({
           ) : (
             <>
               <b>semana {semana}</b>
+              {moduloDe(semana) ? <div>{nombreCompleto(moduloDe(semana)!)}</div> : null}
               {loDeEsaSemana.length > 0
-                ? <div className="apagado">tocaba: {loDeEsaSemana.join(' · ')}</div>
-                : <div className="apagado">no vencía nada esa semana</div>}
+                ? <div className="apagado">vencía: {loDeEsaSemana.join(' · ')}</div>
+                : <div className="apagado">no vencía ningún hito esa semana</div>}
             </>
           )}
         </td>

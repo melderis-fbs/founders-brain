@@ -133,44 +133,46 @@ export function Banderas({
         </details>
       ) : null}
 
-      <h3>La consultora</h3>
-      <p className="mini" style={{ marginTop: 0 }}>
-        Hoy es de <b>{consultoraActual ?? 'nadie'}</b>.
-        {cambios.length > 0 ? ` Cambió ${cambios.length} ${cambios.length === 1 ? 'vez' : 'veces'}.` : ''}
-      </p>
-
+      {/* El cambio de consultora lo decide y lo mira quien administra: para una
+          consultora, de quién es cada cliente no es información suya. */}
       {esAdmin ? (
-        cambiando ? (
-          <div className="al-levantar">
-            <div className="campo" style={{ marginBottom: 9 }}>
-              <label htmlFor="a-quien">¿A quién pasa?</label>
-              <select id="a-quien" value={aQuien} onChange={(e) => setAQuien(e.target.value)}>
-                <option value="">Elegí una…</option>
-                {consultoras.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                <option value="ninguna">— sin consultora —</option>
-              </select>
-            </div>
-            <label htmlFor="por-que-cambia">¿Por qué cambia?</label>
-            <textarea id="por-que-cambia" className="edicion" rows={2} value={porQue}
-                      onChange={(e) => setPorQue(e.target.value)}
-                      placeholder="Dentro de tres meses alguien va a preguntar por qué. Esta es la respuesta." />
-            <p style={{ margin: '9px 0 0' }}>
-              <button type="button" className="boton" onClick={() => void cambiarCoach()} disabled={yendo || aQuien === ''}>
-                Pasarlo
-              </button>{' '}
-              <button type="button" className="boton suave" onClick={() => { setCambiando(false); setError(null) }}>Cancelar</button>
-            </p>
-          </div>
-        ) : (
-          <p style={{ margin: '10px 0 0' }}>
-            <button type="button" className="boton suave" onClick={() => setCambiando(true)}>Cambiar de consultora</button>
+        <>
+          <h3>La consultora</h3>
+          <p className="mini" style={{ marginTop: 0 }}>
+            Hoy es de <b>{consultoraActual ?? 'nadie'}</b>.
+            {cambios.length > 0 ? ` Cambió ${cambios.length} ${cambios.length === 1 ? 'vez' : 'veces'}.` : ''}
           </p>
-        )
-      ) : (
-        <p className="mini">El cambio de consultora lo hace quien administra.</p>
-      )}
 
-      {cambios.length > 0 ? (
+          {cambiando ? (
+            <div className="al-levantar">
+              <div className="campo" style={{ marginBottom: 9 }}>
+                <label htmlFor="a-quien">¿A quién pasa?</label>
+                <select id="a-quien" value={aQuien} onChange={(e) => setAQuien(e.target.value)}>
+                  <option value="">Elegí una…</option>
+                  {consultoras.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  <option value="ninguna">— sin consultora —</option>
+                </select>
+              </div>
+              <label htmlFor="por-que-cambia">¿Por qué cambia?</label>
+              <textarea id="por-que-cambia" className="edicion" rows={2} value={porQue}
+                        onChange={(e) => setPorQue(e.target.value)}
+                        placeholder="Dentro de tres meses alguien va a preguntar por qué. Esta es la respuesta." />
+              <p style={{ margin: '9px 0 0' }}>
+                <button type="button" className="boton" onClick={() => void cambiarCoach()} disabled={yendo || aQuien === ''}>
+                  Pasarlo
+                </button>{' '}
+                <button type="button" className="boton suave" onClick={() => { setCambiando(false); setError(null) }}>Cancelar</button>
+              </p>
+            </div>
+          ) : (
+            <p style={{ margin: '10px 0 0' }}>
+              <button type="button" className="boton suave" onClick={() => setCambiando(true)}>Cambiar de consultora</button>
+            </p>
+          )}
+        </>
+      ) : null}
+
+      {esAdmin && cambios.length > 0 ? (
         <div className="cambios">
           {cambios.map((c) => (
             <div className="un-cambio" key={c.id}>

@@ -5,6 +5,7 @@ import { HITOS } from '@/lib/hitos'
 import { listarConsultoras } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
 import { SEMANAS_CON_HITOS, traerGrilla, type ClienteEnGrilla } from '@/lib/grilla'
+import { moduloDe, nombreCompleto } from '@/lib/modulos'
 import { ETIQUETA_COLUMNA } from '@/lib/semaforo'
 
 export const dynamic = 'force-dynamic'
@@ -113,7 +114,12 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
 
 function PorSemanas({ clientes }: { clientes: ClienteEnGrilla[] }) {
   const ordenados = clientes
-  const queVence = (semana: number) => HITOS.filter((h) => h.semana === semana).map((h) => h.etiqueta).join(' · ')
+  const queVence = (semana: number) => {
+    const m = moduloDe(semana)
+    const hitos = HITOS.filter((h) => h.semana === semana).map((h) => h.etiqueta)
+    return [m ? `Módulo: ${nombreCompleto(m)}` : null, hitos.length > 0 ? `Vence: ${hitos.join(' · ')}` : null]
+      .filter(Boolean).join('\n')
+  }
 
   return (
     <>
@@ -132,7 +138,10 @@ function PorSemanas({ clientes }: { clientes: ClienteEnGrilla[] }) {
               <th>Va en</th>
               <th>Estado</th>
               {SEMANAS_CON_HITOS.map((s) => (
-                <th key={s} className="num" title={queVence(s)}>{s}</th>
+                <th key={s} className="num semana-col" title={queVence(s)}>
+                  {s}
+                  {moduloDe(s) ? <i>{moduloDe(s)!.nombre}</i> : null}
+                </th>
               ))}
               <th className="sobrante" />
             </tr>

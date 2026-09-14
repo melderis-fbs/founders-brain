@@ -1,5 +1,6 @@
 import type { HitoEvaluado } from '@/lib/hitos'
 import { ETAPAS, ETIQUETA_ETAPA, PREGUNTA_ETAPA, type Etapa } from '@/lib/hitos'
+import { moduloDe } from '@/lib/modulos'
 
 /**
  * Las cinco fases del negocio, cada una con su pregunta.
@@ -67,7 +68,10 @@ function UnHito({ e }: { e: HitoEvaluado }) {
           {e.hito.etiqueta}
           {e.hito.bloquea ? <b className="traba" title="Sin esto, lo que viene después no se le puede exigir">traba</b> : null}
         </span>
-        <span className="cuando">semana {e.hito.semana} · {cuando}</span>
+        <span className="cuando">
+          semana {e.hito.semana} · {cuando}
+          {moduloDe(e.hito.semana) ? <> · se trabaja en «{moduloDe(e.hito.semana)!.nombre}»</> : null}
+        </span>
       </div>
     </div>
   )
