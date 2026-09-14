@@ -9,7 +9,7 @@ import { etapasDeLaSemana, FASES, faseDeLaSemana, nombreDeEtapa } from '@/lib/mo
 
 export const dynamic = 'force-dynamic'
 
-const COLUMNAS = [...FASES.map((f) => f.numero), 'sin_fecha'] as const
+const COLUMNAS = [...FASES.map((f) => f.numero), 'termino', 'sin_fecha'] as const
 
 export default async function Grilla({
   searchParams,
@@ -73,12 +73,18 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
           <section className="columna" key={columna}>
             <header>
               <span className="titulo">
-                {columna === 'sin_fecha' ? 'Sin fecha de inicio' : `Fase ${columna} · ${FASES[columna - 1]!.periodo}`}
+                {columna === 'sin_fecha' ? 'Sin fecha de inicio'
+                  : columna === 'termino' ? 'Se le terminó el programa'
+                  : `Fase ${columna} · ${FASES[columna - 1]!.periodo}`}
               </span>
               <span className={`cuantos ${suyos.length === 0 ? 'apagado' : ''}`}>{suyos.length}</span>
-              {columna !== 'sin_fecha' ? (
+              {columna === 'sin_fecha' ? (
+                <div className="pregunta">No se puede comparar contra nada hasta que se cargue el inicio.</div>
+              ) : columna === 'termino' ? (
+                <div className="pregunta">Pasaron las 16 semanas. Lo que falte acá ya no se recupera dentro del programa.</div>
+              ) : (
                 <div className="pregunta">{FASES[columna - 1]!.queConstruimos}</div>
-              ) : null}
+              )}
               {suyos.length > 0 ? (
                 <div className="cuantos-llegaron">
                   {(() => {

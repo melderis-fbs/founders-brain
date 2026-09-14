@@ -28,7 +28,7 @@ export type ClienteEnGrilla = {
   totalSemanas: number | null
   semaforo: Semaforo
   /** En qué fase tendría que estar por calendario. Es la columna del tablero. */
-  columna: number | 'sin_fecha'
+  columna: number | 'sin_fecha' | 'termino'
   /** En qué fase se corta de verdad. null si no se corta en ninguna. */
   seCortaEn: number | null
   necesita: string
@@ -73,7 +73,11 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       // La columna es dónde TENDRÍA que estar, no dónde se corta. Agrupar por
       // dónde se corta amontonaba 193 de 196 clientes en Definición: una
       // columna que dice lo mismo en todas las filas no es una columna.
-      columna: (faseDeLaSemana(semana)?.numero ?? 'sin_fecha') as number | 'sin_fecha',
+      // Un cliente que pasó las dieciséis semanas SÍ tiene fecha de inicio: lo
+      // que pasó es que se le terminó el programa. Meterlo en «sin fecha»
+      // sería decir que falta un dato que está.
+      columna: (faseDeLaSemana(semana)?.numero
+        ?? (semana === null ? 'sin_fecha' : 'termino')) as number | 'sin_fecha' | 'termino',
       seCortaEn: semaforo.fase,
       necesita: queNecesita(evaluados, c.faltan),
       porSemana,

@@ -116,3 +116,15 @@ describe('las columnas de la grilla', () => {
     for (const h of HITOS) expect(SEMANAS_CON_HITOS).toContain(h.semana)
   })
 })
+
+describe('dónde cae cada cliente en el tablero', () => {
+  it('pasada la semana 16 no es «sin fecha»: es que se le terminó el programa', async () => {
+    const { faseDeLaSemana } = await import('./modulos')
+    // La distinción importa: uno es un dato que falta, el otro es un dato que
+    // está y dice que el programa se acabó. Mezclarlos manda a cargar una
+    // fecha que ya está cargada.
+    expect(faseDeLaSemana(16)).not.toBeNull()
+    expect(faseDeLaSemana(17)).toBeNull()
+    expect(faseDeLaSemana(null)).toBeNull()
+  })
+})
