@@ -1,4 +1,4 @@
-import { dondeSeCorta, ETIQUETA_ETAPA, type Etapa, type HitoEvaluado } from './hitos'
+import { dondeSeCorta, faseDelHito, type HitoEvaluado } from './hitos'
 
 /**
  * El semáforo.
@@ -18,8 +18,8 @@ export type Semaforo = {
   color: Color
   palabra: string
   porque: string
-  /** En qué etapa se corta, si se corta. */
-  etapa: Etapa | null
+  /** En qué fase del programa se corta, si se corta. */
+  fase: number | null
 }
 
 /** A partir de cuántas semanas de atraso un retraso pasa a ser grave. */
@@ -32,7 +32,7 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[]): Semaforo {
       color: 'gris',
       palabra: 'sin datos',
       porque: 'No hay con qué compararlo: falta la fecha de inicio, o las fuentes de estos datos no están cargadas.',
-      etapa: null,
+      fase: null,
     }
   }
 
@@ -42,7 +42,7 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[]): Semaforo {
       color: 'verde',
       palabra: 'en tiempo',
       porque: 'No hay nada vencido de lo que hoy se puede medir.',
-      etapa: null,
+      fase: null,
     }
   }
 
@@ -55,7 +55,7 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[]): Semaforo {
       color: 'rojo',
       palabra: 'grave',
       porque: `«${bloqueante.hito.etiqueta}» bloquea todo lo que viene después y falta hace ${semanas(bloqueante.atrasoEnSemanas)}.`,
-      etapa: corte.hito.etapa,
+      fase: faseDelHito(corte.hito),
     }
   }
 
@@ -64,7 +64,7 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[]): Semaforo {
       color: 'rojo',
       palabra: 'grave',
       porque: `«${corte.hito.etiqueta}» falta hace ${semanas(corte.atrasoEnSemanas)}.`,
-      etapa: corte.hito.etapa,
+      fase: faseDelHito(corte.hito),
     }
   }
 
@@ -72,16 +72,11 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[]): Semaforo {
     color: 'amarillo',
     palabra: 'atrasado',
     porque: `«${corte.hito.etiqueta}» falta hace ${semanas(corte.atrasoEnSemanas)}.`,
-    etapa: corte.hito.etapa,
+    fase: faseDelHito(corte.hito),
   }
 }
 
 function semanas(n: number | null): string {
   const cuantas = n ?? 0
   return `${cuantas} ${cuantas === 1 ? 'semana' : 'semanas'}`
-}
-
-export const ETIQUETA_COLUMNA: Record<Etapa | 'sin_fecha', string> = {
-  ...ETIQUETA_ETAPA,
-  sin_fecha: 'Sin fecha de inicio',
 }

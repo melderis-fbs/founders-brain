@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dondeSeCorta, estadoDeEtapas, evaluarHitos, fuentesConDatos, queNecesita, HITOS } from './hitos'
+import { dondeSeCorta, fasesSegunLosHitos, evaluarHitos, fuentesConDatos, queNecesita, HITOS } from './hitos'
 
 const SIN_DOCUMENTOS = new Set<string>()
 // En estas pruebas la cartera tiene fichas cargadas pero ningún onboarding.
@@ -76,11 +76,21 @@ describe('la comparación con lo esperado', () => {
     expect(queNecesita(evaluar(2, FICHA_COMPLETA), [])).toBe('va en tiempo')
   })
 
-  it('las cinco etapas quedan con un estado cada una', () => {
-    const etapas = estadoDeEtapas(evaluar(10, FICHA_COMPLETA))
-    expect(etapas.definicion).toBe('hecho')
-    expect(etapas.mensaje).toBe('hecho')
-    expect(etapas.conversion).toBe('sin_datos')   // no hay ventas ni llamadas cargadas
+  it('una fase no está hecha si sólo está hecho uno de sus hitos', () => {
+    // La fase 2 tiene el mensaje hecho y tres hitos que no se pueden medir.
+    // Eso no es una fase hecha: es una fase que no se sabe.
+    expect(fasesSegunLosHitos(evaluar(10, FICHA_COMPLETA))[2]).toBe('sin_datos')
+  })
+
+  it('las cuatro fases quedan con un estado cada una', () => {
+    const fases = fasesSegunLosHitos(evaluar(10, FICHA_COMPLETA))
+    // Tres de los cuatro hitos de la fase 1 están hechos, pero el onboarding
+    // no se puede evaluar: en esta cartera no hay ninguno cargado. La fase no
+    // está hecha ni falta: no se sabe.
+    expect(fases[1]).toBe('sin_datos')
+    expect(fases[2]).toBe('sin_datos')   // semanas 5 a 8: el mensaje está, pero el tracker no se carga
+    expect(fases[3]).toBe('sin_datos')   // semanas 9 a 12: no se cargan las ventas
+    expect(fases[4]).toBe('sin_datos')   // semanas 13 a 16: tampoco
   })
 
   it('el catálogo es el del método, en orden y sin inventar hitos', () => {

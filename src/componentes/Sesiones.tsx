@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
 import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, semanaDeLaSesion, type SesionEnLista } from '@/lib/sesiones-tipos'
 
-import { faseDeLaSemana, modulosDeLaSemana } from '@/lib/modulos'
+import { etapasDeLaSemana, faseDeLaSemana } from '@/lib/modulos'
 
 const EXTENSIONES = '.txt,.md,.vtt,.srt,.json,.log,.pdf,.docx'
 
@@ -131,7 +131,10 @@ function Fila({
             <>
               <b>semana {semana}</b>
               {faseDeLaSemana(semana) ? (
-                <div>fase {faseDeLaSemana(semana)!.numero}{modulosDeLaSemana(semana).length > 0 ? ` · ${modulosDeLaSemana(semana).join(' · ')}` : ''}</div>
+                <div>
+                  fase {faseDeLaSemana(semana)!.numero}
+                  {etapasDeLaSemana(semana).length > 0 ? ` · ${etapasDeLaSemana(semana).map((e) => e.nombre).join(' · ')}` : ''}
+                </div>
               ) : null}
               {loDeEsaSemana.length > 0
                 ? <div className="apagado">vencía: {loDeEsaSemana.join(' · ')}</div>

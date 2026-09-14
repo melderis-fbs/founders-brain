@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { HITOS } from './hitos'
 import {
-  enQueFaseVa, FASES, faseDeLaSemana, HITOS_CLAVE, modulosDeLaSemana,
-  SEMANAS_DEL_PROGRAMA, SEMANAS_POR_FASE,
+  enQueFaseVa, ETAPAS, FASES, faseDeLaSemana, etapasDeLaSemana, HITOS_CLAVE,
+  nombreDeEtapa, SEMANAS_DEL_PROGRAMA, SEMANAS_POR_FASE,
 } from './modulos'
 
 describe('el programa: cuatro fases de cuatro semanas', () => {
@@ -52,31 +52,51 @@ describe('el programa: cuatro fases de cuatro semanas', () => {
     expect(enQueFaseVa(0).porque).toContain('todavía no arrancó')
   })
 
-  it('todos los módulos de una fase aparecen en alguna de sus semanas', () => {
-    for (const fase of FASES) {
-      const repartidos = []
-      for (let s = fase.desdeSemana; s <= fase.hastaSemana; s++) repartidos.push(...modulosDeLaSemana(s))
-      expect(repartidos.sort()).toEqual([...fase.modulos].sort())
+  it('son catorce etapas, numeradas en orden', () => {
+    expect(ETAPAS).toHaveLength(14)
+    expect(ETAPAS.map((e) => e.numero)).toEqual([...Array(14).keys()].map((i) => i + 1))
+  })
+
+  it('no repiten clave', () => {
+    expect(new Set(ETAPAS.map((e) => e.clave)).size).toBe(14)
+  })
+
+  it('cada etapa cae adentro de su fase', () => {
+    for (const e of ETAPAS) {
+      const suya = FASES[e.fase - 1]!
+      expect(e.desdeSemana, e.nombre).toBeGreaterThanOrEqual(suya.desdeSemana)
+      expect(e.hastaSemana, e.nombre).toBeLessThanOrEqual(suya.hastaSemana)
+      expect(e.hastaSemana, e.nombre).toBeGreaterThanOrEqual(e.desdeSemana)
     }
   })
 
-  it('la fase 1 tiene cinco módulos en cuatro semanas: la doble es la última', () => {
-    expect(FASES[0]!.modulos).toHaveLength(5)
-    expect(modulosDeLaSemana(1)).toEqual(['Onboarding y Diagnóstico'])
-    expect(modulosDeLaSemana(4)).toEqual(['Promesa y Pilares', 'Tu Oferta en Una Página'])
-    expect([1, 2, 3, 4].flatMap((s) => modulosDeLaSemana(s))).toHaveLength(5)
+  it('las dieciséis semanas tienen al menos una etapa', () => {
+    for (let s = 1; s <= SEMANAS_DEL_PROGRAMA; s++) {
+      expect(etapasDeLaSemana(s), `la semana ${s}`).not.toHaveLength(0)
+    }
+  })
+
+  it('todas las etapas aparecen en alguna semana', () => {
+    const vistas = new Set<string>()
+    for (let s = 1; s <= SEMANAS_DEL_PROGRAMA; s++) for (const e of etapasDeLaSemana(s)) vistas.add(e.clave)
+    expect(vistas.size).toBe(ETAPAS.length)
+  })
+
+  it('el nombre lleva su aclaración cuando la tiene', () => {
+    expect(nombreDeEtapa(ETAPAS[1]!)).toBe('Identidad (Manual de Transformación 2.0)')
+    expect(nombreDeEtapa(ETAPAS[2]!)).toBe('Match de Marca')
   })
 
   it('en la semana 4 se trabaja la oferta, que es cuando vence su hito', () => {
     const suHito = HITOS.find((h) => h.clave === 'oferta')!
     expect(suHito.semana).toBe(4)
-    expect(modulosDeLaSemana(suHito.semana)).toContain('Tu Oferta en Una Página')
+    expect(etapasDeLaSemana(4).map((e) => e.nombre)).toContain('Tu Oferta en Una Página')
   })
 
-  it('fuera del programa no hay módulo', () => {
-    expect(modulosDeLaSemana(0)).toEqual([])
-    expect(modulosDeLaSemana(17)).toEqual([])
-    expect(modulosDeLaSemana(null)).toEqual([])
+  it('fuera del programa no hay etapa', () => {
+    expect(etapasDeLaSemana(0)).toEqual([])
+    expect(etapasDeLaSemana(17)).toEqual([])
+    expect(etapasDeLaSemana(null)).toEqual([])
   })
 
   it('los hitos de la comparación caen dentro del programa', () => {

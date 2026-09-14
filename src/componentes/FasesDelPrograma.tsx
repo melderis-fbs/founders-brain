@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { marcarHitoClave } from '@/app/(app)/clientes/[id]/acciones'
 import type { FaseConEstado } from '@/lib/hitos-clave'
+import { ETAPAS, nombreDeEtapa } from '@/lib/modulos'
 
 const COMO_SE_LEE: Record<FaseConEstado['estado'], string> = {
   terminada: 'Terminada',
@@ -64,7 +65,16 @@ export function FasesDelPrograma({
 
           <div className="que-se-trabaja">
             <span className="rotulo">Qué se trabaja</span>
-            <ul>{fase.modulos.map((m) => <li key={m}>{m}</li>)}</ul>
+            <ul>
+              {ETAPAS.filter((e) => e.fase === fase.numero).map((e) => (
+                <li key={e.clave}>
+                  {nombreDeEtapa(e)}
+                  <i className="cuando">
+                    {' '}· semana {e.desdeSemana}{e.hastaSemana !== e.desdeSemana ? ` a ${e.hastaSemana}` : ''}
+                  </i>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="hitos-clave">

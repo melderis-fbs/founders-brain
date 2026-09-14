@@ -1,6 +1,5 @@
 import { CAMPOS, ETIQUETA_GRUPO, type Grupo } from './campos'
-import type { HitoEvaluado } from './hitos'
-import { ETIQUETA_ETAPA } from './hitos'
+import { faseDelHito, type HitoEvaluado } from './hitos'
 import type { SesionEnLista } from './sesiones-tipos'
 
 /**
@@ -264,7 +263,7 @@ function dondeSeCorta(hitos: readonly HitoEvaluado[], cobertura: number): Corte 
 
   return {
     etiqueta: primero.hito.etiqueta,
-    etapa: ETIQUETA_ETAPA[primero.hito.etapa],
+    etapa: `Fase ${faseDelHito(primero.hito) ?? '—'}`,
     atrasoEnSemanas: primero.atrasoEnSemanas,
     alcanzaParaConcluir: alcanza,
     porque: primero.hito.bloquea

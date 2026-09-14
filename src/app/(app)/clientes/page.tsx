@@ -6,7 +6,7 @@ import { ESTADOS, TOTAL_CAMPOS } from '@/lib/campos'
 import { fuentesDeLaCartera, listarClientes, listarConsultoras } from '@/lib/clientes'
 import { sinConsultoraAsignada } from '@/lib/permisos'
 import { quienMira } from '@/lib/quien-mira'
-import { dondeSeCorta, estadoDeEtapas, evaluarHitos, queNecesita } from '@/lib/hitos'
+import { dondeSeCorta, fasesSegunLosHitos, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { semaforoDe } from '@/lib/semaforo'
 import { semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
 
@@ -47,7 +47,7 @@ export default async function Clientes({
       cliente: c,
       semana,
       evaluados,
-      etapas: estadoDeEtapas(evaluados),
+      etapas: fasesSegunLosHitos(evaluados),
       semaforo: semaforoDe(evaluados),
       atraso: corte?.atrasoEnSemanas ?? -1,
       necesita: queNecesita(evaluados, c.faltan),

@@ -1,16 +1,15 @@
 import Link from 'next/link'
 import { Semaforo } from '@/componentes/Semaforo'
-import { ETAPAS, ETIQUETA_ETAPA, PREGUNTA_ETAPA, type EstadoHito } from '@/lib/hitos'
+import type { EstadoHito } from '@/lib/hitos'
 import { HITOS } from '@/lib/hitos'
 import { listarConsultoras } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
 import { SEMANAS_CON_HITOS, traerGrilla, type ClienteEnGrilla } from '@/lib/grilla'
-import { faseDeLaSemana, modulosDeLaSemana } from '@/lib/modulos'
-import { ETIQUETA_COLUMNA } from '@/lib/semaforo'
+import { etapasDeLaSemana, FASES, faseDeLaSemana, nombreDeEtapa } from '@/lib/modulos'
 
 export const dynamic = 'force-dynamic'
 
-const COLUMNAS = [...ETAPAS, 'sin_fecha'] as const
+const COLUMNAS = [...FASES.map((f) => f.numero), 'sin_fecha'] as const
 
 export default async function Grilla({
   searchParams,
@@ -73,10 +72,12 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
         return (
           <section className="columna" key={columna}>
             <header>
-              <span className="titulo">{ETIQUETA_COLUMNA[columna]}</span>
+              <span className="titulo">
+                {columna === 'sin_fecha' ? 'Sin fecha de inicio' : `Fase ${columna} · ${FASES[columna - 1]!.periodo}`}
+              </span>
               <span className={`cuantos ${suyos.length === 0 ? 'apagado' : ''}`}>{suyos.length}</span>
-              {columna in PREGUNTA_ETAPA ? (
-                <div className="pregunta">{PREGUNTA_ETAPA[columna as keyof typeof PREGUNTA_ETAPA]}</div>
+              {columna !== 'sin_fecha' ? (
+                <div className="pregunta">{FASES[columna - 1]!.queConstruimos}</div>
               ) : null}
               {suyos.length > 0 ? (
                 <div className="cuantos-llegaron">
@@ -99,8 +100,8 @@ function Kanban({ clientes }: { clientes: ClienteEnGrilla[] }) {
                     {c.consultora ? ` · ${c.consultora}` : ''}
                   </div>
                   <div className="necesita">{c.necesita}</div>
-                  {c.seCortaEn && c.seCortaEn !== c.columna ? (
-                    <div className="mini se-corta">se corta en {ETIQUETA_ETAPA[c.seCortaEn]}</div>
+                  {c.seCortaEn !== null && c.seCortaEn !== c.columna ? (
+                    <div className="mini se-corta">se corta en la fase {c.seCortaEn}</div>
                   ) : null}
                 </Link>
               ))}
@@ -119,7 +120,7 @@ function PorSemanas({ clientes }: { clientes: ClienteEnGrilla[] }) {
     const hitos = HITOS.filter((h) => h.semana === semana).map((h) => h.etiqueta)
     return [
       fase ? `Fase ${fase.numero} · ${fase.periodo}` : null,
-      ...modulosDeLaSemana(semana),
+      ...etapasDeLaSemana(semana).map(nombreDeEtapa),
       hitos.length > 0 ? `Vence: ${hitos.join(' · ')}` : null,
     ].filter(Boolean).join('\n')
   }

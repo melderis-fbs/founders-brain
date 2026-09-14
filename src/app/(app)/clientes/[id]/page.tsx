@@ -6,7 +6,7 @@ import { Comparacion } from '@/componentes/Comparacion'
 import { Banderas } from '@/componentes/Banderas'
 import { Notas } from '@/componentes/Notas'
 import { notasDe } from '@/lib/notas'
-import { enQueFaseVa, modulosDeLaSemana, SEMANAS_DEL_PROGRAMA } from '@/lib/modulos'
+import { enQueFaseVa, etapasDeLaSemana, nombreDeEtapa } from '@/lib/modulos'
 import { banderaDe, historialDeBanderas, QUE_DICE } from '@/lib/banderas'
 import { cambiosDeCoach } from '@/lib/usuarios'
 import { Fases } from '@/componentes/Fases'
@@ -183,7 +183,7 @@ export default async function Ficha({
                 <>
                   Fase {enQueFaseVa(semanaEnLaQueVa(inicio)).fase!.numero} de 4
                   <div className="mini">
-                    {modulosDeLaSemana(semanaEnLaQueVa(inicio)).join(' · ') ||
+                    {etapasDeLaSemana(semanaEnLaQueVa(inicio)).map(nombreDeEtapa).join(' · ') ||
                       enQueFaseVa(semanaEnLaQueVa(inicio)).fase!.periodo}
                   </div>
                 </>

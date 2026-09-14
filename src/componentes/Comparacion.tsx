@@ -1,13 +1,21 @@
-import {
-  dondeSeCorta, ETAPAS, ETIQUETA_ETAPA, type EstadoHito, type HitoEvaluado,
-} from '@/lib/hitos'
+import { dondeSeCorta, type EstadoHito, type HitoEvaluado } from '@/lib/hitos'
+import { FASES } from '@/lib/modulos'
 
-/** Las cinco etapas del negocio, dibujadas. Para escanear una fila. */
+/**
+ * Las cuatro fases del programa, dibujadas. Para escanear una fila.
+ *
+ * Son las fases y no las catorce etapas a propósito: catorce puntitos en una
+ * fila no se escanean, se leen de a uno, y entonces dejan de servir para lo
+ * único que sirven, que es ver de un vistazo dónde se cortó.
+ */
 export function Etapas({ estados }: { estados: Record<string, EstadoHito> }) {
   return (
     <span className="etapas">
-      {ETAPAS.map((etapa) => (
-        <i key={etapa} className={estados[etapa]} title={`${ETIQUETA_ETAPA[etapa]}: ${enPalabras(estados[etapa])}`} />
+      {FASES.map((f) => (
+        <i
+          key={f.numero} className={estados[f.numero]}
+          title={`Fase ${f.numero} · ${f.periodo}: ${enPalabras(estados[f.numero])}`}
+        />
       ))}
     </span>
   )

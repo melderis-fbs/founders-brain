@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { etapaQueLeTocaria, evaluarHitos, fuentesConDatos } from './hitos'
+import { evaluarHitos, fuentesConDatos } from './hitos'
 import { semaforoDe } from './semaforo'
 
 const CARTERA = fuentesConDatos({ algunClienteConDatosDeFicha: true, algunOnboardingCargado: true })
@@ -25,7 +25,7 @@ describe('el semáforo', () => {
     const s = semaforoDe(evaluar(6, AL_DIA, new Set(['onboarding'])))
     expect(s.color).toBe('verde')
     expect(s.palabra).toBe('en tiempo')
-    expect(s.etapa).toBeNull()
+    expect(s.fase).toBeNull()
   })
 
   it('amarillo cuando hay un atraso chico que no bloquea', () => {
@@ -33,7 +33,7 @@ describe('el semáforo', () => {
     expect(s.color).toBe('amarillo')
     expect(s.palabra).toBe('atrasado')
     expect(s.porque).toContain('1 semana')
-    expect(s.etapa).toBe('mensaje')
+    expect(s.fase).toBe(2)   // la semana 5 cae en la fase 2
   })
 
   it('rojo cuando lo vencido bloquea lo que viene después', () => {
@@ -41,7 +41,7 @@ describe('el semáforo', () => {
     expect(s.color).toBe('rojo')
     expect(s.palabra).toBe('grave')
     expect(s.porque).toContain('bloquea')
-    expect(s.etapa).toBe('definicion')
+    expect(s.fase).toBe(1)   // la semana 4 cae en la fase 1
   })
 
   it('rojo también cuando el atraso ya es largo, aunque no bloquee', () => {
@@ -58,34 +58,8 @@ describe('el semáforo', () => {
     }
   })
 
-  it('el semáforo dice en qué etapa se corta, o null si no se corta', () => {
-    expect(semaforoDe(evaluar(6, AL_DIA, new Set(['onboarding']))).etapa).toBeNull()
-    expect(semaforoDe(evaluar(12, {}, new Set(['onboarding']))).etapa).toBe('definicion')
-  })
-})
-
-describe('en qué etapa tendría que estar por calendario', () => {
-  it('la semana 1 recién arranca Definición', () => {
-    expect(etapaQueLeTocaria(1)).toBe('definicion')
-    expect(etapaQueLeTocaria(4)).toBe('definicion')
-  })
-
-  it('cada etapa empieza cuando vence su primer hito', () => {
-    expect(etapaQueLeTocaria(5)).toBe('mensaje')
-    expect(etapaQueLeTocaria(6)).toBe('volumen')
-    expect(etapaQueLeTocaria(8)).toBe('conversion')
-    expect(etapaQueLeTocaria(13)).toBe('escala')
-  })
-
-  it('pasado el programa sigue siendo la última', () => {
-    expect(etapaQueLeTocaria(31)).toBe('escala')
-  })
-
-  it('sin fecha de inicio no hay etapa que le toque: no se inventa', () => {
-    expect(etapaQueLeTocaria(null)).toBeNull()
-  })
-
-  it('antes de arrancar no le toca ninguna', () => {
-    expect(etapaQueLeTocaria(0)).toBeNull()
+  it('el semáforo dice en qué fase se corta, o null si no se corta', () => {
+    expect(semaforoDe(evaluar(6, AL_DIA, new Set(['onboarding']))).fase).toBeNull()
+    expect(semaforoDe(evaluar(12, {}, new Set(['onboarding']))).fase).toBe(1)
   })
 })

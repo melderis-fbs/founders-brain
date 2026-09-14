@@ -1,4 +1,5 @@
 import type { Campo } from './campos'
+import { etapasDeLaSemana, FASES, faseDeLaSemana, type ClaveEtapa } from './modulos'
 
 /**
  * Lo que tendría que estar hecho, y cuándo.
@@ -11,25 +12,6 @@ import type { Campo } from './campos'
  * «no hizo la primera venta» cuando nadie cargó ninguna venta no es un dato
  * flojo, es una afirmación falsa sobre el cliente.
  */
-
-export const ETAPAS = ['definicion', 'mensaje', 'volumen', 'conversion', 'escala'] as const
-export type Etapa = (typeof ETAPAS)[number]
-
-export const ETIQUETA_ETAPA: Record<Etapa, string> = {
-  definicion: 'Definición',
-  mensaje: 'Mensaje',
-  volumen: 'Volumen',
-  conversion: 'Conversión',
-  escala: 'Escala',
-}
-
-export const PREGUNTA_ETAPA: Record<Etapa, string> = {
-  definicion: '¿Qué vende, a quién y por cuánto?',
-  mensaje: '¿Lo comunica de forma que el comprador correcto se reconozca?',
-  volumen: '¿Le llega a suficiente gente?',
-  conversion: '¿Las conversaciones se transforman en ventas?',
-  escala: '¿La venta se repite o fue suerte?',
-}
 
 /** De dónde lee un hito. Si la fuente no está cargada, el hito no opina. */
 export type Fuente = 'ficha' | 'documentos' | 'ventas' | 'reuniones' | 'llamadas' | 'tracker' | 'seguimiento'
@@ -69,7 +51,6 @@ export type Hito = {
   clave: string
   semana: number
   etiqueta: string
-  etapa: Etapa
   /** Sin esto, lo de más adelante no se le puede exigir. */
   bloquea: boolean
   fuente: Fuente
@@ -78,29 +59,29 @@ export type Hito = {
 }
 
 export const HITOS: readonly Hito[] = [
-  { clave: 'onboarding', semana: 1, etiqueta: 'Onboarding hecho y datos base cargados', etapa: 'definicion',
+  { clave: 'onboarding', semana: 1, etiqueta: 'Onboarding hecho y datos base cargados',
     bloquea: false, fuente: 'documentos' },
-  { clave: 'cuenta_inversa', semana: 1, etiqueta: 'Cuenta inversa hecha con el cliente', etapa: 'definicion',
+  { clave: 'cuenta_inversa', semana: 1, etiqueta: 'Cuenta inversa hecha con el cliente',
     bloquea: false, fuente: 'ficha', camposQueLoDan: ['fecha_cuenta_inversa', 'meta_mensual', 'ticket'] },
-  { clave: 'cliente_ideal', semana: 3, etiqueta: 'Cliente ideal y problema cerrados', etapa: 'definicion',
+  { clave: 'cliente_ideal', semana: 3, etiqueta: 'Cliente ideal y problema cerrados',
     bloquea: false, fuente: 'ficha', camposQueLoDan: ['cliente_ideal', 'problema'] },
-  { clave: 'oferta', semana: 4, etiqueta: 'Oferta y promesa cerradas', etapa: 'definicion',
+  { clave: 'oferta', semana: 4, etiqueta: 'Oferta y promesa cerradas',
     bloquea: true, fuente: 'ficha', camposQueLoDan: ['oferta', 'promesa'] },
-  { clave: 'mensaje', semana: 5, etiqueta: 'Mensaje y canal definidos', etapa: 'mensaje',
+  { clave: 'mensaje', semana: 5, etiqueta: 'Mensaje y canal definidos',
     bloquea: false, fuente: 'ficha', camposQueLoDan: ['mensaje', 'canal'] },
-  { clave: 'conversaciones', semana: 6, etiqueta: 'Primeras conversaciones que avanzan', etapa: 'volumen',
+  { clave: 'conversaciones', semana: 6, etiqueta: 'Primeras conversaciones que avanzan',
     bloquea: false, fuente: 'tracker' },
-  { clave: 'primera_reunion', semana: 6, etiqueta: 'Primera reunión agendada', etapa: 'volumen',
+  { clave: 'primera_reunion', semana: 6, etiqueta: 'Primera reunión agendada',
     bloquea: false, fuente: 'reuniones' },
-  { clave: 'ritmo', semana: 7, etiqueta: 'Ritmo semanal de mensajes sostenido 3 semanas', etapa: 'volumen',
+  { clave: 'ritmo', semana: 7, etiqueta: 'Ritmo semanal de mensajes sostenido 3 semanas',
     bloquea: false, fuente: 'tracker' },
-  { clave: 'primera_llamada', semana: 8, etiqueta: 'Primera llamada de venta hecha', etapa: 'conversion',
+  { clave: 'primera_llamada', semana: 8, etiqueta: 'Primera llamada de venta hecha',
     bloquea: false, fuente: 'llamadas' },
-  { clave: 'primera_venta', semana: 9, etiqueta: 'Primera venta', etapa: 'conversion',
+  { clave: 'primera_venta', semana: 9, etiqueta: 'Primera venta',
     bloquea: true, fuente: 'ventas' },
-  { clave: 'segunda_venta', semana: 13, etiqueta: 'Segunda venta', etapa: 'escala',
+  { clave: 'segunda_venta', semana: 13, etiqueta: 'Segunda venta',
     bloquea: true, fuente: 'ventas' },
-  { clave: 'seguimiento', semana: 14, etiqueta: 'Sistema de seguimiento que se sostiene', etapa: 'escala',
+  { clave: 'seguimiento', semana: 14, etiqueta: 'Sistema de seguimiento que se sostiene',
     bloquea: false, fuente: 'seguimiento' },
 ]
 
@@ -169,17 +150,36 @@ export function dondeSeCorta(evaluados: readonly HitoEvaluado[]): HitoEvaluado |
   return evaluados.find((e) => e.estado === 'falta') ?? null
 }
 
-/** Cómo está cada etapa: hecha si todos sus hitos exigibles están hechos. */
-export function estadoDeEtapas(evaluados: readonly HitoEvaluado[]): Record<Etapa, EstadoHito> {
-  const salida = {} as Record<Etapa, EstadoHito>
-  for (const etapa of ETAPAS) {
-    const suyos = evaluados.filter((e) => e.hito.etapa === etapa)
-    if (suyos.some((e) => e.estado === 'falta')) salida[etapa] = 'falta'
+/**
+ * En qué etapa del programa cae un hito.
+ *
+ * Sale de su semana, no de un campo escrito a mano: así no puede decir
+ * «Ventas y Cierre» un hito que vence en la semana 3.
+ */
+export function etapaDelHito(hito: Hito): ClaveEtapa | null {
+  return etapasDeLaSemana(hito.semana)[0]?.clave ?? null
+}
+
+/** En qué fase del programa cae un hito. */
+export function faseDelHito(hito: Hito): 1 | 2 | 3 | 4 | null {
+  return faseDeLaSemana(hito.semana)?.numero ?? null
+}
+
+/** Cómo está cada fase: mira todos los hitos que vencen dentro de ella. */
+export function fasesSegunLosHitos(evaluados: readonly HitoEvaluado[]): Record<number, EstadoHito> {
+  const salida: Record<number, EstadoHito> = {}
+  for (const fase of FASES) {
+    const suyos = evaluados.filter((e) => faseDelHito(e.hito) === fase.numero)
+    const etapa = fase.numero
+    // Una fase está hecha cuando está hecho TODO lo suyo. Antes alcanzaba con
+    // uno, y una fase con un hito hecho y tres que ni se pueden medir salía en
+    // verde: es la clase de mentira que hace que nadie mire más el tablero.
+    if (suyos.length === 0) salida[etapa] = 'sin_datos'
+    else if (suyos.some((e) => e.estado === 'falta')) salida[etapa] = 'falta'
     else if (suyos.every((e) => e.estado === 'hecho')) salida[etapa] = 'hecho'
     else if (suyos.some((e) => e.estado === 'esta_semana')) salida[etapa] = 'esta_semana'
-    else if (suyos.some((e) => e.estado === 'hecho')) salida[etapa] = 'hecho'
-    else if (suyos.every((e) => e.estado === 'todavia_no')) salida[etapa] = 'todavia_no'
-    else salida[etapa] = 'sin_datos'
+    else if (suyos.some((e) => e.estado === 'sin_datos')) salida[etapa] = 'sin_datos'
+    else salida[etapa] = 'todavia_no'
   }
   return salida
 }
@@ -197,26 +197,4 @@ export function queNecesita(evaluados: readonly HitoEvaluado[], faltanDatos: rea
   }
   const seSabe = evaluados.some((e) => e.estado !== 'sin_datos')
   return seSabe ? 'va en tiempo' : 'no hay datos para saber cómo va'
-}
-
-/**
- * En qué etapa tendría que estar un cliente por calendario.
- *
- * La última etapa cuyo primer hito ya venció. No es dónde está: es dónde el
- * programa dice que debería estar a esta altura. Las dos juntas son la
- * comparación —«tendría que estar vendiendo y se corta en la oferta»—, y por
- * separado no dicen nada.
- *
- * Sin fecha de inicio no hay semana, y sin semana no hay etapa que le toque.
- * No se inventa una.
- */
-export function etapaQueLeTocaria(semana: number | null): Etapa | null {
-  if (semana === null) return null
-
-  let laQueVa: Etapa | null = null
-  for (const etapa of ETAPAS) {
-    const arranca = Math.min(...HITOS.filter((h) => h.etapa === etapa).map((h) => h.semana))
-    if (semana >= arranca) laQueVa = etapa
-  }
-  return laQueVa
 }

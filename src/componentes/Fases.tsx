@@ -1,6 +1,6 @@
 import type { HitoEvaluado } from '@/lib/hitos'
-import { ETAPAS, ETIQUETA_ETAPA, PREGUNTA_ETAPA, type Etapa } from '@/lib/hitos'
-import { modulosDeLaSemana } from '@/lib/modulos'
+import { faseDelHito } from '@/lib/hitos'
+import { etapasDeLaSemana, FASES, nombreDeEtapa } from '@/lib/modulos'
 
 /**
  * Las cinco fases del negocio, cada una con su pregunta.
@@ -13,9 +13,9 @@ import { modulosDeLaSemana } from '@/lib/modulos'
  * por calendario.
  */
 export function Fases({ evaluados }: { evaluados: HitoEvaluado[] }) {
-  const dondeEsta = ETAPAS.find((etapa) =>
-    evaluados.some((e) => e.hito.etapa === etapa && e.estado !== 'hecho'),
-  ) ?? null
+  const dondeEsta = FASES.find((f) =>
+    evaluados.some((e) => faseDelHito(e.hito) === f.numero && e.estado !== 'hecho'),
+  )?.numero ?? null
 
   return (
     <div className="fases">
@@ -23,8 +23,9 @@ export function Fases({ evaluados }: { evaluados: HitoEvaluado[] }) {
         Las etapas se miden por lo que está contestado, no por la semana en la que va.
       </p>
 
-      {ETAPAS.map((etapa) => {
-        const suyos = evaluados.filter((e) => e.hito.etapa === etapa)
+      {FASES.map((fase) => {
+        const etapa = fase.numero
+        const suyos = evaluados.filter((e) => faseDelHito(e.hito) === etapa)
         if (suyos.length === 0) return null
         const hechos = suyos.filter((e) => e.estado === 'hecho').length
         const evaluables = suyos.filter((e) => e.estado !== 'sin_datos').length
@@ -33,8 +34,8 @@ export function Fases({ evaluados }: { evaluados: HitoEvaluado[] }) {
           <section className={`fase ${dondeEsta === etapa ? 'donde-esta' : ''}`} key={etapa}>
             <header>
               <div>
-                <h3>{ETIQUETA_ETAPA[etapa]}</h3>
-                <span className="pregunta">{PREGUNTA_ETAPA[etapa]}</span>
+                <h3>Fase {fase.numero} · {fase.periodo}</h3>
+                <span className="pregunta">{fase.queConstruimos}</span>
               </div>
               <span className="cuenta">
                 {hechos} de {evaluables}
@@ -70,8 +71,8 @@ function UnHito({ e }: { e: HitoEvaluado }) {
         </span>
         <span className="cuando">
           semana {e.hito.semana} · {cuando}
-          {modulosDeLaSemana(e.hito.semana).length > 0
-            ? <> · se trabaja en «{modulosDeLaSemana(e.hito.semana).join('» y «')}»</> : null}
+          {etapasDeLaSemana(e.hito.semana).length > 0
+            ? <> · se trabaja en «{etapasDeLaSemana(e.hito.semana).map(nombreDeEtapa).join('» y «')}»</> : null}
         </span>
       </div>
     </div>
