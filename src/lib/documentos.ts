@@ -15,7 +15,32 @@ export const TIPOS: readonly TipoDocumento[] = ['onboarding', 'llamada_venta', '
 
 const MINIMO = 20
 
-export type Guardado = { ok: true; id: number } | { ok: false; error: string }
+export type Guardado =
+  | { ok: true; id: number; yaEstaba?: true }
+  | { ok: false; error: string }
+
+/**
+ * ¿Este mismo archivo ya está cargado en este cliente?
+ *
+ * Regla 7: volver a importar corrige, no duplica. Subir la carpeta entera dos
+ * veces —que es lo que va a pasar— no puede dejar treinta documentos donde hay
+ * quince. Se compara el nombre del archivo y el largo del texto: dos archivos
+ * distintos con el mismo nombre y exactamente la misma cantidad de caracteres
+ * no existen en la práctica, y si el documento cambió, el largo cambió.
+ */
+async function mismoArchivoYaCargado(
+  clienteId: number,
+  archivoNombre: string,
+  caracteres: number,
+): Promise<number | null> {
+  const r = await filas<{ id: number }>(
+    `select id from documentos
+      where cliente_id = $1 and archivo_nombre = $2 and caracteres = $3
+      order by id limit 1`,
+    [clienteId, archivoNombre, caracteres],
+  )
+  return r[0]?.id ?? null
+}
 
 export async function guardarDocumento(datos: {
   clienteId: number
@@ -44,6 +69,11 @@ export async function guardarDocumento(datos: {
   const titulo = (datos.titulo ?? '').trim() || datos.archivoNombre || ETIQUETA_DOCUMENTO[tipo]
 
   try {
+    if (datos.archivoNombre) {
+      const repetido = await mismoArchivoYaCargado(datos.clienteId, datos.archivoNombre, texto.length)
+      if (repetido !== null) return { ok: true, id: repetido, yaEstaba: true }
+    }
+
     const creado = await escribirDevolviendo<{ id: number }>(
       `insert into documentos (cliente_id, tipo, titulo, fecha, texto, caracteres, archivo_nombre, origen)
        values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,

@@ -1,5 +1,8 @@
 import mammoth from 'mammoth';
 import { extractText, getDocumentProxy } from 'unpdf';
+import { EXTENSIONES_ACEPTADAS, PLANOS, extensionDe } from './extensiones';
+
+export { EXTENSIONES_ACEPTADAS };
 
 /**
  * SACAR EL TEXTO DE UN ARCHIVO
@@ -28,25 +31,15 @@ const MAXIMO = 20 * 1024 * 1024;
 
 export type Extraccion = { ok: true; texto: string; nota?: string } | { ok: false; error: string };
 
-function extension(nombre: string): string {
-  const i = nombre.lastIndexOf('.');
-  return i < 0 ? '' : nombre.slice(i).toLowerCase();
-}
-
-/** Los que entran tal cual, sin extraer nada. */
-const PLANOS = ['.txt', '.md', '.csv', '.vtt', '.srt', '.json', '.log'];
-
-export const EXTENSIONES_ACEPTADAS = [...PLANOS, '.pdf', '.docx'].join(',');
-
 export async function extraerTextoDeArchivo(nombre: string, datos: ArrayBuffer): Promise<Extraccion> {
   if (datos.byteLength > MAXIMO) {
     return { ok: false, error: `«${nombre}» pesa más de 20 MB. Si es un PDF escaneado, no hay texto que extraer: hay que pasarlo por un OCR antes.` };
   }
 
-  const ext = extension(nombre);
+  const ext = extensionDe(nombre);
 
   try {
-    if (PLANOS.includes(ext)) {
+    if ((PLANOS as readonly string[]).includes(ext)) {
       return { ok: true, texto: new TextDecoder().decode(datos) };
     }
 

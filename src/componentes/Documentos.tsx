@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { pegarDocumento } from '@/app/(app)/clientes/[id]/acciones'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
+import { EXTENSIONES_ACEPTADAS } from '@/lib/extensiones'
+import { VariosDocumentos } from './VariosDocumentos'
 
 export type DocumentoEnLista = {
   id: number
@@ -16,7 +18,6 @@ export type DocumentoEnLista = {
 }
 
 const TIPOS: TipoDocumento[] = ['onboarding', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
-const EXTENSIONES = '.txt,.md,.csv,.vtt,.srt,.json,.log,.pdf,.docx'
 
 /**
  * Los documentos del cliente: los que hay, y cómo cargar uno nuevo.
@@ -24,6 +25,10 @@ const EXTENSIONES = '.txt,.md,.csv,.vtt,.srt,.json,.log,.pdf,.docx'
  * Pegar texto es el camino principal, el que siempre funciona. Subir archivo
  * va por un endpoint del servidor —no por una acción— porque una acción tiene
  * tope de 1 MB y un contrato en PDF no entra.
+ *
+ * «Subir varios» es para el caso real: un cliente con quince archivos. Vive en
+ * `VariosDocumentos` porque es otra pantalla, con su tabla para revisar antes
+ * de subir.
  */
 export function Documentos({
   clienteId, documentos, suelto = false,
@@ -34,7 +39,7 @@ export function Documentos({
   suelto?: boolean
 }) {
   const router = useRouter()
-  const [modo, setModo] = useState<'ninguno' | 'pegar' | 'archivo'>('ninguno')
+  const [modo, setModo] = useState<'ninguno' | 'pegar' | 'archivo' | 'varios'>('ninguno')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [abierto, setAbierto] = useState<number | null>(null)
@@ -89,7 +94,8 @@ export function Documentos({
       {modo === 'ninguno' ? (
         <p style={{ margin: 0 }}>
           <button type="button" className="boton suave" onClick={() => setModo('pegar')}>Pegar texto</button>{' '}
-          <button type="button" className="boton suave" onClick={() => setModo('archivo')}>Subir archivo</button>
+          <button type="button" className="boton suave" onClick={() => setModo('archivo')}>Subir archivo</button>{' '}
+          <button type="button" className="boton suave" onClick={() => setModo('varios')}>Subir varios</button>
         </p>
       ) : null}
 
@@ -106,13 +112,17 @@ export function Documentos({
         </form>
       ) : null}
 
+      {modo === 'varios' ? (
+        <VariosDocumentos clienteId={clienteId} alTerminar={() => setModo('ninguno')} />
+      ) : null}
+
       {modo === 'archivo' ? (
         <form action="/api/documentos" method="post" encType="multipart/form-data">
           <input type="hidden" name="cliente_id" value={clienteId} />
           <Cabecera />
           <div className="campo" style={{ marginBottom: 10 }}>
             <label htmlFor="archivo">Archivo</label>
-            <input id="archivo" name="archivo" type="file" accept={EXTENSIONES} required />
+            <input id="archivo" name="archivo" type="file" accept={EXTENSIONES_ACEPTADAS} required />
             <span className="mini">PDF, .docx y texto plano. De un PDF escaneado no sale texto y te lo va a decir.</span>
           </div>
           <button className="boton" type="submit">Subir</button>{' '}

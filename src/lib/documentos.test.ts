@@ -50,6 +50,48 @@ prueba('cargar un documento en la ficha', () => {
     expect(cuantos?.n).toBe(2)   // dos sesiones distintas no son un duplicado
   })
 
+  it('subir dos veces el mismo archivo no lo duplica: avisa que ya estaba (regla 7)', async () => {
+    const uno = await guardarDocumento({
+      clienteId, tipo: 'sesion', texto: largo, archivoNombre: 'Sesion 04.txt', origen: 'archivo',
+    })
+    const dos = await guardarDocumento({
+      clienteId, tipo: 'sesion', texto: largo, archivoNombre: 'Sesion 04.txt', origen: 'archivo',
+    })
+
+    expect(uno.ok && uno.yaEstaba).toBeUndefined()
+    expect(dos.ok && dos.yaEstaba).toBe(true)
+    if (uno.ok && dos.ok) expect(dos.id).toBe(uno.id)   // devuelve el que ya había
+
+    const cuantos = await fila<{ n: number }>('select count(*)::int as n from documentos')
+    expect(cuantos?.n).toBe(1)
+  })
+
+  it('el mismo nombre con otro contenido sí entra: es otra versión, no un duplicado', async () => {
+    await guardarDocumento({ clienteId, tipo: 'sesion', texto: largo, archivoNombre: 'Notas.txt', origen: 'archivo' })
+    const segundo = await guardarDocumento({
+      clienteId, tipo: 'sesion', texto: `${largo} Y además cerró la primera venta.`,
+      archivoNombre: 'Notas.txt', origen: 'archivo',
+    })
+
+    expect(segundo.ok && segundo.yaEstaba).toBeUndefined()
+    const cuantos = await fila<{ n: number }>('select count(*)::int as n from documentos')
+    expect(cuantos?.n).toBe(2)
+  })
+
+  it('el mismo archivo en otro cliente entra igual: el duplicado es por cliente', async () => {
+    await importarCsv({ contenido: 'nombre\nJulián Sosa', archivo: 'p2.csv', usuarioId: null })
+    const otro = (await fila<{ id: number }>("select id from clientes where nombre = 'Julián Sosa'"))!.id
+
+    await guardarDocumento({ clienteId, tipo: 'contrato', texto: largo, archivoNombre: 'Contrato.pdf', origen: 'archivo' })
+    const enElOtro = await guardarDocumento({
+      clienteId: otro, tipo: 'contrato', texto: largo, archivoNombre: 'Contrato.pdf', origen: 'archivo',
+    })
+
+    expect(enElOtro.ok && enElOtro.yaEstaba).toBeUndefined()
+    const cuantos = await fila<{ n: number }>('select count(*)::int as n from documentos')
+    expect(cuantos?.n).toBe(2)
+  })
+
   it('el texto de un documento no se puede leer desde otro cliente', async () => {
     const g = await guardarDocumento({ clienteId, tipo: 'contrato', texto: largo, origen: 'pegado' })
     if (!g.ok) throw new Error(g.error)
