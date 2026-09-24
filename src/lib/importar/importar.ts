@@ -167,7 +167,12 @@ async function procesarFilas(
        left join cliente_numeros m on m.cliente_id = c.id
        left join cliente_comercial k on k.cliente_id = c.id
        left join cliente_autoridad a on a.cliente_id = c.id
-       left join cliente_intentos i on i.cliente_id = c.id`,
+       left join cliente_intentos i on i.cliente_id = c.id
+       left join cliente_quien_es q on q.cliente_id = c.id
+       left join cliente_marca mk on mk.cliente_id = c.id
+       left join cliente_comercializa cm on cm.cliente_id = c.id
+       left join cliente_objetivos ob on ob.cliente_id = c.id
+       left join cliente_venta vt on vt.cliente_id = c.id`,
     [],
     cli,
   )
@@ -426,7 +431,10 @@ async function procesarUnaFila(
   }
 
   // Los bloques de la ficha: se tocan sólo las columnas que la fila trae.
-  for (const tabla of ['cliente_negocio', 'cliente_numeros', 'cliente_comercial', 'cliente_autoridad', 'cliente_intentos'] as const) {
+  for (const tabla of [
+    'cliente_negocio', 'cliente_numeros', 'cliente_comercial', 'cliente_autoridad', 'cliente_intentos',
+    'cliente_quien_es', 'cliente_marca', 'cliente_comercializa', 'cliente_objetivos', 'cliente_venta',
+  ] as const) {
     const delBloque = cambios.filter(([clave]) => campoDe(clave).tabla === tabla)
     if (delBloque.length === 0) continue
     const columnas = delBloque.map(([clave]) => campoDe(clave).columna)

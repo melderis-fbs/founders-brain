@@ -141,7 +141,7 @@ cita: «vos fuiste doce años gerente de finanzas en una empresa de logística»
   it('le dice en qué forma espera cada valor, así no se pierde el dato por la forma', () => {
     const reglas = reglasDeFicha([
       CAMPOS_POR_CLAVE.get('equipo')!,
-      CAMPOS_POR_CLAVE.get('fecha_cuenta_inversa')!,
+      CAMPOS_POR_CLAVE.get('fecha_inicio')!,
       CAMPOS_POR_CLAVE.get('forma_pago')!,
     ])
     expect(reglas).toContain('un número entero solo')
@@ -197,15 +197,35 @@ describe('cada documento se lee distinto', () => {
   })
 
   it('a un onboarding no se le pide el valor del programa', () => {
-    const faltan = [CAMPOS_POR_CLAVE.get('valor_programa')!, CAMPOS_POR_CLAVE.get('cliente_ideal')!]
-    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toEqual(['cliente_ideal'])
+    const faltan = [CAMPOS_POR_CLAVE.get('valor_programa')!, CAMPOS_POR_CLAVE.get('cliente_ideal_inicial')!]
+    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toEqual(['cliente_ideal_inicial'])
+  })
+
+  it('al onboarding se le pide el cliente ideal INICIAL, no el trabajado', () => {
+    const faltan = [CAMPOS_POR_CLAVE.get('cliente_ideal')!, CAMPOS_POR_CLAVE.get('cliente_ideal_inicial')!]
+    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toEqual(['cliente_ideal_inicial'])
+    // y al match de marca al revés: el trabajado es suyo y el inicial no
+    expect(camposQueBuscar('match_de_marca', faltan).map((c) => c.clave)).toEqual(['cliente_ideal'])
+  })
+
+  it('los campos trabajados sólo salen del match de marca', () => {
+    const faltan = ['problema', 'promesa', 'pilares', 'mecanismo'].map((k) => CAMPOS_POR_CLAVE.get(k)!)
+    expect(camposQueBuscar('match_de_marca', faltan)).toHaveLength(4)
+    expect(camposQueBuscar('onboarding', faltan)).toHaveLength(0)
+    expect(camposQueBuscar('llamada_venta', faltan)).toHaveLength(0)
   })
 
   it('las horas por semana no salen de una llamada de venta', () => {
-    const faltan = [CAMPOS_POR_CLAVE.get('horas_por_semana')!, CAMPOS_POR_CLAVE.get('problema')!]
-    expect(camposQueBuscar('llamada_venta', faltan).map((c) => c.clave)).toEqual(['problema'])
+    const faltan = [CAMPOS_POR_CLAVE.get('horas_por_semana')!, CAMPOS_POR_CLAVE.get('dolor_textual')!]
+    expect(camposQueBuscar('llamada_venta', faltan).map((c) => c.clave)).toEqual(['dolor_textual'])
     // pero del onboarding sí: ahí las declaró él
     expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toContain('horas_por_semana')
+  })
+
+  it('lo que se dijo en la venta no se confunde con lo firmado', () => {
+    const faltan = ['valor_prometido', 'valor_programa'].map((k) => CAMPOS_POR_CLAVE.get(k)!)
+    expect(camposQueBuscar('llamada_venta', faltan).map((c) => c.clave)).toEqual(['valor_prometido'])
+    expect(camposQueBuscar('contrato', faltan).map((c) => c.clave)).toEqual(['valor_programa'])
   })
 
   it('«notas» y «otro» no acotan, y eso no se cuenta como que pueden dar todo', () => {
@@ -218,13 +238,13 @@ describe('cada documento se lee distinto', () => {
   it('un documento sin tipo declarado no acota nada, pero sube la vara en el prompt', () => {
     const faltan = [CAMPOS_POR_CLAVE.get('valor_programa')!, CAMPOS_POR_CLAVE.get('cliente_ideal')!]
     expect(camposQueBuscar('otro', faltan)).toHaveLength(2)
-    expect(reglasDeFicha(faltan, LECTURA.otro)).toContain('sólo lo que esté dicho con todas las letras')
+    expect(reglasDeFicha(faltan, LECTURA.otro)).toContain('lo que esté dicho con todas las letras')
   })
 
   it('el prompt le dice qué está leyendo y con qué se confunde ese tipo', () => {
     const reglas = reglasDeFicha([CAMPOS_POR_CLAVE.get('valor_programa')!], LECTURA.contrato)
     expect(reglas).toContain('QUÉ DOCUMENTO ESTÁS LEYENDO')
-    expect(reglas).toContain('lo que el cliente le paga a FOUNDERS')
+    expect(reglas).toContain('lo que FOUNDERS le cobra a él')
   })
 
   it('sin documento elegido el prompt no inventa un tipo', () => {
@@ -296,7 +316,8 @@ rubro — no aparece en ninguno de los tres documentos.`
     expect(reglas).toContain('Match de marca')
     expect(reglas).toContain('cliente_ideal')
     expect(reglas).not.toContain('- ticket —')
-    expect(reglas).toContain('LE GANA AL ONBOARDING')
+    expect(reglas).toContain('ÚNICA fuente de los campos trabajados')
+    expect(reglas).toContain('_inicial')
   })
 })
 
@@ -313,5 +334,40 @@ describe('el cruce mira la ficha que ya está cargada', () => {
     expect(reglas).toContain('No los propongas')
     expect(reglas).toContain('lo que escribió una persona no se pisa solo')
     expect(reglas).toContain('lo propongas —está cargado')
+  })
+})
+
+describe('el cruce distingue el punto de partida del trabajo hecho', () => {
+  const reglas = reglasDelCruce(
+    CAMPOS.filter((c) => ['cliente_ideal', 'cliente_ideal_inicial'].includes(c.clave)),
+    ['Formulario de onboarding', 'Match de marca'],
+  )
+
+  it('manda las respuestas del onboarding al campo inicial, no al trabajado', () => {
+    expect(reglas).toContain('PUNTO DE PARTIDA')
+    expect(reglas).toContain('NUNCA a los campos trabajados')
+  })
+
+  it('sin match de marca los campos trabajados quedan sin proponer', () => {
+    expect(reglas).toContain('no los completes con el onboarding')
+    expect(reglas).toContain('el campo es trabajado y todavía no hay match de marca')
+  })
+
+  it('separa lo hablado en la venta de lo firmado en el contrato', () => {
+    expect(reglas).toContain('lo que se HABLÓ, no lo firmado')
+  })
+
+  it('distingue lo que escribió el cliente de lo que le devolvió una IA', () => {
+    expect(reglas).toContain('Chequeo final con tu IA')
+    expect(reglas).toContain('confianza media')
+  })
+
+  it('no deja que un dato íntimo entre como valor de un campo', () => {
+    expect(reglas).toContain('No cargues religión, salud, orientación')
+    expect(reglas).toContain('recortando la cita a la parte que habla del trabajo')
+  })
+
+  it('avisa que el formulario viejo no tenía algunas preguntas', () => {
+    expect(reglas).toContain('los formularios viejos no')
   })
 })

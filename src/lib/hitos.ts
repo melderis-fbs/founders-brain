@@ -61,8 +61,8 @@ export type Hito = {
 export const HITOS: readonly Hito[] = [
   { clave: 'onboarding', semana: 1, etiqueta: 'Onboarding hecho y datos base cargados',
     bloquea: false, fuente: 'documentos' },
-  { clave: 'cuenta_inversa', semana: 1, etiqueta: 'Cuenta inversa hecha con el cliente',
-    bloquea: false, fuente: 'ficha', camposQueLoDan: ['fecha_cuenta_inversa', 'meta_mensual', 'ticket'] },
+  { clave: 'cuenta_inversa', semana: 1, etiqueta: 'Sabe cuántas ventas necesita por mes',
+    bloquea: false, fuente: 'ficha', camposQueLoDan: ['meta_mensual', 'ticket'] },
   { clave: 'cliente_ideal', semana: 3, etiqueta: 'Cliente ideal y problema cerrados',
     bloquea: false, fuente: 'ficha', camposQueLoDan: ['cliente_ideal', 'problema'] },
   { clave: 'oferta', semana: 4, etiqueta: 'Oferta y promesa cerradas',

@@ -25,6 +25,11 @@ export const ALIAS_TABLA = {
   cliente_comercial: 'k',
   cliente_autoridad: 'a',
   cliente_intentos: 'i',
+  cliente_quien_es: 'q',
+  cliente_marca: 'mk',
+  cliente_comercializa: 'cm',
+  cliente_objetivos: 'ob',
+  cliente_venta: 'vt',
 } as const
 
 export type Origen = 'planilla' | 'persona' | 'documento'

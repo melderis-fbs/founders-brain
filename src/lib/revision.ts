@@ -52,6 +52,11 @@ export const ESQUEMA_ESPERADO: {
     tablas: [], columnas: [],
     restricciones: [['documentos', 'match_de_marca']],
   },
+  {
+    migracion: '0016_la_ficha_del_onboarding_real.sql',
+    tablas: ['cliente_quien_es', 'cliente_marca', 'cliente_comercializa', 'cliente_objetivos', 'cliente_venta'],
+    columnas: [['clientes', 'pais'], ['cliente_negocio', 'cliente_ideal_inicial'], ['cliente_intentos', 'intentos_captacion']],
+  },
 ]
 
 /**

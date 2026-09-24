@@ -4,10 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { decidirPropuesta } from '@/app/(app)/clientes/[id]/acciones'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
-import { acotaCampos, camposQueBuscar } from '@/lib/lectura-de-documentos'
-
-/** Los tres que cuentan la historia del cliente y se pueden cruzar entre sí. */
-const DEL_CRUCE: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta']
+import { acotaCampos, camposQueBuscar, DEL_CRUCE } from '@/lib/lectura-de-documentos'
 
 /** Un «documento» que no existe, para saber que el botón apretado fue el del cruce. */
 const CRUCE = -1
@@ -142,9 +139,10 @@ export function CompletarFicha({
                 .join(' + ')}
             </div>
             <div className="mini">
-              Los lee juntos y propone una sola cosa por campo: el match de marca le gana al onboarding en
-              cliente ideal, problema, deseo, diferencial y mensaje, porque es posterior; el onboarding gana
-              en los números; la llamada de venta gana en lo comercial. Donde no coinciden, te lo dice.
+              Los lee juntos y propone una sola cosa por campo. Lo que el cliente contestó en el onboarding
+              sobre su cliente ideal, su problema y su oferta va a los campos <b>como llegó</b>; lo que salió
+              del match de marca va a los <b>trabajados</b>, y si no hay match, esos quedan vacíos. De la
+              llamada sale lo que se <b>habló</b>, que no es lo firmado. Donde no coinciden, te lo dice.
             </div>
           </div>
           <button type="button" className="boton" disabled={corriendo}

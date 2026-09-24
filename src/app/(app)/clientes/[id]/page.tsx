@@ -18,7 +18,12 @@ import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
-import { CAMPOS, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
+import { CAMPOS, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
+
+/** Los bloques de «El cliente», en el orden en que se conoce a alguien. */
+const GRUPOS_DEL_CLIENTE: Grupo[] = [
+  'quien_es', 'negocio', 'marca', 'comercializa', 'intentos', 'objetivos', 'numeros', 'venta', 'comercial',
+]
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, listarConsultoras, traerCliente } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
@@ -281,20 +286,20 @@ export default async function Ficha({
             {/* Todo lo que se sabe del cliente en un solo lado. Estaba repartido
                 en cuatro pestañas y eso obligaba a recordar en cuál vivía cada
                 dato para ir a buscarlo. */}
+            {/* Todo lo que se sabe del cliente en un solo lado, en el orden en
+                que se conoce a alguien: quién es, cómo llegó, qué trabajó,
+                cómo vende, qué probó, qué quiere y cuánto factura. */}
             {pestana === 'cliente' ? (
               <>
-                <h2 style={{ marginTop: 0 }}>Su negocio</h2>
-                <dl className="dos-columnas">{campos('negocio').map(dato)}</dl>
-
-                <h2 style={{ marginTop: 26 }}>Lo que ya probó</h2>
-                <p className="mini" style={{ marginTop: 0 }}>{POR_QUE_EL_GRUPO.intentos}</p>
-                <dl className="dos-columnas">{campos('intentos').map(dato)}</dl>
-
-                <h2 style={{ marginTop: 26 }}>Sus números</h2>
-                <dl className="dos-columnas">{campos('numeros').map(dato)}</dl>
-
-                <h2 style={{ marginTop: 26 }}>Lo comercial</h2>
-                <dl className="dos-columnas">{campos('comercial').map(dato)}</dl>
+                {GRUPOS_DEL_CLIENTE.map((grupo, i) => (
+                  <section key={grupo}>
+                    <h2 style={i === 0 ? { marginTop: 0 } : { marginTop: 26 }}>{ETIQUETA_GRUPO[grupo]}</h2>
+                    {POR_QUE_EL_GRUPO[grupo]
+                      ? <p className="mini" style={{ marginTop: 0 }}>{POR_QUE_EL_GRUPO[grupo]}</p>
+                      : null}
+                    <dl className="dos-columnas">{campos(grupo).map(dato)}</dl>
+                  </section>
+                ))}
               </>
             ) : null}
 

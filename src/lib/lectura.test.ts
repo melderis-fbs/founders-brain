@@ -74,30 +74,33 @@ describe('la lectura del caso, con aritmética', () => {
   })
 
   it('la cuenta inversa dice cuántas ventas necesita, no un puntaje suelto', () => {
-    const l = leerElCaso({
-      ...NADA,
-      valores: { meta_mensual: 5400000, precio_actual: 1800000, fecha_cuenta_inversa: '2026-03-01' },
-    })
+    const l = leerElCaso({ ...NADA, valores: { meta_mensual: 5400000, ticket: 1800000 } })
     const cuenta = l.partes.find((p) => p.clave === 'cuenta_inversa')!
     expect(cuenta.estado).toBe('medido')
     expect(cuenta).toMatchObject({ valor: 100 })
     expect((cuenta as { detalle: string }).detalle).toContain('3 ventas por mes')
   })
 
-  it('con los números pero sin hacerla con el cliente, no está hecha', () => {
-    const l = leerElCaso({ ...NADA, valores: { meta_mensual: 5400000, precio_actual: 1800000 } })
+  it('se calcula sola: ya no hay una fecha que alguien tenga que tildar', () => {
+    const l = leerElCaso({ ...NADA, valores: { meta_mensual: 5400000, ticket: 1800000 } })
     const cuenta = l.partes.find((p) => p.clave === 'cuenta_inversa')!
-    expect((cuenta as { detalle: string }).detalle).toContain('no está hecha con el cliente')
+    expect((cuenta as { detalle: string }).detalle).not.toContain('no está hecha')
+  })
+
+  it('el precio ya no sirve para la cuenta: ahora es una lista de precios, no un número', () => {
+    const l = leerElCaso({ ...NADA, valores: { meta_mensual: 5400000, precio_actual: 'mentoría: 1800\ntaller: 400' } })
+    const cuenta = l.partes.find((p) => p.clave === 'cuenta_inversa')!
+    expect(cuenta).toMatchObject({ estado: 'sin_datos', porque: 'falta el ticket' })
   })
 
   it('sin meta no se inventa la cuenta: dice qué falta', () => {
-    const l = leerElCaso({ ...NADA, valores: { precio_actual: 1800000 } })
+    const l = leerElCaso({ ...NADA, valores: { ticket: 1800000 } })
     const cuenta = l.partes.find((p) => p.clave === 'cuenta_inversa')!
     expect(cuenta).toMatchObject({ estado: 'sin_datos', porque: 'falta la meta mensual' })
   })
 
-  it('un precio en cero no es un precio', () => {
-    const l = leerElCaso({ ...NADA, valores: { meta_mensual: 5400000, precio_actual: 0 } })
+  it('un ticket en cero no es un ticket', () => {
+    const l = leerElCaso({ ...NADA, valores: { meta_mensual: 5400000, ticket: 0 } })
     expect(l.partes.find((p) => p.clave === 'cuenta_inversa')!.estado).toBe('sin_datos')
   })
 
@@ -114,11 +117,12 @@ describe('la lectura del caso, con aritmética', () => {
 })
 
 describe('los bloques de la ficha', () => {
-  it('cinco bloques, y cuenta cuántos tienen algo', () => {
+  it('un bloque por grupo de la ficha, y cuenta cuántos tienen algo', () => {
     const e = bloquesDeLaFicha({ oferta: 'algo', meta_mensual: 100 }, { documentos: 0, sesiones: 0 })
-    expect(e.bloques).toHaveLength(5)
+    expect(e.bloques).toHaveLength(10)
     expect(e.conAlgo).toBe(2)
-    expect(e.bloques.find((b) => b.grupo === 'negocio')!.estado).toBe('a_medias')
+    expect(e.bloques.find((b) => b.grupo === 'marca')!.estado).toBe('a_medias')     // la oferta es trabajada
+    expect(e.bloques.find((b) => b.grupo === 'objetivos')!.estado).toBe('a_medias') // la meta también
     expect(e.bloques.find((b) => b.grupo === 'intentos')!.estado).toBe('vacio')
   })
 

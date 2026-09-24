@@ -501,30 +501,58 @@ porque los necesitás para dos cosas:
   contradicciones con las dos citas. La consultora lo corrige a mano en un
   minuto; lo que no puede es enterarse si vos no se lo decís.
 
+EL ONBOARDING SE USA ENTERO
+
+Cada pregunta del formulario tiene al menos un campo donde va. Si terminás y hay
+una respuesta del onboarding que no usaste en ningún campo, algo hiciste mal:
+revisala y ubicala, o como último recurso mandala a notas_cliente.
+
 LOS TRES DOCUMENTOS NO VALEN LO MISMO
 
 No los trates como un solo texto. Cada uno fue escrito en otro momento, por otra
 persona y con otra intención, y eso cambia cuánto le podés creer a cada dato.
 
 **Formulario de onboarding.** Lo contestó el cliente sobre sí mismo al entrar.
-Es la MEJOR fuente para los datos duros del negocio: rubro, años, tamaño del
-equipo, cuántos clientes tiene, precios, facturación. Es la PEOR fuente para su
-oferta y su promesa: todavía no las había trabajado.
+Es la MEJOR fuente para todo lo que describe quién es y cómo está hoy: sus datos,
+su negocio, cómo trabaja, cómo vende, qué probó, sus números, sus frustraciones,
+sus miedos y lo que espera del programa.
 
-**Match de marca.** Es trabajo hecho ADENTRO del programa, en la etapa 3, con la
-consultora. Es la MEJOR fuente para cliente ideal, problema, deseo, diferencial,
-mecanismo y mensaje. Para esos campos LE GANA AL ONBOARDING aunque el onboarding
-diga otra cosa: lo del onboarding es de antes. Es la PEOR fuente para los
-números: no es lo que se trabaja en esa etapa.
+Para cliente ideal, problema y oferta, el onboarding es el PUNTO DE PARTIDA, no
+la versión final: todavía no los trabajó. Por eso esas respuestas van a los
+campos que terminan en «_inicial» y NUNCA a los campos trabajados. La distancia
+entre el inicial y el trabajado es el programa funcionando.
 
-**Llamada de venta.** Es la transcripción de cuando le vendieron el programa. Es
-la MEJOR fuente para el dolor dicho con las palabras del cliente, para qué ya
-intentó y le falló, y para lo comercial: valor del programa, cuotas, garantía.
-Es la PEOR fuente para los números del negocio: en una venta se redondea.
+**Match de marca.** Es trabajo hecho ADENTRO del programa, en la etapa 3. Es la
+ÚNICA fuente de los campos trabajados: cliente ideal, problema, deseo, promesa
+(la PAI), mecanismo, pilares, diferencial, oferta y mensaje. Si el match no está,
+esos campos quedan SIN PROPONER: no los completes con el onboarding.
+
+El documento tiene dos partes que valen distinto:
+- Bloques 1 a 5 y Parte 2: los escribió el cliente con su consultora. Confianza alta.
+- «Chequeo final con tu IA» y todo lo que viene después: es lo que le devolvió la
+  IA. Se usa, pero siempre con confianza media y con la línea «sugerido en el
+  chequeo con IA», salvo que el texto muestre que el cliente lo eligió.
+
+Si hay varias versiones de la promesa o de los pilares, gana la marcada como
+final, validada o recomendada; si no hay ninguna marcada, gana la última. Las
+otras van a contradicciones.
+
+Lo que quedó como plantilla sin llenar («[frase]», «Tu respuesta:», casilleros
+vacíos) NO es dato: se saltea.
+
+**Llamada de venta.** Es la mejor fuente para el dolor con las palabras del
+cliente, para sus objeciones y para lo que se le prometió en lo comercial. Es la
+peor fuente para los números de su negocio: en una venta se redondea según
+convenga. Sus números sólo se proponen si el onboarding no los tiene, y siempre
+con confianza media.
+
+Lo comercial de la llamada es lo que se HABLÓ, no lo firmado: va a los campos que
+terminan en «prometido» o «mencionada». Lo firmado sale del contrato y no lo
+cargás vos.
 
 Cuando dos documentos dicen cosas distintas sobre el mismo campo, gana el que
-corresponde por esa tabla. Proponés uno solo, el que gana. Pero la diferencia la
-informás igual, abajo.
+corresponde por esta tabla. Pero la diferencia se informa igual: es información,
+no ruido.
 
 LOS ÚNICOS CAMPOS QUE PODÉS PROPONER SON ESTOS:
 
@@ -543,13 +571,20 @@ Primero, un bloque por campo que encontraste, exactamente así:
 valor: el dato, solo, sin explicación
 documento: de cuál de los documentos salió
 cita: «la frase textual, copiada tal cual»
+confianza: alta o media
+
+Poné media cuando la cita sostiene el valor pero con alguna interpretación de tu
+parte, y decí cuál en una línea abajo. Si sacaste la cita de una pregunta
+distinta a la esperada, decilo en esa misma línea.
 
 Después:
 
 ### contradicciones
-Un renglón por campo donde dos fuentes dicen cosas distintas. Las dos clases
-valen: documento contra documento, y documento contra un valor YA CARGADO en la
-ficha. La segunda es la que nadie mira nunca. Así:
+Un renglón por campo donde dos fuentes dicen cosas distintas. Cuatro clases
+valen, y las cuatro importan: documento contra documento; documento contra un
+valor YA CARGADO en la ficha, que es la que nadie mira nunca; un campo inicial
+contra su campo trabajado, donde se ve cuánto cambió el cliente; y lo que se
+dijo en la venta contra lo que figura del contrato. Así:
 «campo — el onboarding dice X («cita») y el match de marca dice Y («cita»). Vale
 Y porque el match de marca es posterior.»
 Si no hay ninguna, escribí «no hay».
@@ -558,9 +593,14 @@ No promedies, no elijas en silencio y no la escondas.
 Y al final:
 
 ### sin proponer
-Un renglón por campo que quedó vacío, con el motivo: no está en ningún
-documento, o las fuentes se contradicen y no hay cómo elegir, o la cita no
-alcanzaba. Es lo que le dice a la consultora qué le queda por cargar a mano.
+Un renglón por campo que quedó vacío, con su motivo. Los motivos posibles son:
+- no está en ningún documento;
+- el formulario de este cliente no hacía esa pregunta: los formularios viejos no
+  tienen las preguntas de números, años, equipo, horas ni registro;
+- el campo es trabajado y todavía no hay match de marca;
+- los documentos dicen cosas distintas y no hay cómo elegir;
+- la cita no alcanzaba.
+Es lo que le dice a la consultora qué le queda por cargar a mano.
 
 REGLAS QUE NO TIENEN EXCEPCIÓN
 
@@ -570,9 +610,15 @@ REGLAS QUE NO TIENEN EXCEPCIÓN
 3 bis. El valor tiene que estar sostenido POR ESA CITA, no por otro pedazo del documento. Un valor que dice más que su cita es un dato inventado con apariencia de citado.
 4. Un campo, una propuesta. Si lo encontraste en dos documentos, elegís el que gana por la tabla y el otro va a contradicciones.
 5. El valor va en la forma que pide la flecha de cada campo. Si es un número, va el número solo: «6», no «6 años».
-6. Separá lo que TIENE de lo que QUIERE. «Facturo 1.800.000 y quiero llegar a 5.400.000» son dos campos distintos. No los mezcles ni los promedies.
-7. Vacío no es cero. Si no está, el campo se deja sin proponer y se dice en «sin proponer». Nada de 0, «no aplica» ni «no especificado».
-8. Mejor tres datos sólidos que doce dudosos: cada uno lo va a confirmar una persona a mano.`
+6. Separá lo que TIENE de lo que QUIERE. «Facturo 1.800.000 y quiero llegar a 5.400.000» son dos campos distintos. No los mezcles ni los promedies. Lo mismo con el texto: «facturar 5000 USD por mes y tener una oferta clara» es meta_mensual = 5000 y objetivo_meses = «una oferta clara».
+7. Vacío no es cero. Si no está, se deja sin proponer. Nada de 0, «no aplica» ni «no especificado». La excepción es cuando el cliente lo declara: «trabajo solo» es equipo = 0, y un «No» a una pregunta de sí o no es un valor. Eso se propone.
+8. Se lee por CONTENIDO, no por título de pregunta. Los clientes contestan seguido en la pregunta equivocada: en «miedos y creencias limitantes» cuentan qué les funcionó, o contestan dos preguntas en una. La cita va al campo que corresponde por lo que dice, y aclarás de qué pregunta la sacaste.
+9. Una respuesta puede alimentar VARIOS campos. «Ofrezco mentorías de 12 hs a 1800 USD. Los clientes vienen por referidos» alimenta como_entrega, precio_actual, moneda y origen_clientes, cada uno con su pedazo de cita.
+10. Números. «5 millones» es 5000000. «1.800» es 1800. Si dice «más o menos», «unos» o «alrededor de», proponé el número con confianza media. Si da un rango o valores de distintos meses, no promedies: va a facturacion_historica como texto. Si hay dos antigüedades posibles («hace 20 años empecé con X, hace 8 con esto»), antiguedad_negocio es la de lo que vende HOY y la otra va en historia_negocio.
+11. Datos personales. No cargues religión, salud, orientación, situación familiar ni ningún dato íntimo como valor de un campo, aunque el cliente lo cuente. Si ese dato le condiciona el trabajo, cargá la restricción recortando la cita a la parte que habla del trabajo: de «siendo padre soltero… me impone un ritmo logístico en la semana que me frustra», la cita es «me impone un ritmo logístico en la semana que me frustra». Si pide que su negocio refleje ciertos valores, cargá en el campo valores lo que pide para su negocio, en sus palabras, sin etiquetar su creencia.
+12. Respuestas que no contestan. Si la respuesta es una escala suelta («del 1 al 10 un 7») o no responde lo que se preguntó, usá el resto del texto si sirve; si no, sin proponer con motivo «la cita no alcanzaba».
+13. Los errores de tipeo del cliente se copian como están en la cita.
+14. Mejor tres datos sólidos que doce dudosos: cada uno lo va a confirmar una persona a mano.`
 }
 
 /**

@@ -4,7 +4,7 @@ import { traerCliente } from '@/lib/clientes'
 import { armarExpediente } from '@/lib/expediente'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
 import { documentosDe } from '@/lib/clientes'
-import { camposQueBuscar, LECTURA } from '@/lib/lectura-de-documentos'
+import { camposDelCruce, camposQueBuscar, DEL_CRUCE, LECTURA } from '@/lib/lectura-de-documentos'
 import { plegado } from '@/lib/texto'
 import { guardarResumen } from '@/lib/documentos'
 import { cruzarDocumentosEnVivo, explicarError, extraerFichaEnVivo, hayModelo, MODELO, partirPropuestas, sacarResumen, sacarSeccion } from '@/lib/modelo'
@@ -60,7 +60,6 @@ export async function POST(pedido: NextRequest) {
   // El cruce: los documentos que cuentan la historia del cliente, leídos de una
   // vez y con la tabla de cuál le gana a cuál. Un contrato o unas notas sueltas
   // no entran en esa tabla, así que no habilitan el cruce.
-  const DEL_CRUCE = ['onboarding', 'match_de_marca', 'llamada_venta'] as const
   const paraCruzar = documentos.filter((d) => (DEL_CRUCE as readonly string[]).includes(d.tipo))
   const cruce = cuerpo.cruce === true
   if (cruce && paraCruzar.length < 2) {
@@ -78,7 +77,9 @@ export async function POST(pedido: NextRequest) {
   // De lo que falta, sólo lo que este documento puede tener. Pedirle el valor
   // del programa a un onboarding es pedirle algo que no tiene: lo va a buscar
   // igual y, si se esfuerza, lo encuentra donde no está.
-  const aBuscar = elegido ? camposQueBuscar(tipo, cliente.faltan) : [...cliente.faltan]
+  const aBuscar = cruce
+    ? camposDelCruce(paraCruzar.map((d) => d.tipo), cliente.faltan)
+    : elegido ? camposQueBuscar(tipo, cliente.faltan) : [...cliente.faltan]
   if (aBuscar.length === 0) {
     return new Response(
       `De ${ETIQUETA_DOCUMENTO[tipo] ?? tipo} sale otra clase de datos, y los que puede dar ya están cargados. Probá con otro documento.`,
@@ -130,9 +131,13 @@ export async function POST(pedido: NextRequest) {
           return `${etiqueta} («${d.titulo}»)${enLaTabla ? '' : ' — no está en la tabla de prioridad de abajo'}`
         })
 
+        const cuantosCruzan = paraCruzar.length
+        const otros = documentos.length - cuantosCruzan
+
         escribir(
           cruce
-            ? `Cruzando ${paraCruzar.length} documentos —${nombresDelCruce.join(', ')}— contra los ${aBuscar.length} datos que faltan…\n\n`
+            ? `Cruzando ${cuantosCruzan} documentos contra los ${aBuscar.length} datos que faltan${
+                otros > 0 ? `, más ${otros} de apoyo` : ''}…\n\n`
             : elegido
               ? `Leyendo ${ETIQUETA_DOCUMENTO[tipo] ?? tipo} «${elegido.titulo}», buscando los ${aBuscar.length} datos que este documento puede dar…\n\n`
               : `Leyendo ${expediente.incluidos.length} documento(s), buscando ${aBuscar.length} datos que faltan…\n\n`,

@@ -154,37 +154,35 @@ function deHitos(hitos: readonly HitoEvaluado[]): Parte {
 /**
  * La cuenta inversa: cuántas ventas necesita para llegar a la meta.
  *
- * No es un campo que se marca: son tres números que tienen que estar y tienen
- * que cerrar. Si la meta no se puede alcanzar con el precio que cobra, eso no
- * es un puntaje bajo, es una cuenta que hay que rehacer con el cliente.
+ * Antes esto miraba un campo «cuenta inversa hecha», con una fecha que alguien
+ * tenía que tildar. Nadie entendía de dónde salía esa fecha, y tenían razón: la
+ * cuenta inversa no es un trámite que se marca, son dos números que tienen que
+ * estar y que tienen que cerrar. Meta dividido ticket es cuántas ventas por mes
+ * necesita, y eso se calcula solo o no se puede calcular.
+ *
+ * El número es el ticket, no el precio: desde que la ficha guarda el precio
+ * como una lista («mentoría: 1800, taller: 400») dejó de ser una cuenta. El
+ * ticket es el número de referencia que carga la consultora, justamente para
+ * esto.
  */
 function deCuentaInversa(valores: Record<string, unknown>): Parte {
   const base = { clave: 'cuenta_inversa' as const, ...PESOS.cuenta_inversa }
   const meta = numero(valores.meta_mensual)
-  const precio = numero(valores.precio_actual) ?? numero(valores.ticket)
-  const hecha = valores.fecha_cuenta_inversa != null && String(valores.fecha_cuenta_inversa) !== ''
+  const ticket = numero(valores.ticket)
 
-  if (meta === null && precio === null) {
-    return { ...base, estado: 'sin_datos', porque: 'no está cargada ni la meta mensual ni el precio' }
+  if (meta === null && ticket === null) {
+    return { ...base, estado: 'sin_datos', porque: 'no está cargada ni la meta mensual ni el ticket' }
   }
   if (meta === null) return { ...base, estado: 'sin_datos', porque: 'falta la meta mensual' }
-  if (precio === null) return { ...base, estado: 'sin_datos', porque: 'falta el precio que cobra hoy' }
-  if (precio <= 0) return { ...base, estado: 'sin_datos', porque: 'el precio cargado es cero' }
+  if (ticket === null) return { ...base, estado: 'sin_datos', porque: 'falta el ticket' }
+  if (ticket <= 0) return { ...base, estado: 'sin_datos', porque: 'el ticket cargado es cero' }
 
-  const ventasPorMes = Math.ceil(meta / precio)
-  if (!hecha) {
-    return {
-      ...base,
-      estado: 'medido',
-      valor: 40,
-      detalle: `Los números están (necesita ${ventasPorMes} ${ventasPorMes === 1 ? 'venta' : 'ventas'} por mes), pero la cuenta no está hecha con el cliente.`,
-    }
-  }
+  const ventasPorMes = Math.ceil(meta / ticket)
   return {
     ...base,
     estado: 'medido',
     valor: 100,
-    detalle: `Hecha: necesita ${ventasPorMes} ${ventasPorMes === 1 ? 'venta' : 'ventas'} por mes para llegar a la meta.`,
+    detalle: `Necesita ${ventasPorMes} ${ventasPorMes === 1 ? 'venta' : 'ventas'} por mes para llegar a la meta.`,
   }
 }
 

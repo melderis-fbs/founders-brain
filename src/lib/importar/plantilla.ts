@@ -43,7 +43,6 @@ const EJEMPLO: Record<string, string> = {
   precio_actual: '1.800.000',
   ventas_ultimo_mes: '1',
   tiene_tracker: 'sí',
-  fecha_cuenta_inversa: '10/02/2025',
   valor_programa: '3.000.000',
   forma_pago: 'cuotas',
   cuotas_totales: '4',

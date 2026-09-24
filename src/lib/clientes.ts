@@ -7,6 +7,8 @@ import { plegado } from './texto'
 const ALIAS = {
   clientes: 'c', cliente_negocio: 'n', cliente_numeros: 'm', cliente_comercial: 'k',
   cliente_autoridad: 'a', cliente_intentos: 'i',
+  cliente_quien_es: 'q', cliente_marca: 'mk', cliente_comercializa: 'cm',
+  cliente_objetivos: 'ob', cliente_venta: 'vt',
 } as const
 
 const CAMPOS_QUE_CUENTAN = CAMPOS.filter((c) => c.cuenta)
@@ -36,6 +38,11 @@ const UNIONES = `
   left join cliente_comercial k on k.cliente_id = c.id
   left join cliente_autoridad a on a.cliente_id = c.id
   left join cliente_intentos i on i.cliente_id = c.id
+  left join cliente_quien_es q on q.cliente_id = c.id
+  left join cliente_marca mk on mk.cliente_id = c.id
+  left join cliente_comercializa cm on cm.cliente_id = c.id
+  left join cliente_objetivos ob on ob.cliente_id = c.id
+  left join cliente_venta vt on vt.cliente_id = c.id
   left join consultoras co on co.id = c.consultora_id`
 
 export type FilaDeLista = {
