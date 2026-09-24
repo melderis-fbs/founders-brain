@@ -18,7 +18,7 @@ import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
-import { CAMPOS, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
+import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 
 /** Los bloques de «El cliente», en el orden en que se conoce a alguien. */
 const GRUPOS_DEL_CLIENTE: Grupo[] = [
@@ -138,6 +138,11 @@ export default async function Ficha({
   // la del calendario, porque ella estuvo en la sesión y el calendario no.
   const termina = cuandoTermina(inicio, meses, cliente.valores.fecha_fin_prevista as string | null)
 
+  // De lo que falta, lo que realmente traba una cuenta. El resto enriquece el
+  // caso: se carga cuando se puede, no antes de poder analizar nada.
+  const clavesBase = new Set(CAMPOS_BASE.map((c) => c.clave))
+  const faltanBase = cliente.faltan.filter((c) => clavesBase.has(c.clave))
+
   const laEtapaDeAhora = (cliente.valores.etapa_actual as string | null)
     ?? filasEtapas.find((f) => f.estado === 'es_la_de_ahora')?.etapa.nombre
     ?? null
@@ -216,8 +221,11 @@ export default async function Ficha({
           </div>
           <div>
             <span className="rotulo">Ficha</span>
-            <b className={cliente.faltan.length > 0 ? 'ambar' : 'verde'}>
-              {TOTAL_CAMPOS - cliente.faltan.length} de {TOTAL_CAMPOS} datos
+            <b className={faltanBase.length > 0 ? 'ambar' : 'verde'}>
+              {TOTAL_BASE - faltanBase.length} de {TOTAL_BASE} datos base
+              <div className="mini">
+                {TOTAL_CAMPOS - cliente.faltan.length} de {TOTAL_CAMPOS} en total. Los otros suman, no hacen falta.
+              </div>
             </b>
           </div>
         </div>
@@ -262,17 +270,38 @@ export default async function Ficha({
                 <Comparacion evaluados={evaluados} suelto />
                 <h2 style={{ marginTop: 26 }}>Identidad y programa</h2>
                 <dl className="dos-columnas">{campos('identidad').map(dato)}</dl>
-                {cliente.faltan.length > 0 ? (
+                {/* Sólo los base. Listar los 93 que faltan es una pared, y peor:
+                    hace pensar que hasta llenarlos no se puede analizar nada. */}
+                {faltanBase.length > 0 ? (
                   <p className="faltantes">
-                    Faltan <b>{cliente.faltan.length} de {TOTAL_CAMPOS}</b> datos. Tocá cualquiera y te deja escribiéndolo:{' '}
-                    {cliente.faltan.map((c, i) => (
+                    De los datos con los que la aplicación saca cuentas faltan{' '}
+                    <b>{faltanBase.length} de {TOTAL_BASE}</b>. Tocá cualquiera y te deja escribiéndolo:{' '}
+                    {faltanBase.map((c, i) => (
                       <span key={c.clave}>
                         {i > 0 ? ', ' : ''}
                         <Link href={dondeSeCarga(cliente.id, c.clave) ?? '#'}>{c.etiqueta.toLowerCase()}</Link>
                       </span>
                     ))}.
+                    {cliente.faltan.length > faltanBase.length ? (
+                      <>
+                        {' '}Hay <Link href={`/clientes/${cliente.id}?bloque=cliente`}>
+                          otros {cliente.faltan.length - faltanBase.length} sin cargar
+                        </Link>, que suman al caso pero no hacen falta para analizarlo.
+                      </>
+                    ) : null}
                   </p>
-                ) : null}
+                ) : (
+                  <p className="faltantes">
+                    Están los {TOTAL_BASE} datos con los que la aplicación saca cuentas.
+                    {cliente.faltan.length > 0 ? (
+                      <>
+                        {' '}Quedan <Link href={`/clientes/${cliente.id}?bloque=cliente`}>
+                          {cliente.faltan.length} por cargar
+                        </Link>, que suman al caso.
+                      </>
+                    ) : null}
+                  </p>
+                )}
               </>
             ) : null}
 

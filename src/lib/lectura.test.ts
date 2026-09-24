@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { HitoEvaluado } from './hitos'
 import { HITOS } from './hitos'
+import { CAMPOS_BASE, TOTAL_BASE, TOTAL_CAMPOS } from './campos'
 import { bloquesDeLaFicha, leerElCaso } from './lectura'
 import type { SesionEnLista } from './sesiones-tipos'
 import { semanaDeLaSesion } from './sesiones-tipos'
@@ -172,5 +173,52 @@ describe('en qué semana del programa cayó cada sesión', () => {
 
   it('una fecha que no se entiende no da una semana cualquiera', () => {
     expect(semanaDeLaSesion('2026-01-05', 'el martes')).toBeNull()
+  })
+})
+
+describe('la ficha grande no traba el análisis', () => {
+  it('con un solo dato y ningún documento, se puede diagnosticar igual', () => {
+    const e = bloquesDeLaFicha({ oferta: 'algo' }, { documentos: 0, sesiones: 0 })
+    expect(e.valeLaPena).toBe(true)
+    expect(e.queVaAPoder).toContain('Se puede pedir igual')
+  })
+
+  it('lo único que lo frena es que no haya absolutamente nada', () => {
+    const e = bloquesDeLaFicha({}, { documentos: 0, sesiones: 0 })
+    expect(e.valeLaPena).toBe(false)
+    expect(e.queVaAPoder).toContain('no hace falta gastar')
+  })
+
+  it('un documento solo, sin ningún campo cargado, ya alcanza', () => {
+    const e = bloquesDeLaFicha({}, { documentos: 1, sesiones: 0 })
+    expect(e.valeLaPena).toBe(true)
+  })
+
+  it('no habla de seis bloques cuando hay diez', () => {
+    const e = bloquesDeLaFicha({ oferta: 'algo' }, { documentos: 2, sesiones: 0 })
+    expect(e.queVaAPoder).toContain(`de ${e.bloques.length} bloques`)
+    expect(e.queVaAPoder).not.toContain('de 6 bloques')
+  })
+})
+
+describe('los dieciséis datos con los que se sacan cuentas', () => {
+  it('son los que usan los hitos y la aritmética, no una lista suelta', () => {
+    const claves = new Set(CAMPOS_BASE.map((c) => c.clave))
+    for (const usa of ['meta_mensual', 'ticket', 'cliente_ideal', 'problema', 'oferta', 'promesa', 'mensaje', 'canal']) {
+      expect(claves.has(usa), `${usa} lo usan los hitos y tiene que ser base`).toBe(true)
+    }
+    expect(claves.has('fecha_inicio')).toBe(true)   // sin esto no hay semana ni comparación
+  })
+
+  it('son pocos: la ficha entera no puede ser el requisito para analizar', () => {
+    expect(TOTAL_BASE).toBeLessThan(20)
+    expect(TOTAL_BASE).toBeLessThan(TOTAL_CAMPOS / 4)
+  })
+
+  it('nada de «quién es» ni de la venta es base: suman al caso, no lo traban', () => {
+    const grupos = new Set(CAMPOS_BASE.map((c) => c.grupo))
+    expect(grupos.has('quien_es')).toBe(false)
+    expect(grupos.has('venta')).toBe(false)
+    expect(grupos.has('comercial')).toBe(false)
   })
 })

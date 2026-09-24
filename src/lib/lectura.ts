@@ -324,8 +324,13 @@ export function bloquesDeLaFicha(
   })
 
   const conAlgo = bloques.filter((b) => b.estado !== 'vacio').length
+  const cuantos = bloques.length
   const nada = conAlgo === 0 && hay.documentos === 0 && hay.sesiones === 0
 
+  // Lo único que lo frena es que no haya NADA. Con un documento y dos datos ya
+  // tiene sobre qué trabajar: lo que no sabe lo dice, que es lo que se le pide.
+  // Poner una vara más alta que ésta es hacer esperar a alguien que podría
+  // estar leyendo un diagnóstico.
   return {
     bloques,
     conAlgo,
@@ -333,10 +338,10 @@ export function bloquesDeLaFicha(
     queVaAPoder: nada
       ? 'No hay nada cargado de este cliente: ni ficha, ni documentos, ni sesiones. El diagnóstico no tiene sobre qué trabajar y no hace falta gastar en pedirlo.'
       : conAlgo <= 2 && hay.documentos === 0
-        ? `Con ${conAlgo} de 6 bloques y ningún documento, el diagnóstico va a contestar «eso no está cargado» más de lo que te va a servir. Cargá un documento y completá la ficha desde ahí primero.`
+        ? `Con ${conAlgo} de ${cuantos} bloques y ningún documento va a contestar «eso no está cargado» bastante seguido. Se puede pedir igual; con un documento rinde mucho más.`
         : hay.documentos === 0
-          ? `Hay ${conAlgo} de 6 bloques con datos, pero ningún documento cargado. El diagnóstico va a poder comparar contra el programa; de la cabeza del cliente no va a poder decir nada.`
-          : `Hay ${conAlgo} de 6 bloques con datos y ${hay.documentos} ${hay.documentos === 1 ? 'documento' : 'documentos'}. Alcanza para diagnosticar.`,
+          ? `Hay ${conAlgo} de ${cuantos} bloques con datos, pero ningún documento cargado. Va a poder comparar contra el programa; de la cabeza del cliente no va a poder decir nada.`
+          : `Hay ${conAlgo} de ${cuantos} bloques con datos y ${hay.documentos} ${hay.documentos === 1 ? 'documento' : 'documentos'}. Alcanza para diagnosticar.`,
   }
 }
 

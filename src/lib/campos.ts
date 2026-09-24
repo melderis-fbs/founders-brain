@@ -33,8 +33,19 @@ export type Campo = {
     | 'cliente_quien_es' | 'cliente_marca' | 'cliente_comercializa' | 'cliente_objetivos' | 'cliente_venta'
   columna: string
   tipo: TipoCampo
-  /** Cuenta para «le faltan N de 32 datos». */
+  /** Entra en el total de la ficha. */
   cuenta: boolean
+  /**
+   * De los que el análisis USA para contestar dónde está el cliente.
+   *
+   * La ficha tiene 93 campos y eso está bien: son las preguntas que el
+   * onboarding y el match de marca hacen de verdad. Pero 93 casilleros vacíos
+   * arriba de la pantalla se leen como una pared, y peor: hacen pensar que hasta
+   * llenarlos no se puede analizar nada. No es así. Estos dieciséis son los que
+   * alimentan la cuenta inversa, los hitos y el semáforo; el resto enriquece el
+   * caso y no bloquea nada.
+   */
+  base?: true
   opciones?: readonly string[]
   alias?: Record<string, string>
   /** Encabezados de planilla que se aceptan para esta columna. */
@@ -48,9 +59,9 @@ export const FORMAS_PAGO = ['contado', 'cuotas'] as const
 
 export const CAMPOS: readonly Campo[] = [
   // ── Identidad ───────────────────────────────────────────────────────────
-  { clave: 'nombre', etiqueta: 'Nombre y apellido', grupo: 'identidad', tabla: 'clientes', columna: 'nombre', tipo: 'texto', cuenta: true,
+  { clave: 'nombre', etiqueta: 'Nombre y apellido', grupo: 'identidad', tabla: 'clientes', columna: 'nombre', tipo: 'texto', cuenta: true, base: true,
     sinonimos: ['nombre', 'cliente', 'nombre del cliente', 'nombre y apellido', 'nombre completo', 'apellidos'] },
-  { clave: 'consultora', etiqueta: 'Consultora', grupo: 'identidad', tabla: 'clientes', columna: 'consultora_id', tipo: 'texto', cuenta: true,
+  { clave: 'consultora', etiqueta: 'Consultora', grupo: 'identidad', tabla: 'clientes', columna: 'consultora_id', tipo: 'texto', cuenta: true, base: true,
     sinonimos: ['consultora', 'consultor', 'asignada', 'consultora asignada', 'responsable', 'ficha de consultora', 'ficha consultora', 'consultora a cargo'] },
   { clave: 'email', etiqueta: 'Email', grupo: 'identidad', tabla: 'clientes', columna: 'email', tipo: 'texto', cuenta: true,
     sinonimos: ['email', 'mail', 'correo', 'e mail', 'correo electronico'] },
@@ -63,10 +74,10 @@ export const CAMPOS: readonly Campo[] = [
     ayuda: 'Una línea por red, con el usuario o el link. Sólo las que tienen dato' },
   { clave: 'fuente', etiqueta: 'Cómo nos conoció', grupo: 'identidad', tabla: 'clientes', columna: 'fuente', tipo: 'texto', cuenta: true,
     sinonimos: ['fuente', 'de donde vino', 'origen', 'como nos conocio', 'como nos conociste', 'canal de entrada'] },
-  { clave: 'programa_meses', etiqueta: 'Programa', grupo: 'identidad', tabla: 'clientes', columna: 'programa_meses', tipo: 'entero', cuenta: true,
+  { clave: 'programa_meses', etiqueta: 'Programa', grupo: 'identidad', tabla: 'clientes', columna: 'programa_meses', tipo: 'entero', cuenta: true, base: true,
     sinonimos: ['programa', 'meses', 'duracion', 'duracion del programa', 'plan'],
     ayuda: '4 o 6 meses' },
-  { clave: 'fecha_inicio', etiqueta: 'Inicio del programa', grupo: 'identidad', tabla: 'clientes', columna: 'fecha_inicio', tipo: 'fecha', cuenta: true,
+  { clave: 'fecha_inicio', etiqueta: 'Inicio del programa', grupo: 'identidad', tabla: 'clientes', columna: 'fecha_inicio', tipo: 'fecha', cuenta: true, base: true,
     sinonimos: ['inicio', 'fecha de inicio', 'inicio del programa', 'arranque', 'ingreso', 'ingreso reintegro'] },
   { clave: 'fecha_fin_prevista', etiqueta: 'Fin previsto', grupo: 'identidad', tabla: 'clientes', columna: 'fecha_fin_prevista', tipo: 'fecha', cuenta: true,
     sinonimos: ['fin', 'fecha de fin', 'fin previsto', 'finalizacion', 'fecha finalizacion'],
@@ -84,7 +95,7 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'etapa_declarada', etiqueta: 'Etapa según la planilla', grupo: 'identidad', tabla: 'clientes', columna: 'etapa_declarada', tipo: 'texto', cuenta: true,
     sinonimos: ['etapa declarada', 'etapa planilla', 'etapa segun la planilla'],
     ayuda: 'La que escribe la consultora en su planilla' },
-  { clave: 'estado', etiqueta: 'Estado', grupo: 'identidad', tabla: 'clientes', columna: 'estado', tipo: 'opcion', cuenta: true, opciones: ESTADOS, alias: { activa: 'activo', 'en curso': 'activo', 'dado de baja': 'baja', cancelado: 'baja', terminado: 'finalizado', progresando: 'activo' },
+  { clave: 'estado', etiqueta: 'Estado', grupo: 'identidad', tabla: 'clientes', columna: 'estado', tipo: 'opcion', cuenta: true, base: true, opciones: ESTADOS, alias: { activa: 'activo', 'en curso': 'activo', 'dado de baja': 'baja', cancelado: 'baja', terminado: 'finalizado', progresando: 'activo' },
     sinonimos: ['estado', 'estatus', 'situacion', 'activo inactivo'] },
 
   // ── Quién es ────────────────────────────────────────────────────────────
@@ -115,9 +126,9 @@ export const CAMPOS: readonly Campo[] = [
   // ── Su negocio, como llegó ──────────────────────────────────────────────
   { clave: 'nombre_negocio', etiqueta: 'Nombre del negocio', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'nombre_negocio', tipo: 'texto', cuenta: true,
     sinonimos: ['nombre del negocio', 'marca', 'empresa', 'nombre negocio'] },
-  { clave: 'rubro', etiqueta: 'Rubro', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'rubro', tipo: 'texto', cuenta: true,
+  { clave: 'rubro', etiqueta: 'Rubro', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'rubro', tipo: 'texto', cuenta: true, base: true,
     sinonimos: ['rubro', 'industria', 'sector', 'nicho', 'actividad'] },
-  { clave: 'que_vende', etiqueta: 'Qué vende hoy', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'que_vende', tipo: 'texto_largo', cuenta: true,
+  { clave: 'que_vende', etiqueta: 'Qué vende hoy', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'que_vende', tipo: 'texto_largo', cuenta: true, base: true,
     sinonimos: ['que vende', 'producto', 'servicio', 'oferta actual', 'que hace tu negocio'] },
   { clave: 'historia_negocio', etiqueta: 'Cómo empezó y cómo evolucionó', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'historia_negocio', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['historia', 'historia del negocio', 'como empezo'] },
@@ -134,7 +145,7 @@ export const CAMPOS: readonly Campo[] = [
     sinonimos: ['roles', 'roles del equipo', 'que hace cada uno'] },
   { clave: 'como_entrega', etiqueta: 'Cómo lo entrega hoy', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'como_entrega', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['como entrega', 'formato', 'modalidad', 'como funciona hoy'] },
-  { clave: 'modelo_negocio', etiqueta: 'Modelo de negocio', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'modelo_negocio', tipo: 'opcion', cuenta: true, opciones: MODELOS, alias: { servicios: 'servicio', productos: 'producto', curso: 'infoproducto', 'info producto': 'infoproducto', digital: 'infoproducto' },
+  { clave: 'modelo_negocio', etiqueta: 'Modelo de negocio', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'modelo_negocio', tipo: 'opcion', cuenta: true, base: true, opciones: MODELOS, alias: { servicios: 'servicio', productos: 'producto', curso: 'infoproducto', 'info producto': 'infoproducto', digital: 'infoproducto' },
     sinonimos: ['modelo', 'modelo de negocio', 'tipo de negocio'] },
   { clave: 'a_quien_hoy', etiqueta: 'A quién le vende hoy', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'a_quien_hoy', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['a quien le vende', 'clientes actuales', 'a quien vende hoy'],
@@ -152,12 +163,12 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'nichos_candidatos', etiqueta: 'Nichos que evaluó y su puntaje', grupo: 'marca', tabla: 'cliente_marca', columna: 'nichos_candidatos', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['nichos', 'nichos candidatos', 'matriz de nichos'],
     ayuda: '«nicho: total», uno por línea' },
-  { clave: 'cliente_ideal', etiqueta: 'Cliente ideal', grupo: 'marca', tabla: 'cliente_negocio', columna: 'cliente_ideal', tipo: 'texto_largo', cuenta: true,
+  { clave: 'cliente_ideal', etiqueta: 'Cliente ideal', grupo: 'marca', tabla: 'cliente_negocio', columna: 'cliente_ideal', tipo: 'texto_largo', cuenta: true, base: true,
     sinonimos: ['cliente ideal', 'avatar', 'buyer persona', 'publico', 'a quien le vende'] },
   { clave: 'casos_reales', etiqueta: 'Casos reales de referencia', grupo: 'marca', tabla: 'cliente_marca', columna: 'casos_reales', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['casos reales', 'casos', 'clientes de referencia'],
     ayuda: 'Un caso por línea, con lo que logró' },
-  { clave: 'problema', etiqueta: 'Problema que le resuelve', grupo: 'marca', tabla: 'cliente_negocio', columna: 'problema', tipo: 'texto_largo', cuenta: true,
+  { clave: 'problema', etiqueta: 'Problema que le resuelve', grupo: 'marca', tabla: 'cliente_negocio', columna: 'problema', tipo: 'texto_largo', cuenta: true, base: true,
     sinonimos: ['problema', 'dolor', 'que problema resuelve', 'pain'] },
   { clave: 'deseo', etiqueta: 'A dónde quiere llegar su cliente', grupo: 'marca', tabla: 'cliente_negocio', columna: 'deseo', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['deseo', 'que quiere', 'resultado deseado', 'aspiracion'],
@@ -171,7 +182,7 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'objeciones_cliente', etiqueta: 'Por qué su cliente no le compra', grupo: 'marca', tabla: 'cliente_marca', columna: 'objeciones_cliente', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['objeciones del cliente', 'objeciones'],
     ayuda: 'Las de SU cliente con él. No confundir con las objeciones de la venta con Founders' },
-  { clave: 'promesa', etiqueta: 'La PAI de su programa', grupo: 'marca', tabla: 'cliente_negocio', columna: 'promesa', tipo: 'texto_largo', cuenta: true,
+  { clave: 'promesa', etiqueta: 'La PAI de su programa', grupo: 'marca', tabla: 'cliente_negocio', columna: 'promesa', tipo: 'texto_largo', cuenta: true, base: true,
     sinonimos: ['promesa', 'pai', 'promesa unica', 'big promise'] },
   { clave: 'promesas_secundarias', etiqueta: 'PAI para otros segmentos', grupo: 'marca', tabla: 'cliente_marca', columna: 'promesas_secundarias', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['promesas secundarias', 'otras pai'],
@@ -183,10 +194,10 @@ export const CAMPOS: readonly Campo[] = [
     ayuda: 'Dos o tres, como resultados, uno por línea' },
   { clave: 'diferencial', etiqueta: 'Diferencial', grupo: 'marca', tabla: 'cliente_negocio', columna: 'diferencial', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['diferencial', 'diferenciacion', 'ventaja', 'por que le compran'] },
-  { clave: 'oferta', etiqueta: 'Oferta', grupo: 'marca', tabla: 'cliente_negocio', columna: 'oferta', tipo: 'texto_largo', cuenta: true,
+  { clave: 'oferta', etiqueta: 'Oferta', grupo: 'marca', tabla: 'cliente_negocio', columna: 'oferta', tipo: 'texto_largo', cuenta: true, base: true,
     sinonimos: ['oferta', 'propuesta', 'que ofrece', 'paquete'],
     ayuda: 'El programa concreto: nombre, duración y formato' },
-  { clave: 'mensaje', etiqueta: 'Mensaje', grupo: 'marca', tabla: 'cliente_negocio', columna: 'mensaje', tipo: 'texto_largo', cuenta: true,
+  { clave: 'mensaje', etiqueta: 'Mensaje', grupo: 'marca', tabla: 'cliente_negocio', columna: 'mensaje', tipo: 'texto_largo', cuenta: true, base: true,
     sinonimos: ['mensaje', 'posicionamiento', 'frase', 'mensaje central'] },
   { clave: 'frases_mercado', etiqueta: 'Frases textuales de su mercado', grupo: 'marca', tabla: 'cliente_marca', columna: 'frases_mercado', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['frases del mercado', 'frases textuales', 'voz del cliente'],
@@ -196,7 +207,7 @@ export const CAMPOS: readonly Campo[] = [
     ayuda: '«15 enviadas, 18 respuestas»' },
 
   // ── Cómo consigue y cómo vende ──────────────────────────────────────────
-  { clave: 'canal', etiqueta: 'Canal que mejor le funciona', grupo: 'comercializa', tabla: 'cliente_negocio', columna: 'canal', tipo: 'texto', cuenta: true,
+  { clave: 'canal', etiqueta: 'Canal que mejor le funciona', grupo: 'comercializa', tabla: 'cliente_negocio', columna: 'canal', tipo: 'texto', cuenta: true, base: true,
     sinonimos: ['canal', 'canales', 'canal de venta', 'donde vende', 'medio'] },
   { clave: 'origen_clientes', etiqueta: 'Cómo le llegan los que pagan', grupo: 'comercializa', tabla: 'cliente_negocio', columna: 'origen_clientes', tipo: 'texto', cuenta: true,
     sinonimos: ['origen clientes', 'de donde vienen', 'como llegan'] },
@@ -238,7 +249,7 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'objetivo_meses', etiqueta: 'Qué quiere lograr en los próximos meses', grupo: 'objetivos', tabla: 'cliente_objetivos', columna: 'objetivo_meses', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['objetivo', 'que quiere lograr', 'objetivo de meses'],
     ayuda: 'Sin el número: el número va en la meta mensual' },
-  { clave: 'meta_mensual', etiqueta: 'Meta mensual', grupo: 'objetivos', tabla: 'cliente_numeros', columna: 'meta_mensual', tipo: 'numero', cuenta: true,
+  { clave: 'meta_mensual', etiqueta: 'Meta mensual', grupo: 'objetivos', tabla: 'cliente_numeros', columna: 'meta_mensual', tipo: 'numero', cuenta: true, base: true,
     sinonimos: ['meta', 'meta mensual', 'objetivo de facturacion', 'a cuanto quiere llegar'] },
 
   // ── Sus números ─────────────────────────────────────────────────────────
@@ -253,7 +264,7 @@ export const CAMPOS: readonly Campo[] = [
     sinonimos: ['ventas', 'ventas del mes', 'ventas ultimo mes', 'cierres'] },
   { clave: 'tiene_tracker', etiqueta: 'Lleva registro de ventas y números', grupo: 'numeros', tabla: 'cliente_numeros', columna: 'tiene_tracker', tipo: 'booleano', cuenta: true,
     sinonimos: ['tracker', 'lleva registro', 'planilla de ventas'] },
-  { clave: 'ticket', etiqueta: 'Ticket', grupo: 'numeros', tabla: 'cliente_numeros', columna: 'ticket', tipo: 'numero', cuenta: true,
+  { clave: 'ticket', etiqueta: 'Ticket', grupo: 'numeros', tabla: 'cliente_numeros', columna: 'ticket', tipo: 'numero', cuenta: true, base: true,
     sinonimos: ['ticket', 'ticket promedio', 'valor promedio'],
     ayuda: 'El precio de referencia con el que se hace la cuenta inversa. Lo carga la consultora' },
 
@@ -287,6 +298,15 @@ export const CAMPOS_POR_CLAVE: ReadonlyMap<string, Campo> = new Map(CAMPOS.map((
 
 /** Cuántos datos se cuentan para el «le faltan N de M». */
 export const TOTAL_CAMPOS = CAMPOS.filter((c) => c.cuenta).length
+
+/**
+ * Los campos con los que la aplicación puede contestar algo.
+ *
+ * Es el número que va arriba en la ficha. El otro —los 93— es cuánto se puede
+ * saber de un cliente, no cuánto hace falta para analizarlo.
+ */
+export const CAMPOS_BASE = CAMPOS.filter((c) => c.base === true)
+export const TOTAL_BASE = CAMPOS_BASE.length
 
 export const ETIQUETA_GRUPO: Record<Grupo, string> = {
   identidad: 'Identidad y programa',
