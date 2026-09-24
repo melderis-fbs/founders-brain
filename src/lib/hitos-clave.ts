@@ -124,3 +124,61 @@ export function estadoDeLasEtapas(semana: number | null, elegida: string | null)
     return { etapa, estado: 'todavia_no' as const, porque: `Le toca en la semana ${etapa.desdeSemana}.` }
   })
 }
+
+/**
+ * LAS CATORCE ETAPAS, MARCADAS A MANO
+ *
+ * Qué etapas del programa dio por cumplidas la consultora. Es lo que la
+ * planilla tildaba a mano, y es lo único con lo que se puede decir «dónde está
+ * y dónde tendría que estar»: el calendario dice qué le tocaría, esto dice qué
+ * tiene.
+ *
+ * Viven en la misma tabla que los hitos clave, con la clave prefijada. Podrían
+ * tener tabla propia, pero es la misma forma —cliente, clave, cuándo, quién— y
+ * una tabla más es una migración más que alguien tiene que correr a mano en
+ * producción antes de que la pantalla ande.
+ */
+
+const PREFIJO = 'etapa:'
+
+export function etapasHechasDe(hechos: ReadonlyMap<string, HechoPorCliente>): Set<string> {
+  const salida = new Set<string>()
+  for (const clave of hechos.keys()) {
+    if (clave.startsWith(PREFIJO)) salida.add(clave.slice(PREFIJO.length))
+  }
+  return salida
+}
+
+/** Quién marcó cada etapa y cuándo, para poder discutirlo con un nombre al lado. */
+export function quienMarcoLaEtapa(
+  hechos: ReadonlyMap<string, HechoPorCliente>,
+  clave: string,
+): HechoPorCliente | null {
+  return hechos.get(PREFIJO + clave) ?? null
+}
+
+export async function marcarEtapa(datos: {
+  clienteId: number
+  clave: string
+  usuarioId: number
+}): Promise<Resultado> {
+  if (!ETAPAS.some((e) => e.clave === datos.clave)) {
+    return { ok: false, error: `«${datos.clave}» no es una etapa del programa.` }
+  }
+  await escribirDevolviendo(
+    `insert into hitos_clave (cliente_id, clave, usuario_id) values ($1, $2, $3)
+     on conflict (cliente_id, clave) do update set usuario_id = excluded.usuario_id
+     returning id`,
+    [datos.clienteId, PREFIJO + datos.clave, datos.usuarioId],
+  )
+  return { ok: true }
+}
+
+export async function desmarcarEtapa(clienteId: number, clave: string): Promise<Resultado> {
+  await escribir(
+    'delete from hitos_clave where cliente_id = $1 and clave = $2',
+    [clienteId, PREFIJO + clave],
+    { esperadas: 'cualquiera' },
+  )
+  return { ok: true }
+}

@@ -114,12 +114,12 @@ describe('la lectura del caso, con aritmética', () => {
 })
 
 describe('los bloques de la ficha', () => {
-  it('seis bloques, y cuenta cuántos tienen algo', () => {
+  it('cinco bloques, y cuenta cuántos tienen algo', () => {
     const e = bloquesDeLaFicha({ oferta: 'algo', meta_mensual: 100 }, { documentos: 0, sesiones: 0 })
-    expect(e.bloques).toHaveLength(6)
+    expect(e.bloques).toHaveLength(5)
     expect(e.conAlgo).toBe(2)
     expect(e.bloques.find((b) => b.grupo === 'negocio')!.estado).toBe('a_medias')
-    expect(e.bloques.find((b) => b.grupo === 'autoridad')!.estado).toBe('vacio')
+    expect(e.bloques.find((b) => b.grupo === 'intentos')!.estado).toBe('vacio')
   })
 
   it('sin nada cargado no vale la pena pagar el diagnóstico', () => {
@@ -135,7 +135,7 @@ describe('los bloques de la ficha', () => {
 
   it('con ficha y documentos dice que alcanza', () => {
     const e = bloquesDeLaFicha(
-      { oferta: 'x', meta_mensual: 1, hace_bien: 'y', que_funciono: 'z' },
+      { oferta: 'x', meta_mensual: 1, que_funciono: 'z' },
       { documentos: 2, sesiones: 1 },
     )
     expect(e.queVaAPoder).toContain('Alcanza para diagnosticar')

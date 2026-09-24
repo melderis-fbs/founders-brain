@@ -532,15 +532,61 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .boton.bandera-naranja { color: #b8701f; }
 .boton.bandera-amarilla { color: #8a6d1f; }
 
-.bandera-arriba {
-  display: flex; align-items: center; gap: 9px; text-decoration: none;
-  border: 1px solid var(--borde); border-left-width: 3px; border-radius: 9px;
-  padding: 9px 13px; margin: 12px 0; font-size: 13.5px; color: var(--tinta);
+/* La bandera en la cabecera: un desplegable, no una pestaña donde nadie entra. */
+.bandera-arriba { margin-top: 16px; border-top: 1px solid var(--borde-suave); padding-top: 13px; }
+.bandera-arriba .fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bandera-arriba .fila .rotulo { margin: 0; }
+.bandera-arriba .motivo-corto { font-size: 13.5px; color: var(--tinta); }
+.bandera-arriba .como-enlace {
+  margin-left: auto; background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--gris); text-decoration: underline;
 }
-.bandera-arriba.roja { border-left-color: #b03030; color: #b03030; }
-.bandera-arriba.naranja { border-left-color: #b8701f; color: #b8701f; }
-.bandera-arriba.amarilla { border-left-color: #8a6d1f; color: #8a6d1f; }
-.bandera-arriba span { color: var(--tinta); }
+.bandera-arriba .como-enlace:hover { color: var(--tinta); }
+.selector-bandera { border-left-width: 3px; }
+.selector-bandera.roja { border-left-color: #b03030; color: #b03030; font-weight: 600; }
+.selector-bandera.naranja { border-left-color: #b8701f; color: #b8701f; font-weight: 600; }
+.selector-bandera.amarilla { border-left-color: #8a6d1f; color: #8a6d1f; font-weight: 600; }
+.bandera-arriba .al-levantar { margin-top: 12px; max-width: 560px; }
+.bandera-arriba .al-levantar label { display: block; font-size: 13px; margin-bottom: 6px; }
+.bandera-arriba .antes { margin-top: 12px; }
+.bandera-arriba .una-antes, .bandera-arriba .un-cambio { padding: 10px 0; border-top: 1px solid var(--borde); }
+.bandera-arriba .un-cambio { display: flex; gap: 14px; align-items: baseline; }
+.bandera-arriba .motivo { margin: 5px 0; font-size: 13.5px; line-height: 1.5; }
+.bandera-arriba .chip-bandera {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--gris);
+}
+
+/* El estado, al lado del nombre: la misma forma que una bandera. */
+.chip-estado {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 99px;
+  padding: 3px 11px; font-size: 12px; font-weight: 700; text-transform: lowercase;
+  background: var(--hover); color: var(--gris);
+}
+.chip-estado.al_dia { background: var(--verde-suave); color: var(--verde); }
+.chip-estado.atrasado { background: var(--ambar-suave); color: var(--ambar); }
+.chip-estado.grave { background: var(--rojo-suave); color: var(--rojo); }
+
+/* ── Dónde está y dónde tendría que estar ─────────────────────────────────
+   Las dos barras, una sobre la otra: la gris es lo que el calendario pide,
+   la de color lo que tiene. La diferencia se ve, no se calcula. */
+.avance {
+  border: 1px solid var(--borde); border-radius: 11px; padding: 15px 17px; margin-bottom: 20px;
+  background: var(--papel);
+}
+.avance .numeros { display: flex; gap: 34px; flex-wrap: wrap; margin-bottom: 14px; }
+.avance .cifra.chico { font-size: 21px; text-transform: lowercase; }
+.avance .dos-barras {
+  position: relative; height: 15px; border-radius: 99px; background: var(--borde-suave);
+  overflow: hidden; margin: 6px 0 10px;
+}
+.avance .dos-barras .barra { position: absolute; inset: 0 auto 0 0; border-radius: 99px; }
+.avance .dos-barras .esperado { background: repeating-linear-gradient(115deg, var(--borde) 0 5px, transparent 5px 10px); }
+.avance .dos-barras .real { height: 7px; top: 4px; background: var(--azul); }
+.avance.al_dia .dos-barras .real { background: var(--verde); }
+.avance.atrasado .dos-barras .real { background: var(--ambar); }
+.avance.grave .dos-barras .real { background: var(--rojo); }
+.avance.sin_marcar .dos-barras .real, .avance.sin_fecha .dos-barras .real { background: var(--gris-suave); }
+.avance .titular { margin: 0 0 4px; font-size: 14px; line-height: 1.5; }
 
 .banderas .bandera-puesta {
   display: flex; gap: 16px; align-items: flex-start; justify-content: space-between;
@@ -641,9 +687,14 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 }
 .programa .una-etapa .nombre { display: block; font-size: 13.5px; }
 .programa .una-etapa .mini { display: block; }
-.programa .una-etapa.pasada { opacity: .6; }
-.programa .una-etapa.todavia_no { opacity: .75; }
-.programa .una-etapa.es_la_de_ahora { border-left-color: #7aa7d0; }
+.programa .una-etapa label { display: flex; gap: 12px; align-items: center; width: 100%; cursor: pointer; margin: 0; }
+.programa .una-etapa input { flex: none; margin: 0; }
+.programa .una-etapa.hecha { border-left-color: var(--verde); background: var(--verde-suave); }
+.programa .una-etapa.hecha .num { background: var(--verde); color: #fff; }
+/* Sin marcar y con la semana ya pasada: el único renglón que sale en rojo. */
+.programa .una-etapa.debia_estar { border-left-color: var(--rojo); background: var(--rojo-suave); }
+.programa .una-etapa.todavia_no { opacity: .7; }
+.programa .una-etapa.es_la_de_ahora { border-left-color: #7aa7d0; background: var(--azul-suave); }
 .programa .una-etapa.elegida { border-left-color: var(--tinta); }
 .programa .una-etapa.elegida .num { background: var(--tinta); color: var(--papel); }
 .programa .hitos-de { margin-bottom: 16px; }

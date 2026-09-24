@@ -22,18 +22,17 @@ export type LecturaDeTipo = {
   cuidado: string
 }
 
-const NEGOCIO_Y_AUTORIDAD = [
+const DEL_NEGOCIO = [
   'que_vende', 'cliente_ideal', 'problema', 'a_quien_hoy', 'deseo', 'como_entrega',
   'cantidad_clientes', 'origen_clientes', 'diferencial', 'antiguedad_negocio', 'equipo',
-  'hace_bien', 'experiencia_profesional', 'resultados_propios', 'resultados_terceros',
-  'industrias_que_conoce', 'autoridad_desperdiciada', 'que_funciono', 'que_no_funciono',
-  'facturacion_historica', 'rubro', 'modelo_negocio', 'canal',
+  'que_funciono', 'que_no_funciono', 'facturacion_historica',
+  'rubro', 'modelo_negocio', 'canal',
 ] as const
 
 export const LECTURA: Record<TipoDocumento, LecturaDeTipo> = {
   onboarding: {
     queEs: 'Un formulario de onboarding: lo que el cliente contestó sobre sí mismo cuando entró al programa.',
-    campos: [...NEGOCIO_Y_AUTORIDAD, 'horas_por_semana', 'precio_actual', 'facturacion_actual',
+    campos: [...DEL_NEGOCIO, 'horas_por_semana', 'precio_actual', 'facturacion_actual',
              'meta_mensual', 'ticket', 'ventas_ultimo_mes', 'moneda', 'email', 'telefono'],
     cuidado:
       'Separá lo que tiene de lo que quiere. «Facturo 1.800.000 y quiero llegar a 5.400.000» son dos campos ' +

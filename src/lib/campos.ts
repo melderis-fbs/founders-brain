@@ -11,7 +11,7 @@ import { NOMBRES_DE_ETAPAS } from './modulos'
 
 export type TipoCampo = 'texto' | 'texto_largo' | 'numero' | 'entero' | 'fecha' | 'booleano' | 'opcion'
 
-export type Grupo = 'identidad' | 'negocio' | 'autoridad' | 'intentos' | 'numeros' | 'comercial'
+export type Grupo = 'identidad' | 'negocio' | 'intentos' | 'numeros' | 'comercial'
 
 export type Campo = {
   clave: string
@@ -113,21 +113,6 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'equipo', etiqueta: 'Tamaño del equipo', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'equipo', tipo: 'entero', cuenta: true,
     sinonimos: ['equipo', 'tamano equipo', 'personas', 'empleados', 'cuanta gente'] },
 
-  // ── Su autoridad ────────────────────────────────────────────────────────
-  { clave: 'hace_bien', etiqueta: 'Qué hace excepcionalmente bien', grupo: 'autoridad', tabla: 'cliente_autoridad', columna: 'hace_bien', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['hace excepcionalmente bien', 'que hace bien', 'fortaleza', 'talento'] },
-  { clave: 'experiencia_profesional', etiqueta: 'Experiencia profesional', grupo: 'autoridad', tabla: 'cliente_autoridad', columna: 'experiencia_profesional', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['experiencia', 'experiencia profesional', 'trayectoria', 'background'] },
-  { clave: 'resultados_propios', etiqueta: 'Resultados propios', grupo: 'autoridad', tabla: 'cliente_autoridad', columna: 'resultados_propios', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['resultados propios', 'sus resultados', 'logros'] },
-  { clave: 'resultados_terceros', etiqueta: 'Resultados de terceros', grupo: 'autoridad', tabla: 'cliente_autoridad', columna: 'resultados_terceros', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['resultados de terceros', 'casos de exito', 'testimonios', 'resultados clientes'] },
-  { clave: 'industrias_que_conoce', etiqueta: 'Industrias que conoce', grupo: 'autoridad', tabla: 'cliente_autoridad', columna: 'industrias_que_conoce', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['industrias', 'industrias que conoce', 'mercados', 'sectores que conoce'] },
-  { clave: 'autoridad_desperdiciada', etiqueta: 'Autoridad desperdiciada', grupo: 'autoridad', tabla: 'cliente_autoridad', columna: 'autoridad_desperdiciada', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['autoridad desperdiciada', 'lo que no usa', 'credibilidad sin usar'],
-    ayuda: 'Dónde ya tiene lenguaje, contactos y credibilidad, y no los está usando' },
-
   // ── Lo que ya probó ─────────────────────────────────────────────────────
   { clave: 'que_funciono', etiqueta: 'Qué le funcionó', grupo: 'intentos', tabla: 'cliente_intentos', columna: 'que_funciono', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['que funciono', 'lo que funciono', 'que le funciono'] },
@@ -174,7 +159,6 @@ export const TOTAL_CAMPOS = CAMPOS.filter((c) => c.cuenta).length
 export const ETIQUETA_GRUPO: Record<Grupo, string> = {
   identidad: 'Identidad y programa',
   negocio: 'Su negocio',
-  autoridad: 'Su autoridad',
   intentos: 'Lo que ya probó',
   numeros: 'Sus números',
   comercial: 'Lo comercial',
@@ -182,7 +166,6 @@ export const ETIQUETA_GRUPO: Record<Grupo, string> = {
 
 /** Por qué existe cada bloque, para el que se pregunte qué carga ahí. */
 export const POR_QUE_EL_GRUPO: Partial<Record<Grupo, string>> = {
-  autoridad: 'Nunca se descarta la experiencia previa porque el cliente diga que no quiere ese mercado: la oportunidad suele estar donde ya tiene lenguaje, contactos y credibilidad.',
   intentos: 'Para no volver a proponerle una estrategia que ya le falló.',
 }
 
@@ -213,11 +196,10 @@ export const ETIQUETA_DOCUMENTO: Record<TipoDocumento, string> = {
  */
 export const PESTANA_DEL_GRUPO: Record<Grupo, string> = {
   identidad: 'resumen',
-  negocio: 'negocio',
-  autoridad: 'autoridad',
-  intentos: 'intentos',
-  numeros: 'numeros',
-  comercial: 'numeros',
+  negocio: 'cliente',
+  intentos: 'cliente',
+  numeros: 'cliente',
+  comercial: 'cliente',
 }
 
 /** El enlace que lleva a cargar ese dato, ya abierto para escribir. */

@@ -45,3 +45,28 @@ export function seLePasoElPrograma(fechaInicio: string | null | undefined, meses
   if (semana === null || total === null) return false
   return semana > total
 }
+
+/**
+ * Cuándo termina el programa.
+ *
+ * La fecha de fin no está cargada en NINGÚN cliente de la cartera, pero se
+ * sabe: es la de inicio más los meses del programa. Así que se muestra la
+ * cargada si alguien la escribió, y si no la calculada — diciendo que es
+ * calculada. Un dato que dice de dónde salió se puede discutir; uno que se
+ * hace pasar por cargado, no.
+ */
+export function cuandoTermina(
+  fechaInicio: string | null | undefined,
+  meses: number | null | undefined,
+  cargada?: string | null,
+): { fecha: string; calculada: boolean } | null {
+  if (cargada) return { fecha: String(cargada).slice(0, 10), calculada: false }
+  if (!fechaInicio || !meses) return null
+
+  const inicio = new Date(`${String(fechaInicio).slice(0, 10)}T00:00:00Z`)
+  if (Number.isNaN(inicio.getTime())) return null
+
+  const fin = new Date(inicio)
+  fin.setUTCMonth(fin.getUTCMonth() + meses)
+  return { fecha: fin.toISOString().slice(0, 10), calculada: true }
+}

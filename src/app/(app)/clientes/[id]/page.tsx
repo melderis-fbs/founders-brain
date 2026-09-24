@@ -3,22 +3,20 @@ import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
 import { CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO } from '@/lib/campos'
 import { Comparacion } from '@/componentes/Comparacion'
-import { Banderas } from '@/componentes/Banderas'
+import { BanderaYConsultora } from '@/componentes/BanderaYConsultora'
 import { Notas } from '@/componentes/Notas'
 import { notasDe } from '@/lib/notas'
-import { enQueFaseVa, etapasDeLaSemana, nombreDeEtapa } from '@/lib/modulos'
-import { banderaDe, historialDeBanderas, QUE_DICE } from '@/lib/banderas'
+import { banderaDe, historialDeBanderas } from '@/lib/banderas'
 import { cambiosDeCoach } from '@/lib/usuarios'
-import { Fases } from '@/componentes/Fases'
-import { FasesDelPrograma } from '@/componentes/FasesDelPrograma'
-import { estadoDeLasEtapas, estadoDeLasFases, hechosDe } from '@/lib/hitos-clave'
+import { ElPrograma } from '@/componentes/ElPrograma'
+import { estadoDeLasFases, etapasHechasDe, hechosDe } from '@/lib/hitos-clave'
+import { avanceDe, filasDeEtapas } from '@/lib/avance'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
 import { bloquesDeLaFicha, leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
 import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
 import { Preguntar } from '@/componentes/Preguntar'
-import { Semaforo } from '@/componentes/Semaforo'
 import { Sesiones } from '@/componentes/Sesiones'
 import { CAMPOS, POR_QUE_EL_GRUPO, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
@@ -27,8 +25,7 @@ import { quienMira } from '@/lib/quien-mira'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { pendientesDe } from '@/lib/propuestas'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
-import { seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
-import { semaforoDe } from '@/lib/semaforo'
+import { cuandoTermina, seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
 import { hayAlgunaSesionEnLaCartera, listarSesiones } from '@/lib/sesiones'
 
 export const dynamic = 'force-dynamic'
@@ -37,14 +34,9 @@ export const dynamic = 'force-dynamic'
 const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
   { clave: 'programa', texto: 'El programa' },
-  { clave: 'fases', texto: 'Etapas del negocio' },
-  { clave: 'atencion', texto: 'Bandera y consultora' },
+  { clave: 'cliente', texto: 'El cliente' },
   { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
-  { clave: 'negocio', texto: 'Su negocio' },
-  { clave: 'autoridad', texto: 'Su autoridad' },
-  { clave: 'intentos', texto: 'Lo que ya probó' },
-  { clave: 'numeros', texto: 'Números y pagos' },
   { clave: 'sesiones', texto: 'Sesiones' },
   { clave: 'documentos', texto: 'Documentos' },
 ] as const
@@ -108,10 +100,15 @@ export default async function Ficha({
     tiposDeDocumento: new Set(documentos.map((d) => d.tipo)),
     conDatos,
   })
-  const semaforo = semaforoDe(evaluados)
   const fasesDelPrograma = estadoDeLasFases(semanaEnLaQueVa(inicio), new Set(hechos.keys()))
-  const etapasDelPrograma = estadoDeLasEtapas(
+
+  // La comparación que contesta la pregunta de toda la aplicación. Aritmética
+  // pura: restar fechas y contar etapas marcadas. No cuesta nada, corre siempre.
+  const etapasHechas = etapasHechasDe(hechos)
+  const avance = avanceDe(semanaEnLaQueVa(inicio), etapasHechas)
+  const filasEtapas = filasDeEtapas(
     semanaEnLaQueVa(inicio),
+    etapasHechas,
     (cliente.valores.etapa_actual as string) ?? null,
   )
 
@@ -131,6 +128,14 @@ export default async function Ficha({
   // en qué pestaña vive la oferta.
   const bloqueDelCampo = apuntado ? PESTANA_DEL_GRUPO[CAMPOS_POR_CLAVE.get(apuntado)?.grupo ?? 'identidad'] : null
   const pestana: Pestana = (PESTANAS.find((p) => p.clave === (bloqueDelCampo ?? bloque))?.clave ?? 'resumen') as Pestana
+
+  // Arriba se muestra una sola etapa: la que eligió la consultora manda sobre
+  // la del calendario, porque ella estuvo en la sesión y el calendario no.
+  const termina = cuandoTermina(inicio, meses, cliente.valores.fecha_fin_prevista as string | null)
+
+  const laEtapaDeAhora = (cliente.valores.etapa_actual as string | null)
+    ?? filasEtapas.find((f) => f.estado === 'es_la_de_ahora')?.etapa.nombre
+    ?? null
 
   const campos = (grupo: Grupo) => CAMPOS.filter((c) => c.grupo === grupo)
   const dato = (campo: Campo) => (
@@ -158,39 +163,29 @@ export default async function Ficha({
         </div>
       ) : null}
 
-      {/* ── Lo que se lee de un vistazo ─────────────────────────────────── */}
+      {/* ── Lo que se lee de un vistazo ─────────────────────────────────
+          Todo lo que una consultora necesita saber antes de abrir la boca:
+          cuándo empezó, cuándo termina, de quién es, en qué semana va, qué
+          etapa le toca, cómo viene y si hay una bandera levantada. */}
       <header className="cabecera-ficha tarjeta">
         <div className="titulo">
           <h1>{cliente.nombre}</h1>
-          <Semaforo estado={semaforo} />
+          <span className={`chip-estado ${avance.estado}`}>{avance.palabra}</span>
           {seLePasoElPrograma(inicio, meses) ? <span className="chip mal">ya se pasó del programa</span> : null}
         </div>
-        <p className="porque">{semaforo.porque}</p>
-
-        {bandera ? (
-          <Link className={`bandera-arriba ${bandera.color}`} href={`/clientes/${cliente.id}?bloque=atencion`}
-                title={bandera.motivo}>
-            <i className="marca-bandera" />
-            <span><b>{QUE_DICE[bandera.color]}</b> · {bandera.motivo}</span>
-          </Link>
-        ) : null}
 
         <div className="datos-clave">
           <div>
-            <span className="rotulo">Va en</span>
-            <b>{textoDeSemana(inicio, meses)}</b>
+            <span className="rotulo">Empezó</span>
+            <b className={inicio ? undefined : 'apagado'}>
+              {inicio ? String(inicio).slice(0, 10).split('-').reverse().join('/') : 'sin fecha'}
+            </b>
           </div>
           <div>
-            <span className="rotulo">Etapa</span>
-            <b>
-              {cliente.valores.etapa_actual
-                ? String(cliente.valores.etapa_actual)
-                : <span className="apagado">sin elegir</span>}
-              <div className="mini">
-                {etapasDeLaSemana(semanaEnLaQueVa(inicio)).length > 0
-                  ? `por calendario: ${etapasDeLaSemana(semanaEnLaQueVa(inicio)).map(nombreDeEtapa).join(' · ')}`
-                  : enQueFaseVa(semanaEnLaQueVa(inicio)).porque}
-              </div>
+            <span className="rotulo">Termina</span>
+            <b className={termina ? undefined : 'apagado'}>
+              {termina ? termina.fecha.split('-').reverse().join('/') : 'sin fecha'}
+              {termina?.calculada ? <div className="mini">calculada: {meses} meses desde el inicio</div> : null}
             </b>
           </div>
           <div>
@@ -198,8 +193,21 @@ export default async function Ficha({
             <b className={cliente.consultora ? undefined : 'apagado'}>{cliente.consultora ?? 'sin asignar'}</b>
           </div>
           <div>
-            <span className="rotulo">Dónde se corta</span>
-            <b className={corte ? 'rojo' : 'apagado'}>{corte ? corte.hito.etiqueta.toLowerCase() : 'en nada medible'}</b>
+            <span className="rotulo">Va en</span>
+            <b>{textoDeSemana(inicio, meses)}</b>
+          </div>
+          <div>
+            <span className="rotulo">Etapa</span>
+            <b className={laEtapaDeAhora ? undefined : 'apagado'}>{laEtapaDeAhora ?? 'sin elegir'}</b>
+          </div>
+          <div>
+            <span className="rotulo">Etapas hechas</span>
+            <b className={avance.estado === 'al_dia' ? 'verde' : avance.estado === 'grave' ? 'rojo' : 'ambar'}>
+              {avance.hechas} de {avance.total}
+              <div className="mini">
+                {avance.estado === 'sin_fecha' ? 'sin fecha no hay con qué comparar' : `le pedían ${avance.esperadas}`}
+              </div>
+            </b>
           </div>
           <div>
             <span className="rotulo">Ficha</span>
@@ -207,11 +215,14 @@ export default async function Ficha({
               {TOTAL_CAMPOS - cliente.faltan.length} de {TOTAL_CAMPOS} datos
             </b>
           </div>
-          <div>
-            <span className="rotulo">Sesiones</span>
-            <b className={sesiones.length === 0 ? 'apagado' : undefined}>{sesiones.length}</b>
-          </div>
         </div>
+
+        <BanderaYConsultora
+          clienteId={cliente.id} bandera={bandera} historial={historialBanderas}
+          cambios={cambios} consultoraActual={cliente.consultora}
+          consultoras={lasConsultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
+          esAdmin={quien?.usuario.rol === 'admin'}
+        />
       </header>
 
       <div className="ficha">
@@ -230,6 +241,18 @@ export default async function Ficha({
           <div className="tarjeta panel">
             {pestana === 'resumen' ? (
               <>
+                <div className={`avance ${avance.estado}`}>
+                  <span className="rotulo">Dónde está y dónde tendría que estar</span>
+                  <div className="dos-barras" aria-hidden="true">
+                    <div className="barra esperado" style={{ width: `${avance.porEsperado}%` }} />
+                    <div className="barra real" style={{ width: `${avance.porReal}%` }} />
+                  </div>
+                  <p className="titular">{avance.titular}</p>
+                  <p className="mini" style={{ margin: 0 }}>
+                    <Link href={`/clientes/${cliente.id}?bloque=programa`}>Ver y marcar las catorce etapas →</Link>
+                  </p>
+                </div>
+
                 <LecturaDelCaso lectura={lectura} ficha={ficha} clienteId={cliente.id} />
                 <Comparacion evaluados={evaluados} suelto />
                 <h2 style={{ marginTop: 26 }}>Identidad y programa</h2>
@@ -249,34 +272,27 @@ export default async function Ficha({
             ) : null}
 
             {pestana === 'programa' ? (
-              <FasesDelPrograma
-                clienteId={cliente.id} etapas={etapasDelPrograma} fases={fasesDelPrograma}
-                hechos={Object.fromEntries(hechos)}
+              <ElPrograma
+                clienteId={cliente.id} avance={avance} filas={filasEtapas}
+                fases={fasesDelPrograma} hechos={Object.fromEntries(hechos)}
               />
             ) : null}
 
-            {pestana === 'fases' ? <Fases evaluados={evaluados} /> : null}
-
-            {pestana === 'atencion' ? (
-              <Banderas
-                clienteId={cliente.id} bandera={bandera} historial={historialBanderas}
-                cambios={cambios} consultoraActual={cliente.consultora}
-                consultoras={lasConsultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
-                esAdmin={quien?.usuario.rol === 'admin'}
-              />
-            ) : null}
-
-            {pestana === 'negocio' || pestana === 'autoridad' || pestana === 'intentos' ? (
+            {/* Todo lo que se sabe del cliente en un solo lado. Estaba repartido
+                en cuatro pestañas y eso obligaba a recordar en cuál vivía cada
+                dato para ir a buscarlo. */}
+            {pestana === 'cliente' ? (
               <>
-                {POR_QUE_EL_GRUPO[pestana] ? <p className="mini" style={{ marginTop: 0 }}>{POR_QUE_EL_GRUPO[pestana]}</p> : null}
-                <dl className="dos-columnas">{campos(pestana).map(dato)}</dl>
-              </>
-            ) : null}
+                <h2 style={{ marginTop: 0 }}>Su negocio</h2>
+                <dl className="dos-columnas">{campos('negocio').map(dato)}</dl>
 
-            {pestana === 'numeros' ? (
-              <>
-                <h2>Sus números</h2>
+                <h2 style={{ marginTop: 26 }}>Lo que ya probó</h2>
+                <p className="mini" style={{ marginTop: 0 }}>{POR_QUE_EL_GRUPO.intentos}</p>
+                <dl className="dos-columnas">{campos('intentos').map(dato)}</dl>
+
+                <h2 style={{ marginTop: 26 }}>Sus números</h2>
                 <dl className="dos-columnas">{campos('numeros').map(dato)}</dl>
+
                 <h2 style={{ marginTop: 26 }}>Lo comercial</h2>
                 <dl className="dos-columnas">{campos('comercial').map(dato)}</dl>
               </>
@@ -317,8 +333,7 @@ export default async function Ficha({
                 Completar desde los documentos{propuestas.length > 0 ? ` · ${propuestas.length}` : ''}
               </Link>
               <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=diagnostico`}>Diagnóstico del caso</Link>
-              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=programa`}>Dónde va en el programa</Link>
-              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=fases`}>Revisar el caso</Link>
+              <Link className="boton suave" href={`/clientes/${cliente.id}?bloque=programa`}>Marcar etapas del programa</Link>
               <span className="boton suave apagada" title="Todavía no está">Preparar la próxima sesión</span>
               <span className="boton suave apagada" title="Todavía no está">Cerrar la sesión</span>
               <span className="boton suave apagada" title="Todavía no está">Cargar la semana</span>
