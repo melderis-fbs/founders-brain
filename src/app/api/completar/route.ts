@@ -5,8 +5,9 @@ import { armarExpediente } from '@/lib/expediente'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
 import { documentosDe } from '@/lib/clientes'
 import { camposQueBuscar, LECTURA } from '@/lib/lectura-de-documentos'
+import { plegado } from '@/lib/texto'
 import { guardarResumen } from '@/lib/documentos'
-import { explicarError, extraerFichaEnVivo, hayModelo, MODELO, partirPropuestas, sacarResumen } from '@/lib/modelo'
+import { cruzarDocumentosEnVivo, explicarError, extraerFichaEnVivo, hayModelo, MODELO, partirPropuestas, sacarResumen, sacarSeccion } from '@/lib/modelo'
 import { guardarPropuestas } from '@/lib/propuestas'
 
 /**
@@ -27,7 +28,7 @@ export async function POST(pedido: NextRequest) {
     return new Response('Falta la clave de Anthropic (ANTHROPIC_API_KEY). Sin eso no se puede completar la ficha.', { status: 503 })
   }
 
-  let cuerpo: { clienteId?: number; documentoId?: number }
+  let cuerpo: { clienteId?: number; documentoId?: number; cruce?: boolean }
   try { cuerpo = await pedido.json() } catch { return new Response('No se entendió el pedido.', { status: 400 }) }
 
   const clienteId = Number(cuerpo.clienteId)
@@ -56,6 +57,21 @@ export async function POST(pedido: NextRequest) {
     return new Response('Ese documento no es de este cliente.', { status: 404 })
   }
 
+  // El cruce: los documentos que cuentan la historia del cliente, leídos de una
+  // vez y con la tabla de cuál le gana a cuál. Un contrato o unas notas sueltas
+  // no entran en esa tabla, así que no habilitan el cruce.
+  const DEL_CRUCE = ['onboarding', 'match_de_marca', 'llamada_venta'] as const
+  const paraCruzar = documentos.filter((d) => (DEL_CRUCE as readonly string[]).includes(d.tipo))
+  const cruce = cuerpo.cruce === true
+  if (cruce && paraCruzar.length < 2) {
+    return new Response(
+      paraCruzar.length === 0
+        ? 'Para cruzar hacen falta al menos dos de estos tres: formulario de onboarding, match de marca y llamada de venta. Este cliente no tiene ninguno.'
+        : `Para cruzar hacen falta al menos dos. Este cliente tiene uno solo (${ETIQUETA_DOCUMENTO[paraCruzar[0]!.tipo as TipoDocumento]}): leelo con el botón de ese documento.`,
+      { status: 400 },
+    )
+  }
+
   const tipo = (elegido?.tipo ?? 'otro') as TipoDocumento
   const lectura = elegido ? LECTURA[tipo] ?? LECTURA.otro : undefined
 
@@ -80,6 +96,19 @@ export async function POST(pedido: NextRequest) {
   }
 
   const permitidas = new Set(aBuscar.map((c) => c.clave))
+
+  /** De qué documento habla el modelo cuando escribe «match de marca». */
+  const documentoPorNombre = (nombre: string | undefined): number | null => {
+    if (!nombre) return null
+    const dicho = plegado(nombre)
+    if (dicho === '') return null
+    for (const d of documentos) {
+      const etiqueta = plegado(ETIQUETA_DOCUMENTO[d.tipo as TipoDocumento] ?? d.tipo)
+      if (dicho.includes(etiqueta) || etiqueta.includes(dicho)) return d.id
+      if (plegado(d.titulo) === dicho) return d.id
+    }
+    return null
+  }
   const codificador = new TextEncoder()
 
   const flujo = new ReadableStream<Uint8Array>({
@@ -92,14 +121,32 @@ export async function POST(pedido: NextRequest) {
 
       let completo = ''
       try {
+        // Se le nombran TODOS los del expediente, no sólo los tres con tabla de
+        // prioridad: el expediente los trae igual, y decirle que hay tres cuando
+        // ve cinco lo hace citar un documento que según el prompt no existe.
+        const nombresDelCruce = documentos.map((d) => {
+          const etiqueta = ETIQUETA_DOCUMENTO[d.tipo as TipoDocumento] ?? d.tipo
+          const enLaTabla = (DEL_CRUCE as readonly string[]).includes(d.tipo)
+          return `${etiqueta} («${d.titulo}»)${enLaTabla ? '' : ' — no está en la tabla de prioridad de abajo'}`
+        })
+
         escribir(
-          elegido
-            ? `Leyendo ${ETIQUETA_DOCUMENTO[tipo] ?? tipo} «${elegido.titulo}», buscando los ${aBuscar.length} datos que este documento puede dar…\n\n`
-            : `Leyendo ${expediente.incluidos.length} documento(s), buscando ${aBuscar.length} datos que faltan…\n\n`,
+          cruce
+            ? `Cruzando ${paraCruzar.length} documentos —${nombresDelCruce.join(', ')}— contra los ${aBuscar.length} datos que faltan…\n\n`
+            : elegido
+              ? `Leyendo ${ETIQUETA_DOCUMENTO[tipo] ?? tipo} «${elegido.titulo}», buscando los ${aBuscar.length} datos que este documento puede dar…\n\n`
+              : `Leyendo ${expediente.incluidos.length} documento(s), buscando ${aBuscar.length} datos que faltan…\n\n`,
         )
-        for await (const pedazo of extraerFichaEnVivo(expediente.texto, aBuscar, {
-          clienteId, usuarioId: usuario.id, para: 'ficha', pregunta: null,
-        }, lectura)) {
+
+        const vivo = cruce
+          ? cruzarDocumentosEnVivo(expediente.texto, aBuscar, nombresDelCruce, {
+              clienteId, usuarioId: usuario.id, para: 'ficha', pregunta: null,
+            })
+          : extraerFichaEnVivo(expediente.texto, aBuscar, {
+              clienteId, usuarioId: usuario.id, para: 'ficha', pregunta: null,
+            }, lectura)
+
+        for await (const pedazo of vivo) {
           completo += pedazo
           escribir(pedazo)
         }
@@ -112,7 +159,14 @@ export async function POST(pedido: NextRequest) {
         }
 
         const { propuestas, descartadas } = partirPropuestas(completo, permitidas)
-        const guardado = await guardarPropuestas({ clienteId, crudas: propuestas, documentoId: elegido?.id ?? null })
+        const guardado = await guardarPropuestas({
+          clienteId, crudas: propuestas,
+          documentoId: elegido?.id ?? null,
+          // En el cruce cada dato vino de un documento distinto, así que se
+          // busca por el nombre que el modelo escribió. Si no se reconoce, se
+          // guarda sin documento: mejor sin origen que con el origen de otro.
+          ...(cruce ? { deQueDocumento: (cruda) => documentoPorNombre(cruda.documento) } : {}),
+        })
 
         const sobraron = [...descartadas, ...guardado.descartadas]
         escribir('\n\n---\n')
@@ -123,6 +177,19 @@ export async function POST(pedido: NextRequest) {
             : 'No salió ningún dato nuevo de los documentos. Lo que está arriba es lo que leyó; si ahí ves un dato que te sirve, cargalo a mano en la pestaña que corresponda.',
         )
         if (sobraron.length > 0) escribir(`\nNo entraron: ${sobraron.join(' · ')}.`)
+
+        if (cruce) {
+          // Lo que más vale del cruce no son las propuestas: es esto. Una
+          // contradicción entre el onboarding y el match de marca casi siempre
+          // es el cliente que cambió de idea adentro del programa.
+          const contra = sacarSeccion(completo, 'contradicciones')
+          escribir(contra
+            ? `\n\nDonde los documentos no coinciden:\n${contra}`
+            : '\n\nLos documentos no se contradicen en nada.')
+
+          const sinProponer = sacarSeccion(completo, 'sin proponer')
+          if (sinProponer) escribir(`\n\nLo que sigue faltando y por qué:\n${sinProponer}`)
+        }
       } catch (error) {
         escribir(`\n\n[No se pudo completar. ${explicarError(error)}]`)
       } finally {

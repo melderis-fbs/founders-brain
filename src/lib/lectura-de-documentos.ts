@@ -39,6 +39,19 @@ export const LECTURA: Record<TipoDocumento, LecturaDeTipo> = {
       'distintos: la facturación de hoy es 1.800.000 y la meta es 5.400.000. No los mezcles ni los promedies.',
   },
 
+  match_de_marca: {
+    queEs:
+      'El match de marca: el trabajo que el cliente hizo CON la consultora en la etapa 3 del programa, ' +
+      'para definir a quién le habla, qué le resuelve y con qué lo diferencia.',
+    campos: ['cliente_ideal', 'problema', 'deseo', 'diferencial', 'mecanismo', 'mensaje',
+             'promesa', 'oferta', 'que_vende', 'a_quien_hoy', 'canal', 'rubro'],
+    cuidado:
+      'Esto es de ADENTRO del programa y es posterior al formulario de onboarding. Si dice otra cosa que el ' +
+      'onboarding sobre el cliente ideal, el problema, el deseo, el diferencial, el mecanismo o el mensaje, ' +
+      'gana esto: el onboarding lo contestó antes de entrar. Que no coincidan no es un error, es el programa ' +
+      'funcionando. Lo que NO sale de acá son los números del negocio: no es lo que se trabaja en esta etapa.',
+  },
+
   llamada_venta: {
     queEs: 'La transcripción de la llamada en la que le vendieron el programa.',
     campos: ['problema', 'deseo', 'que_no_funciono', 'que_funciono', 'a_quien_hoy', 'origen_clientes',

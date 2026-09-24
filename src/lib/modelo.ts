@@ -449,6 +449,133 @@ REGLAS QUE NO TIENEN EXCEPCIÓN
 }
 
 /**
+ * CRUZAR LOS TRES DOCUMENTOS DE UNA VEZ
+ *
+ * Leer de a uno significa apretar tres veces, esperar tres veces y revisar tres
+ * tandas de propuestas donde el mismo campo aparece dos o tres veces con
+ * valores distintos. Eso no es más información: es más trabajo.
+ *
+ * Leídos juntos, el modelo puede resolver el conflicto él —tiene la tabla de
+ * quién le gana a quién— y proponer UNA sola cosa por campo. Lo que no puede
+ * hacer es esconder el conflicto: lo que resolvió va en una sección aparte,
+ * porque una contradicción entre el onboarding y el match de marca casi siempre
+ * es el programa funcionando, y eso vale más que el dato.
+ */
+export function reglasDelCruce(camposQueFaltan: readonly Campo[], tiposPresentes: readonly string[]): string {
+  const lista = camposQueFaltan
+    .map((c) => `- ${c.clave} — ${c.etiqueta}${c.ayuda ? ` (${c.ayuda})` : ''} → ${comoSeEscribe(c)}`)
+    .join('\n')
+
+  const cuales = tiposPresentes.map((t) => `- ${t}`).join('\n')
+
+  return `${REGLAS}
+
+AHORA ESTÁS CRUZANDO VARIOS DOCUMENTOS DE UN MISMO CLIENTE
+
+En el expediente hay estos documentos:
+
+${cuales}
+
+Leelos TODOS, cruzalos entre sí y contra lo que ya está cargado en la ficha, y
+proponé UNA sola cosa por campo.
+
+LA FICHA ACTUAL ESTÁ EN EL EXPEDIENTE
+
+Arriba de los documentos, bajo el título «## La ficha», está todo lo que HOY
+tiene cargado este cliente, campo por campo. Leela antes de proponer nada.
+
+Los que dicen NO CARGADO están vacíos. **Vacío no es cero**: quiere decir que
+nadie lo escribió, no que el cliente no lo tenga. Son los únicos que podés
+proponer.
+
+Los que tienen un valor ya están cargados. No los propongas. Pero leelos igual,
+porque los necesitás para dos cosas:
+
+- **Para no contradecir sin darte cuenta.** Si la ficha dice que el ticket es
+  1.800.000 y proponés una facturación de 900.000 por mes con dos ventas, los
+  números no cierran. Decilo.
+- **Para encontrar lo que está MAL cargado.** Si la ficha dice «Rubro: software
+  a medida» y los tres documentos hablan de un estudio de arquitectura, eso es
+  un error que lleva meses ahí y nadie lo vio. No lo propongas —está cargado, y
+  lo que escribió una persona no se pisa solo— pero ponelo en las
+  contradicciones con las dos citas. La consultora lo corrige a mano en un
+  minuto; lo que no puede es enterarse si vos no se lo decís.
+
+LOS TRES DOCUMENTOS NO VALEN LO MISMO
+
+No los trates como un solo texto. Cada uno fue escrito en otro momento, por otra
+persona y con otra intención, y eso cambia cuánto le podés creer a cada dato.
+
+**Formulario de onboarding.** Lo contestó el cliente sobre sí mismo al entrar.
+Es la MEJOR fuente para los datos duros del negocio: rubro, años, tamaño del
+equipo, cuántos clientes tiene, precios, facturación. Es la PEOR fuente para su
+oferta y su promesa: todavía no las había trabajado.
+
+**Match de marca.** Es trabajo hecho ADENTRO del programa, en la etapa 3, con la
+consultora. Es la MEJOR fuente para cliente ideal, problema, deseo, diferencial,
+mecanismo y mensaje. Para esos campos LE GANA AL ONBOARDING aunque el onboarding
+diga otra cosa: lo del onboarding es de antes. Es la PEOR fuente para los
+números: no es lo que se trabaja en esa etapa.
+
+**Llamada de venta.** Es la transcripción de cuando le vendieron el programa. Es
+la MEJOR fuente para el dolor dicho con las palabras del cliente, para qué ya
+intentó y le falló, y para lo comercial: valor del programa, cuotas, garantía.
+Es la PEOR fuente para los números del negocio: en una venta se redondea.
+
+Cuando dos documentos dicen cosas distintas sobre el mismo campo, gana el que
+corresponde por esa tabla. Proponés uno solo, el que gana. Pero la diferencia la
+informás igual, abajo.
+
+LOS ÚNICOS CAMPOS QUE PODÉS PROPONER SON ESTOS:
+
+${lista}
+
+Cualquier otro campo ya tiene valor cargado. No lo propongas. Si un documento lo
+contradice, eso va en las contradicciones, no en las propuestas.
+
+CÓMO DEVOLVÉS
+
+Tres secciones, en este orden.
+
+Primero, un bloque por campo que encontraste, exactamente así:
+
+### clave_del_campo
+valor: el dato, solo, sin explicación
+documento: de cuál de los documentos salió
+cita: «la frase textual, copiada tal cual»
+
+Después:
+
+### contradicciones
+Un renglón por campo donde dos fuentes dicen cosas distintas. Las dos clases
+valen: documento contra documento, y documento contra un valor YA CARGADO en la
+ficha. La segunda es la que nadie mira nunca. Así:
+«campo — el onboarding dice X («cita») y el match de marca dice Y («cita»). Vale
+Y porque el match de marca es posterior.»
+Si no hay ninguna, escribí «no hay».
+No promedies, no elijas en silencio y no la escondas.
+
+Y al final:
+
+### sin proponer
+Un renglón por campo que quedó vacío, con el motivo: no está en ningún
+documento, o las fuentes se contradicen y no hay cómo elegir, o la cita no
+alcanzaba. Es lo que le dice a la consultora qué le queda por cargar a mano.
+
+REGLAS QUE NO TIENEN EXCEPCIÓN
+
+1. Sin cita no hay propuesta. Si no podés copiar una frase de un documento que lo diga, ese campo no va.
+2. Lo que no está en los documentos, no está. Nada de deducir, estimar, redondear ni completar con lo que suele pasar.
+3. La cita se copia literal, no se parafrasea. Si la tenés que arreglar para que se entienda, no la uses.
+3 bis. El valor tiene que estar sostenido POR ESA CITA, no por otro pedazo del documento. Un valor que dice más que su cita es un dato inventado con apariencia de citado.
+4. Un campo, una propuesta. Si lo encontraste en dos documentos, elegís el que gana por la tabla y el otro va a contradicciones.
+5. El valor va en la forma que pide la flecha de cada campo. Si es un número, va el número solo: «6», no «6 años».
+6. Separá lo que TIENE de lo que QUIERE. «Facturo 1.800.000 y quiero llegar a 5.400.000» son dos campos distintos. No los mezcles ni los promedies.
+7. Vacío no es cero. Si no está, el campo se deja sin proponer y se dice en «sin proponer». Nada de 0, «no aplica» ni «no especificado».
+8. Mejor tres datos sólidos que doce dudosos: cada uno lo va a confirmar una persona a mano.`
+}
+
+/**
  * Decirle en qué forma esperamos el valor.
  *
  * Sin esto propone «6 años» para un campo que es un número y la propuesta se
@@ -499,7 +626,40 @@ export async function* extraerFichaEnVivo(
   }
 }
 
-export type PropuestaCruda = { campo: string; valor: string; cita: string | null }
+export async function* cruzarDocumentosEnVivo(
+  expediente: string,
+  camposQueFaltan: readonly Campo[],
+  tiposPresentes: readonly string[],
+  registro: Registro,
+): AsyncGenerator<string, void, unknown> {
+  const arranque = Date.now()
+
+  const stream = anthropic().messages.stream({
+    model: MODELO,
+    max_tokens: 6000,
+    system: [{ type: 'text', text: reglasDelCruce(camposQueFaltan, tiposPresentes) }],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: expediente, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: 'Cruzá los documentos y completá lo que puedas.' },
+      ],
+    }],
+  })
+
+  try {
+    for await (const evento of stream) {
+      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') yield evento.delta.text
+    }
+    const final = await stream.finalMessage()
+    await anotarLlamada(registro, final.usage, Date.now() - arranque, null)
+  } catch (error) {
+    await anotarLlamada(registro, null, Date.now() - arranque, error instanceof Error ? error.message : String(error))
+    throw error
+  }
+}
+
+export type PropuestaCruda = { campo: string; valor: string; cita: string | null; documento?: string }
 
 /**
  * El resumen del documento, que se guarda para no volver a leerlo.
@@ -510,12 +670,36 @@ export type PropuestaCruda = { campo: string; valor: string; cita: string | null
  * viaja.
  */
 export function sacarResumen(texto: string): string | null {
+  return sacarSeccion(texto, 'resumen')
+}
+
+/**
+ * Los títulos que NO son campos: abren una sección y cierran el campo anterior.
+ *
+ * Sin esto, «### contradicciones» se lee como si fuera un campo llamado
+ * «contradicciones», se descarta por no existir, y todo lo que viene abajo
+ * —que es justo lo que hay que leer— se pega al campo de arriba.
+ */
+const SECCIONES = new Set(['resumen', 'contradicciones', 'sin proponer', 'sin_proponer', 'propuestas'])
+
+/**
+ * Una sección con nombre, o null si no vino o vino vacía.
+ *
+ * «no hay» cuenta como vacía: es la forma de decir que no encontró nada, y
+ * mostrarlo como si fuera contenido es ruido.
+ */
+export function sacarSeccion(texto: string, nombre: string): string | null {
+  const buscado = nombre.trim().toLowerCase()
   const bloques = texto.split(/^#{1,4}\s+/m).slice(1)
+
   for (const bloque of bloques) {
     const renglones = bloque.split('\n')
-    if ((renglones[0] ?? '').trim().toLowerCase() !== 'resumen') continue
+    const titulo = (renglones[0] ?? '').trim().toLowerCase().replace(/[:*]/g, '').trim()
+    if (titulo !== buscado && titulo.replace(/_/g, ' ') !== buscado) continue
+
     const cuerpo = renglones.slice(1).join('\n').trim()
-    return cuerpo === '' ? null : cuerpo
+    if (cuerpo === '' || /^(no hay|ninguna|ninguno|-)\.?$/i.test(cuerpo)) return null
+    return cuerpo
   }
   return null
 }
@@ -545,7 +729,8 @@ export function partirPropuestas(
     if (valor === '') { descartadas.push(`${bloque.campo}: vino sin valor`); continue }
     if (cita === '') { descartadas.push(`${bloque.campo}: vino sin cita, así que no entra`); continue }
 
-    propuestas.push({ campo: bloque.campo, valor, cita })
+    const documento = leerRenglon(bloque.cuerpo, 'documento')
+    propuestas.push({ campo: bloque.campo, valor, cita, ...(documento ? { documento } : {}) })
   }
 
   return { propuestas, descartadas }
@@ -568,6 +753,11 @@ function partirEnBloques(
   let actual: { campo: string; cuerpo: string[] } | null = null
 
   for (const renglon of texto.split('\n')) {
+    if (esTituloDeSeccion(renglon)) {
+      if (actual) bloques.push({ campo: actual.campo, cuerpo: actual.cuerpo.join('\n') })
+      actual = null
+      continue
+    }
     const campo = leerEncabezado(renglon, clavesPermitidas)
     if (campo) {
       if (actual) bloques.push({ campo: actual.campo, cuerpo: actual.cuerpo.join('\n') })
@@ -579,6 +769,13 @@ function partirEnBloques(
   if (actual) bloques.push({ campo: actual.campo, cuerpo: actual.cuerpo.join('\n') })
 
   return bloques
+}
+
+function esTituloDeSeccion(renglon: string): boolean {
+  const crudo = renglon.trim()
+  if (!/^#{1,6}\s/.test(crudo) && !/^\*\*.+\*\*:?$/.test(crudo)) return false
+  const limpio = crudo.replace(/^#{1,6}\s*/, '').replace(/[*`:]/g, '').trim().toLowerCase()
+  return SECCIONES.has(limpio)
 }
 
 function leerEncabezado(renglon: string, clavesPermitidas: ReadonlySet<string>): string | null {
@@ -607,7 +804,7 @@ function leerEncabezado(renglon: string, clavesPermitidas: ReadonlySet<string>):
  * renglón en blanco o hasta que arranca otra etiqueta, y recién ahí se le
  * sacan las comillas de los extremos.
  */
-function leerRenglon(cuerpo: string, etiqueta: 'valor' | 'cita'): string {
+function leerRenglon(cuerpo: string, etiqueta: 'valor' | 'cita' | 'documento'): string {
   const renglones = cuerpo.split('\n')
   const desde = renglones.findIndex((r) => new RegExp(`^\\s*[-*]?\\s*\\*{0,2}${etiqueta}\\*{0,2}\\s*:`, 'i').test(r))
   if (desde === -1) return ''
@@ -615,7 +812,7 @@ function leerRenglon(cuerpo: string, etiqueta: 'valor' | 'cita'): string {
   const juntadas = [renglones[desde]!.replace(new RegExp(`^\\s*[-*]?\\s*\\*{0,2}${etiqueta}\\*{0,2}\\s*:\\s*`, 'i'), '')]
   for (const siguiente of renglones.slice(desde + 1)) {
     if (siguiente.trim() === '') break
-    if (/^\s*[-*]?\s*\*{0,2}(valor|cita|campo)\*{0,2}\s*:/i.test(siguiente)) break
+    if (/^\s*[-*]?\s*\*{0,2}(valor|cita|campo|documento)\*{0,2}\s*:/i.test(siguiente)) break
     juntadas.push(siguiente.trim())
   }
 

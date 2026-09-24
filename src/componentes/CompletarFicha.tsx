@@ -5,6 +5,12 @@ import { useState } from 'react'
 import { decidirPropuesta } from '@/app/(app)/clientes/[id]/acciones'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
 import { acotaCampos, camposQueBuscar } from '@/lib/lectura-de-documentos'
+
+/** Los tres que cuentan la historia del cliente y se pueden cruzar entre sí. */
+const DEL_CRUCE: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta']
+
+/** Un «documento» que no existe, para saber que el botón apretado fue el del cruce. */
+const CRUCE = -1
 import type { Campo } from '@/lib/campos'
 import type { DocumentoEnLista } from './Documentos'
 import type { Propuesta } from '@/lib/propuestas'
@@ -33,12 +39,14 @@ export function CompletarFicha({
   const [decidiendo, setDecidiendo] = useState<number | null>(null)
   const [leyendo, setLeyendo] = useState<number | null>(null)
 
-  async function completar(documentoId: number) {
-    setCorriendo(true); setEnVivo(''); setError(null); setLeyendo(documentoId)
+  const paraCruzar = documentos.filter((d) => DEL_CRUCE.includes(d.tipo as TipoDocumento))
+
+  async function completar(documentoId: number | null) {
+    setCorriendo(true); setEnVivo(''); setError(null); setLeyendo(documentoId ?? CRUCE)
     try {
       const r = await fetch('/api/completar', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ clienteId, documentoId }),
+        body: JSON.stringify(documentoId === null ? { clienteId, cruce: true } : { clienteId, documentoId }),
       })
       if (!r.ok || !r.body) { setError(await r.text()); return }
       const lector = r.body.getReader()
@@ -118,7 +126,35 @@ export function CompletarFicha({
       {enVivo ? <div className="bloque-analisis"><pre>{enVivo.replace(/^#{1,4}\s+/gm, '')}</pre></div> : null}
       {error ? <div className="error-campo" style={{ margin: '12px 0' }}>{error}</div> : null}
 
-      <h3>Qué documento leer</h3>
+      {/* El cruce primero: una apretada en vez de tres, y sin el mismo campo
+          propuesto dos veces con valores distintos. */}
+      {paraCruzar.length >= 2 && faltan.length > 0 ? (
+        <div className="cruce">
+          <div className="que">
+            <span className="rotulo">Los tres documentos de una vez</span>
+            <div className="valor">
+              {DEL_CRUCE
+                .filter((t) => paraCruzar.some((d) => d.tipo === t))
+                .map((t) => {
+                  const cuantos = paraCruzar.filter((d) => d.tipo === t).length
+                  return `${ETIQUETA_DOCUMENTO[t]}${cuantos > 1 ? ` (${cuantos})` : ''}`
+                })
+                .join(' + ')}
+            </div>
+            <div className="mini">
+              Los lee juntos y propone una sola cosa por campo: el match de marca le gana al onboarding en
+              cliente ideal, problema, deseo, diferencial y mensaje, porque es posterior; el onboarding gana
+              en los números; la llamada de venta gana en lo comercial. Donde no coinciden, te lo dice.
+            </div>
+          </div>
+          <button type="button" className="boton" disabled={corriendo}
+                  onClick={() => void completar(null)}>
+            {leyendo === CRUCE ? 'Cruzando…' : `Cruzar los ${paraCruzar.length} documentos`}
+          </button>
+        </div>
+      ) : null}
+
+      <h3>{paraCruzar.length >= 2 ? 'O leer uno solo' : 'Qué documento leer'}</h3>
       {documentos.length === 0 ? (
         <p className="mini">
           Primero hay que cargar algún documento de este cliente, en la pestaña Documentos.

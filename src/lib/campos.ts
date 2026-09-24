@@ -177,10 +177,11 @@ export const DOCUMENTOS_DE_PLANILLA = [
   { tipo: 'notas', etiqueta: 'Notas de la consultora', sinonimos: ['notas', 'notas consultora', 'observaciones', 'comentarios'] },
 ] as const
 
-export type TipoDocumento = 'onboarding' | 'llamada_venta' | 'contrato' | 'sesion' | 'notas' | 'otro'
+export type TipoDocumento = 'onboarding' | 'match_de_marca' | 'llamada_venta' | 'contrato' | 'sesion' | 'notas' | 'otro'
 
 export const ETIQUETA_DOCUMENTO: Record<TipoDocumento, string> = {
   onboarding: 'Formulario de onboarding',
+  match_de_marca: 'Match de marca',
   llamada_venta: 'Llamada de venta',
   contrato: 'Contrato',
   sesion: 'Sesión',

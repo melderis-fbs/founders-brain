@@ -6,7 +6,7 @@ import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
 import { EXTENSIONES_ACEPTADAS, porQueNoSeLee } from '@/lib/extensiones'
 import { adivinarFecha, adivinarTipo, adivinarTitulo } from '@/lib/nombre-de-archivo'
 
-const TIPOS: TipoDocumento[] = ['onboarding', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
+const TIPOS: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
 
 type Estado = 'esperando' | 'no_se_lee' | 'subiendo' | 'listo' | 'ya_estaba' | 'error'
 

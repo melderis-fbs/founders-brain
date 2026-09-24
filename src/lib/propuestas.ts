@@ -43,6 +43,12 @@ export async function guardarPropuestas(datos: {
   crudas: readonly PropuestaCruda[]
   /** De qué documento salieron, cuando se leyó uno solo. */
   documentoId?: number | null
+  /**
+   * De qué documento salió CADA una, cuando se leyeron varios juntos. La
+   * consultora tiene que poder ver si el dato vino del onboarding o del match
+   * de marca: no es lo mismo, y es lo que le permite discutir la propuesta.
+   */
+  deQueDocumento?: (cruda: PropuestaCruda) => number | null
 }): Promise<{ guardadas: number; descartadas: string[] }> {
   const descartadas: string[] = []
   let guardadas = 0
@@ -68,7 +74,8 @@ export async function guardarPropuestas(datos: {
        do update set valor = excluded.valor, cita = excluded.cita,
                      documento_id = excluded.documento_id, creada_en = now()
        returning id`,
-      [datos.clienteId, cruda.campo, cruda.valor, cruda.cita, datos.documentoId ?? null],
+      [datos.clienteId, cruda.campo, cruda.valor, cruda.cita,
+       datos.deQueDocumento ? datos.deQueDocumento(cruda) : (datos.documentoId ?? null)],
     )
     guardadas++
   }

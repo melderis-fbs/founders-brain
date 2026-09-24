@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CAMPOS_POR_CLAVE } from './campos'
+import { CAMPOS, CAMPOS_POR_CLAVE } from './campos'
 import { acotaCampos, camposInventados, camposQueBuscar, LECTURA } from './lectura-de-documentos'
-import { explicarError, partirAnalisis, partirDiagnostico, partirPropuestas, reglasDeFicha } from './modelo'
+import { explicarError, partirAnalisis, partirDiagnostico, partirPropuestas, reglasDeFicha, reglasDelCruce, sacarSeccion } from './modelo'
 
 describe('partir el análisis de una sesión', () => {
   const respuesta = `## Qué pasó
@@ -230,5 +230,88 @@ describe('cada documento se lee distinto', () => {
   it('sin documento elegido el prompt no inventa un tipo', () => {
     const reglas = reglasDeFicha([CAMPOS_POR_CLAVE.get('oferta')!])
     expect(reglas).not.toContain('QUÉ DOCUMENTO ESTÁS LEYENDO')
+  })
+})
+
+describe('cruzar varios documentos de una vez', () => {
+  const PERMITIDAS = new Set(['cliente_ideal', 'ticket', 'rubro'])
+
+  const RESPUESTA = `### cliente_ideal
+valor: estudios contables de 3 a 10 personas
+documento: match de marca
+cita: «Le hablamos a estudios contables de 3 a 10 personas.»
+
+### ticket
+valor: 1800000
+documento: onboarding
+cita: «El proyecto completo lo cobro 1.800.000 pesos.»
+
+### contradicciones
+cliente_ideal — el onboarding dice «dueños de pymes» y el match de marca dice
+«estudios contables de 3 a 10 personas». Vale el match de marca: es posterior.
+
+### sin proponer
+rubro — no aparece en ninguno de los tres documentos.`
+
+  it('cada propuesta dice de qué documento salió', () => {
+    const { propuestas } = partirPropuestas(RESPUESTA, PERMITIDAS)
+    expect(propuestas).toHaveLength(2)
+    expect(propuestas[0]!.documento).toBe('match de marca')
+    expect(propuestas[1]!.documento).toBe('onboarding')
+    expect(propuestas[1]!.valor).toBe('1800000')
+  })
+
+  it('las secciones no se leen como si fueran campos', () => {
+    const { propuestas, descartadas } = partirPropuestas(RESPUESTA, PERMITIDAS)
+    expect(propuestas.map((p) => p.campo)).toEqual(['cliente_ideal', 'ticket'])
+    expect(descartadas).toEqual([])
+  })
+
+  it('la contradicción se puede sacar entera, sin que se le pegue lo de abajo', () => {
+    const c = sacarSeccion(RESPUESTA, 'contradicciones')
+    expect(c).toContain('el onboarding dice')
+    expect(c).toContain('Vale el match de marca')
+    expect(c).not.toContain('sin proponer')
+    expect(c).not.toContain('no aparece en ninguno')
+  })
+
+  it('«no hay» es vacío, no es contenido', () => {
+    expect(sacarSeccion('### contradicciones\nno hay', 'contradicciones')).toBeNull()
+    expect(sacarSeccion('### contradicciones\n\n### sin proponer\nrubro', 'contradicciones')).toBeNull()
+  })
+
+  it('lo que quedó sin proponer se lee aunque el título tenga espacio', () => {
+    expect(sacarSeccion(RESPUESTA, 'sin proponer')).toContain('rubro — no aparece')
+  })
+
+  it('una sección que no vino no rompe nada', () => {
+    expect(sacarSeccion(RESPUESTA, 'resumen')).toBeNull()
+  })
+
+  it('el prompt del cruce nombra los documentos que hay y sólo los campos que faltan', () => {
+    const reglas = reglasDelCruce(
+      CAMPOS.filter((c) => c.clave === 'cliente_ideal'),
+      ['Formulario de onboarding', 'Match de marca'],
+    )
+    expect(reglas).toContain('Match de marca')
+    expect(reglas).toContain('cliente_ideal')
+    expect(reglas).not.toContain('- ticket —')
+    expect(reglas).toContain('LE GANA AL ONBOARDING')
+  })
+})
+
+describe('el cruce mira la ficha que ya está cargada', () => {
+  const reglas = reglasDelCruce(CAMPOS.filter((c) => c.clave === 'cliente_ideal'), ['Match de marca', 'Llamada de venta'])
+
+  it('le dice dónde está la ficha actual y qué significa NO CARGADO', () => {
+    expect(reglas).toContain('## La ficha')
+    expect(reglas).toContain('NO CARGADO')
+    expect(reglas).toContain('Vacío no es cero')
+  })
+
+  it('le prohíbe proponer sobre un campo cargado, pero le pide que avise si está mal', () => {
+    expect(reglas).toContain('No los propongas')
+    expect(reglas).toContain('lo que escribió una persona no se pisa solo')
+    expect(reglas).toContain('lo propongas —está cargado')
   })
 })

@@ -707,3 +707,13 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 }
 .programa .hito-clave.hecho > span { color: var(--gris); text-decoration: line-through; }
 .programa .hito-clave .cuando { font-style: normal; color: var(--gris); font-size: 12px; }
+
+/* El cruce de los tres documentos: una apretada en vez de tres. */
+.cruce {
+  display: flex; gap: 16px; align-items: center; justify-content: space-between;
+  border: 1px solid var(--borde); border-left: 3px solid var(--azul); border-radius: 10px;
+  padding: 14px 16px; margin: 16px 0 6px; background: var(--azul-suave);
+}
+.cruce .valor { font-weight: 600; font-size: 14px; margin: 3px 0 5px; }
+.cruce .mini { max-width: 62ch; }
+.cruce .boton { flex: none; }

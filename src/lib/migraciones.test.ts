@@ -37,8 +37,8 @@ describe('el chequeo de la base', () => {
 
   it('cada migración declara algo que se pueda comprobar', () => {
     for (const paso of ESQUEMA_ESPERADO) {
-      expect(paso.tablas.length + paso.columnas.length,
-             `${paso.migracion} no declara ninguna tabla ni columna`).toBeGreaterThan(0)
+      expect(paso.tablas.length + paso.columnas.length + (paso.restricciones?.length ?? 0),
+             `${paso.migracion} no declara ninguna tabla, columna ni restricción`).toBeGreaterThan(0)
     }
   })
 })

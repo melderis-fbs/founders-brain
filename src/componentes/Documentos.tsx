@@ -17,7 +17,7 @@ export type DocumentoEnLista = {
   creado_en: string
 }
 
-const TIPOS: TipoDocumento[] = ['onboarding', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
+const TIPOS: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
 
 /**
  * Los documentos del cliente: los que hay, y cómo cargar uno nuevo.

@@ -26,6 +26,7 @@ import { plegado } from './texto'
  * una sesión. Gana la más específica, que es la que está primero.
  */
 const SEÑALES: ReadonlyArray<readonly [TipoDocumento, readonly string[]]> = [
+  ['match_de_marca', ['match de marca', 'matchdemarca', 'match marca', 'manual de transformacion', 'identidad de marca']],
   ['llamada_venta', ['llamada de venta', 'call de venta', 'venta', 'closer', 'discovery', 'cierre de venta']],
   ['onboarding', ['onboarding', 'on boarding', 'formulario', 'cuestionario', 'alta de cliente', 'kickoff', 'kick off']],
   ['contrato', ['contrato', 'acuerdo', 'convenio', 'propuesta firmada', 'garantia', 'factura', 'presupuesto']],

@@ -9,7 +9,13 @@ import { sqlDe } from './migraciones'
  * aplicación conectaba bien y después reventaba contra una tabla que no
  * existía. Un chequeo que sólo mira la primera puerta no sirve.
  */
-export const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: [string, string][] }[] = [
+export const ESQUEMA_ESPERADO: {
+  migracion: string
+  tablas: string[]
+  columnas: [string, string][]
+  /** [tabla, texto]: alguna restricción de esa tabla tiene que contener ese texto. */
+  restricciones?: [string, string][]
+}[] = [
   {
     migracion: '0001_estructura.sql',
     tablas: ['usuarios', 'sesiones_login', 'consultoras', 'clientes', 'cliente_negocio',
@@ -41,6 +47,11 @@ export const ESQUEMA_ESPERADO: { migracion: string; tablas: string[]; columnas: 
   { migracion: '0012_notas_del_coach.sql', tablas: ['notas'], columnas: [] },
   { migracion: '0013_hitos_clave_del_programa.sql', tablas: ['hitos_clave'], columnas: [] },
   { migracion: '0014_etapa_del_cliente.sql', tablas: [], columnas: [['clientes', 'etapa_actual']] },
+  {
+    migracion: '0015_match_de_marca.sql',
+    tablas: [], columnas: [],
+    restricciones: [['documentos', 'match_de_marca']],
+  },
 ]
 
 /**
@@ -156,6 +167,16 @@ async function queMigracionFalta(): Promise<Revision | null> {
   const tablas = new Set(columnas.map((c) => c.table_name))
   const conColumna = new Set(columnas.map((c) => `${c.table_name}.${c.column_name}`))
 
+  // Una migración puede no crear ni una tabla ni una columna y hacer falta
+  // igual: ampliar un `check` es exactamente eso, y si no se mira, guardar
+  // revienta con la base «completa».
+  const checks = await filas<{ tabla: string; def: string }>(
+    `select c.relname as tabla, pg_get_constraintdef(t.oid) as def
+       from pg_constraint t join pg_class c on c.oid = t.conrelid
+       join pg_namespace n on n.oid = c.relnamespace
+      where t.contype = 'c' and n.nspname = 'public'`,
+  )
+
   // information_schema sólo muestra lo que el usuario puede ver. Cero tablas
   // puede ser una base vacía, pero también un usuario sin permisos, y decir lo
   // primero cuando pasa lo segundo manda a arreglar lo que no está roto.
@@ -179,14 +200,22 @@ async function queMigracionFalta(): Promise<Revision | null> {
       .filter(([t, c]) => tablas.has(t) && !conColumna.has(`${t}.${c}`))
       .map(([t, c]) => `${t}.${c}`)
 
-    if (tablasQueFaltan.length === 0 && columnasQueFaltan.length === 0) continue
+    const restriccionesQueFaltan = (paso.restricciones ?? [])
+      .filter(([t, texto]) => tablas.has(t) && !checks.some((c) => c.tabla === t && c.def.includes(texto)))
+      .map(([t, texto]) => `${t} no acepta «${texto}»`)
+
+    if (tablasQueFaltan.length === 0 && columnasQueFaltan.length === 0 && restriccionesQueFaltan.length === 0) continue
 
     const queFalta = [
       tablasQueFaltan.length > 0 ? `${tablasQueFaltan.length === 1 ? 'la tabla' : 'las tablas'} ${tablasQueFaltan.join(', ')}` : null,
       columnasQueFaltan.length > 0 ? `${columnasQueFaltan.length === 1 ? 'la columna' : 'las columnas'} ${columnasQueFaltan.join(', ')}` : null,
+      restriccionesQueFaltan.length > 0 ? restriccionesQueFaltan.join(' y ') : null,
     ].filter(Boolean).join(' y ')
 
-    faltantes.push({ migracion: paso.migracion, queFalta, cuantas: tablasQueFaltan.length + columnasQueFaltan.length })
+    faltantes.push({
+      migracion: paso.migracion, queFalta,
+      cuantas: tablasQueFaltan.length + columnasQueFaltan.length + restriccionesQueFaltan.length,
+    })
   }
 
   if (faltantes.length === 0) return null

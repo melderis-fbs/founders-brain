@@ -60,6 +60,10 @@ export const MIGRACIONES: readonly Migracion[] = [
     archivo: "0014_etapa_del_cliente.sql",
     sql: "-- En qué etapa está el cliente, elegida a mano.\n--\n-- La aplicación deduce en qué etapa tendría que estar por el calendario. Pero\n-- la consultora sabe en cuál está de verdad, que muchas veces no es la misma:\n-- el cliente se atrasó, se saltó una, o la está rehaciendo.\n--\n-- Las dos se guardan y ninguna pisa a la otra. Cuando no coinciden, eso no es\n-- un error: es la conversación. «Por calendario le tocaría Ventas y Cierre y\n-- está en Match de Marca» dice más que cualquiera de las dos sola.\n--\n-- Es distinto de `etapa_declarada`, que es el texto que venía en la planilla\n-- de trabajo y no usa este vocabulario.\n\nalter table clientes add column if not exists etapa_actual text;",
   },
+  {
+    archivo: "0015_match_de_marca.sql",
+    sql: "-- El match de marca entra como tipo de documento propio.\n--\n-- Hasta acá caía en «otro», y «otro» se lee sin reglas: el motor no sabía que\n-- ese texto es trabajo hecho DENTRO del programa, en la etapa 3, y que por lo\n-- tanto le gana al formulario de onboarding en cliente ideal, problema, deseo,\n-- diferencial, mecanismo y mensaje. El onboarding lo contestó el cliente antes\n-- de entrar; el match de marca es lo que salió de trabajarlo.\n--\n-- Sin esta migración, guardar un documento de este tipo revienta contra el\n-- check de la columna. Por eso el chequeo de la base la busca: es una\n-- restricción, no una tabla ni una columna, y si no se mira no se ve.\n\nalter table documentos drop constraint if exists documentos_tipo_check;\n\nalter table documentos add constraint documentos_tipo_check\n  check (tipo in ('onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro'));",
+  },
 ]
 
 /** El SQL de las migraciones que faltan, en orden, listo para pegar. */

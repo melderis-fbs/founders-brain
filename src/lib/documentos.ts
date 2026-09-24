@@ -11,7 +11,7 @@ import { leerFecha } from './valores'
  * una acción de servidor.
  */
 
-export const TIPOS: readonly TipoDocumento[] = ['onboarding', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
+export const TIPOS: readonly TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
 
 const MINIMO = 20
 
