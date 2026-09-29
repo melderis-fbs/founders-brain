@@ -321,7 +321,16 @@ recomendar nada, escribí una sola acción: cargar el dato que falta, nombrándo
 
 ## Qué falta cargar
 Los datos que, si estuvieran, cambiarían el diagnóstico. Uno por uno. Si no
-falta nada importante, escribí «Nada que cambie este diagnóstico.»`
+falta nada importante, escribí «Nada que cambie este diagnóstico.»
+
+SI HAY ENCUESTAS DE SATISFACCIÓN
+
+En el expediente puede aparecer «## Lo que el cliente dijo de nosotros». Eso son
+encuestas: hablan del acompañamiento, no del negocio. No saques de ahí datos de
+la ficha. Sirven para una sola cosa, y es importante: si el cliente dijo que algo
+nuestro no está funcionando, eso entra en «¿es el cliente o somos nosotros?» con
+su cita textual. Un cliente atrasado que además dijo que no entiende las
+consignas no es el mismo caso que uno atrasado que dijo que está conforme.`
 
 export async function* diagnosticarEnVivo(
   expediente: string,
@@ -636,6 +645,84 @@ function comoSeEscribe(campo: Campo): string {
     case 'opcion': return `una de estas, tal cual: ${(campo.opciones ?? []).join(', ')}`
     case 'texto_largo': return 'una o dos frases'
     default: return 'texto corto'
+  }
+}
+
+export const REGLAS_ENCUESTAS = `${REGLAS}
+
+AHORA ESTÁS LEYENDO LAS ENCUESTAS DE SATISFACCIÓN DE VARIOS CLIENTES
+
+Te dan las encuestas que contestaron los clientes sobre el acompañamiento de
+FOUNDERS. No son sobre sus negocios: son sobre nosotros.
+
+Lo que te piden no es el resumen de cada una. Es qué SE REPITE. Una queja dicha
+por una persona es un caso; dicha por ocho es un problema nuestro, y ésa es la
+diferencia que nadie está mirando hoy.
+
+CÓMO DEVOLVÉS
+
+### lo que se repite
+Un bloque por patrón, empezando por el que aparece en más encuestas:
+
+**<el patrón, en una frase>** — aparece en <N> de <total>
+- «<cita textual de un cliente>» — <nombre>
+- «<cita textual de otro>» — <nombre>
+Qué significa: <una línea, sin adornos>
+
+Sólo lo que aparezca en TRES o más encuestas. Dos no es un patrón, es una
+coincidencia, y llamarla patrón hace que alguien salga a arreglar algo que no
+está roto.
+
+### lo que dijo una sola persona pero conviene mirar
+Los casos únicos que igual valen: una queja grave, un pedido concreto, algo que
+nombra a una consultora. Con su cita y su nombre. Si no hay ninguno, «no hay».
+
+### dónde se concentra
+Si algún patrón aparece sobre todo en los clientes de una misma consultora, o en
+los que están en la misma etapa, decilo con los números. Si está repartido
+parejo, decí eso, que también es información. Si no hay con qué compararlo
+—pocas encuestas, o todas de la misma consultora— decilo y no lo fuerces.
+
+### qué haría falta preguntar
+Dos o tres preguntas que la encuesta NO hace y que, mirando lo que contestaron,
+harían falta. Esto es lo que mejora la próxima encuesta.
+
+REGLAS QUE NO TIENEN EXCEPCIÓN
+
+1. Cada patrón va con citas textuales y con el nombre de quien lo dijo. Sin cita no hay patrón.
+2. Los números son de verdad: «aparece en 5 de 23», no «en la mayoría». Contá.
+3. No inventes un patrón para tener algo que decir. Si las encuestas no se parecen en nada, decí eso: es un resultado.
+4. No suavices. Una queja se transcribe como la escribieron, con las palabras que usaron.
+5. Lo que una sola persona dijo NO se cuenta como patrón, por fuerte que suene.`
+
+export async function* buscarPatronesEnVivo(
+  texto: string,
+  registro: Registro,
+): AsyncGenerator<string, void, unknown> {
+  const arranque = Date.now()
+
+  const stream = anthropic().messages.stream({
+    model: MODELO,
+    max_tokens: 5000,
+    system: [{ type: 'text', text: REGLAS_ENCUESTAS }],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: texto, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: 'Buscá lo que se repite entre estas encuestas.' },
+      ],
+    }],
+  })
+
+  try {
+    for await (const evento of stream) {
+      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') yield evento.delta.text
+    }
+    const final = await stream.finalMessage()
+    await anotarLlamada(registro, final.usage, Date.now() - arranque, null)
+  } catch (error) {
+    await anotarLlamada(registro, null, Date.now() - arranque, error instanceof Error ? error.message : String(error))
+    throw error
   }
 }
 

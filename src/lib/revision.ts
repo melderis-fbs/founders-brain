@@ -61,6 +61,12 @@ export const ESQUEMA_ESPERADO: {
     migracion: '0017_telegram_skool_y_programas_raros.sql',
     tablas: [], columnas: [['clientes', 'telegram'], ['clientes', 'skool']],
   },
+  {
+    migracion: '0018_ventas_por_mes_encuestas_y_camino_propio.sql',
+    tablas: ['cliente_mes', 'documento_archivo'],
+    columnas: [['clientes', 'sigue_el_programa'], ['clientes', 'plan_propio']],
+    restricciones: [['documentos', 'encuesta']],
+  },
 ]
 
 /**

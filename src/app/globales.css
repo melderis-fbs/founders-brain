@@ -727,3 +727,24 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
   color: var(--gris); text-decoration: underline;
 }
 .como-enlace:hover { color: var(--tinta); }
+
+/* Los hitos clave, adentro de su etapa. */
+.programa .una-etapa { flex-direction: column; align-items: stretch; }
+.programa .hitos-de-la-etapa {
+  margin: 4px 0 0 46px; padding-top: 6px; border-top: 1px dashed var(--borde);
+}
+.programa .hitos-de-la-etapa .hito-clave { padding: 3px 0; font-size: 13px; }
+
+/* Mes a mes: los totales se leen de un vistazo. */
+.mes-a-mes .cifra { font-size: 26px; }
+.mes-a-mes .cifra.chico { font-size: 20px; }
+.mes-a-mes tr.totales td { border-top: 2px solid var(--borde); background: var(--hover); }
+.mes-a-mes tr.totales i { font-weight: 400; color: var(--gris); }
+.chip-estado.camino_propio { background: var(--azul-suave); color: var(--azul); }
+.avance.camino_propio .dos-barras { display: none; }
+
+/* El documento original, como es: un contrato en texto corrido no es un contrato. */
+.visor-pdf { margin: 10px 0; }
+.visor-pdf iframe {
+  width: 100%; height: 640px; border: 1px solid var(--borde); border-radius: 10px; background: #fff;
+}

@@ -215,11 +215,10 @@ describe('cada documento se lee distinto', () => {
     expect(camposQueBuscar('llamada_venta', faltan)).toHaveLength(0)
   })
 
-  it('las horas por semana no salen de una llamada de venta', () => {
-    const faltan = [CAMPOS_POR_CLAVE.get('horas_por_semana')!, CAMPOS_POR_CLAVE.get('dolor_textual')!]
+  it('el país sale del onboarding y no de una llamada de venta', () => {
+    const faltan = [CAMPOS_POR_CLAVE.get('pais')!, CAMPOS_POR_CLAVE.get('dolor_textual')!]
     expect(camposQueBuscar('llamada_venta', faltan).map((c) => c.clave)).toEqual(['dolor_textual'])
-    // pero del onboarding sí: ahí las declaró él
-    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toContain('horas_por_semana')
+    expect(camposQueBuscar('onboarding', faltan).map((c) => c.clave)).toContain('pais')
   })
 
   it('lo que se dijo en la venta no se confunde con lo firmado', () => {

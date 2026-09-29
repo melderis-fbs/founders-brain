@@ -17,7 +17,7 @@ export type DocumentoEnLista = {
   creado_en: string
 }
 
-const TIPOS: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro']
+const TIPOS: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'encuesta', 'notas', 'otro']
 
 /**
  * Los documentos del cliente: los que hay, y cómo cargar uno nuevo.
@@ -31,12 +31,14 @@ const TIPOS: TipoDocumento[] = ['onboarding', 'match_de_marca', 'llamada_venta',
  * de subir.
  */
 export function Documentos({
-  clienteId, documentos, suelto = false,
+  clienteId, documentos, suelto = false, archivos = {},
 }: {
   clienteId: number
   documentos: DocumentoEnLista[]
   /** Dentro de una pestaña ya hay una tarjeta: no hace falta otra. */
   suelto?: boolean
+  /** Los que tienen el archivo original guardado, para poder verlo como es. */
+  archivos?: Record<number, { tipo_mime: string; peso: number }>
 }) {
   const router = useRouter()
   const [modo, setModo] = useState<'ninguno' | 'pegar' | 'archivo' | 'varios'>('ninguno')
@@ -45,6 +47,7 @@ export function Documentos({
   const [abierto, setAbierto] = useState<number | null>(null)
   const [texto, setTexto] = useState<string>('')
   const [editando, setEditando] = useState<number | null>(null)
+  const [viendo, setViendo] = useState<number | null>(null)
   const [borrando, setBorrando] = useState<number | null>(null)
 
   async function corregir(id: number, datos: FormData) {
@@ -101,6 +104,19 @@ export function Documentos({
                 <div className="mini">
                   {d.caracteres.toLocaleString('es-AR')} caracteres · entró por {d.origen}
                   {d.fecha ? ` · ${d.fecha.split('-').reverse().join('/')}` : ''}
+                  {archivos[d.id] ? (
+                    <>
+                      {' · '}
+                      {archivos[d.id]!.tipo_mime === 'application/pdf' ? (
+                        <button type="button" className="como-enlace"
+                                onClick={() => { setViendo(viendo === d.id ? null : d.id); setAbierto(null) }}>
+                          {viendo === d.id ? 'cerrar el PDF' : 'ver el PDF'}
+                        </button>
+                      ) : (
+                        <a href={`/api/documentos/${d.id}/archivo?cliente=${clienteId}&bajar=1`}>bajar el original</a>
+                      )}
+                    </>
+                  ) : null}
                   {' · '}
                   <button type="button" className="como-enlace"
                           onClick={() => { setEditando(editando === d.id ? null : d.id); setBorrando(null); setError(null) }}>
@@ -149,6 +165,22 @@ export function Documentos({
                       Sí, borrarlo
                     </button>{' '}
                     <button type="button" className="boton suave" onClick={() => setBorrando(null)}>No</button>
+                  </div>
+                ) : null}
+
+                {/* El original, como es. El texto extraído sirve para leerlo y
+                    para el motor; un contrato en texto corrido pierde las
+                    cláusulas y las firmas, y eso hay que poder verlo. */}
+                {viendo === d.id ? (
+                  <div className="visor-pdf">
+                    <iframe src={`/api/documentos/${d.id}/archivo?cliente=${clienteId}`} title={d.titulo} />
+                    <p className="mini" style={{ margin: '6px 0 0' }}>
+                      <a href={`/api/documentos/${d.id}/archivo?cliente=${clienteId}&bajar=1`}>Bajarlo</a>
+                      {' · '}
+                      <a href={`/api/documentos/${d.id}/archivo?cliente=${clienteId}`} target="_blank" rel="noreferrer">
+                        Abrirlo en otra pestaña
+                      </a>
+                    </p>
                   </div>
                 ) : null}
 

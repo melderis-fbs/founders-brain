@@ -92,9 +92,12 @@ export const CAMPOS: readonly Campo[] = [
     sinonimos: ['closer', 'cerrador', 'quien cerro'] },
   { clave: 'setter', etiqueta: 'Setter', grupo: 'identidad', tabla: 'clientes', columna: 'setter', tipo: 'texto', cuenta: true,
     sinonimos: ['setter', 'quien agendo', 'agendador'] },
-  { clave: 'horas_por_semana', etiqueta: 'Horas por semana', grupo: 'identidad', tabla: 'clientes', columna: 'horas_por_semana', tipo: 'numero', cuenta: true,
-    sinonimos: ['horas', 'horas por semana', 'horas semanales', 'disponibilidad'],
-    ayuda: 'Las que declaró para dedicarle al programa, no las que prometió en la venta' },
+  { clave: 'sigue_el_programa', etiqueta: 'Sigue el Road Map', grupo: 'identidad', tabla: 'clientes', columna: 'sigue_el_programa', tipo: 'booleano', cuenta: false,
+    sinonimos: ['sigue el programa', 'sigue el road map', 'road map'],
+    ayuda: 'Los M2 y las excepciones trabajan sobre el caso puntual. Poné «no» y deja de compararse contra las catorce etapas' },
+  { clave: 'plan_propio', etiqueta: 'El plan de este cliente', grupo: 'identidad', tabla: 'clientes', columna: 'plan_propio', tipo: 'texto_largo', cuenta: false,
+    sinonimos: ['plan propio', 'plan del cliente', 'camino propio'],
+    ayuda: 'Para los que no siguen el Road Map: qué se acordó trabajar con este cliente, en las palabras de su coach' },
   { clave: 'etapa_actual', etiqueta: 'Etapa en la que está', grupo: 'identidad', tabla: 'clientes', columna: 'etapa_actual', tipo: 'opcion', cuenta: true, opciones: NOMBRES_DE_ETAPAS,
     sinonimos: ['etapa', 'etapa actual', 'en que etapa esta'],
     ayuda: 'La que elige la consultora. La aplicación deduce la suya del calendario; cuando no coinciden, eso es la conversación' },
@@ -343,7 +346,7 @@ export const DOCUMENTOS_DE_PLANILLA = [
   { tipo: 'notas', etiqueta: 'Notas de la consultora', sinonimos: ['notas', 'notas consultora', 'observaciones', 'comentarios'] },
 ] as const
 
-export type TipoDocumento = 'onboarding' | 'match_de_marca' | 'llamada_venta' | 'contrato' | 'sesion' | 'notas' | 'otro'
+export type TipoDocumento = 'onboarding' | 'match_de_marca' | 'llamada_venta' | 'contrato' | 'sesion' | 'encuesta' | 'notas' | 'otro'
 
 export const ETIQUETA_DOCUMENTO: Record<TipoDocumento, string> = {
   onboarding: 'Formulario de onboarding',
@@ -351,6 +354,7 @@ export const ETIQUETA_DOCUMENTO: Record<TipoDocumento, string> = {
   llamada_venta: 'Llamada de venta',
   contrato: 'Contrato',
   sesion: 'Sesión',
+  encuesta: 'Encuesta de satisfacción',
   notas: 'Notas',
   otro: 'Otro',
 }

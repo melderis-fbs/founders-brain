@@ -3,7 +3,7 @@ import { banderaDe } from './banderas'
 import { QUE_DICE } from './banderas-tipos'
 import { loQueNoSeSostiene } from './campos-escritura'
 import { estadoDeLasFases, hechosDe } from './hitos-clave'
-import { ETAPAS, nombreDeEtapa } from './modulos'
+import { ETAPAS, nombreDeEtapa , hitosDeLaFase } from './modulos'
 import { notasDe } from './notas'
 import { cambiosDeCoach } from './usuarios'
 import { fuentesDeLaCartera, traerCliente } from './clientes'
@@ -157,7 +157,7 @@ export async function armarExpediente(
     partes.push(`\n### Fase ${fase.numero} · ${fase.periodo} · ${estado.replace('_', ' ')}`)
     partes.push(`Se trabaja: ${etapas}.`)
     partes.push(porque)
-    for (const h of fase.hitosClave) {
+    for (const h of hitosDeLaFase(fase.numero)) {
       const marcado = hechos.get(h.clave)
       partes.push(
         `- ${h.etiqueta}${h.cuando ? ` (se espera ${h.cuando})` : ''}: ` +
@@ -249,6 +249,26 @@ export async function armarExpediente(
       `\n(No entraron por tamaño y todavía nadie los resumió: ${omitidos.join(', ')}. ` +
       'Sobre esos documentos no se puede afirmar nada: no los viste.)',
     )
+  }
+
+  // ── Lo que el cliente dijo de NOSOTROS ────────────────────────────────────
+  // Va aparte de los otros documentos a propósito: una encuesta no habla de su
+  // negocio, habla del acompañamiento. Mezclarla con el onboarding la convierte
+  // en una fuente de datos que no es.
+  const encuestas = documentos.filter((d) => d.tipo === 'encuesta')
+  if (encuestas.length > 0) {
+    partes.push('\n## Lo que el cliente dijo de nosotros')
+    partes.push(
+      '\nSon encuestas de satisfacción: hablan del acompañamiento, no del negocio del cliente. ' +
+      'No se sacan datos de la ficha de acá. Sirven para saber si está conforme, y eso cambia qué ' +
+      'se le puede pedir.',
+    )
+    for (const e of encuestas) {
+      const [f] = await filas<{ texto: string | null }>('select texto from documentos where id = $1', [e.id])
+      if (f?.texto && f.texto.trim() !== '') {
+        partes.push(`\n### ${e.titulo}${e.fecha ? ` (${e.fecha})` : ''}\n${f.texto.trim()}`)
+      }
+    }
   }
 
   // ── Las sesiones y lo que salió de cada una ───────────────────────────────

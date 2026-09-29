@@ -1,5 +1,5 @@
 import { escribir, escribirDevolviendo, filas } from './db'
-import { ETAPAS, etapasDeLaSemana, FASES, faseDeLaSemana, HITOS_CLAVE, type Etapa, type Fase } from './modulos'
+import { ETAPAS, etapasDeLaSemana, FASES, faseDeLaSemana, hitosDeLaFase, HITOS_CLAVE, type Etapa, type Fase } from './modulos'
 
 /**
  * Los hitos clave del programa, marcados por cliente.
@@ -68,8 +68,9 @@ export function estadoDeLasFases(semana: number | null, hechos: ReadonlySet<stri
   const laDeHoy = faseDeLaSemana(semana)
 
   return FASES.map((fase) => {
-    const total = fase.hitosClave.length
-    const cuantos = fase.hitosClave.filter((h) => hechos.has(h.clave)).length
+    const suyos = hitosDeLaFase(fase.numero)
+    const total = suyos.length
+    const cuantos = suyos.filter((h) => hechos.has(h.clave)).length
     const yaPaso = semana !== null && semana > fase.hastaSemana
     const esLaDeHoy = laDeHoy?.numero === fase.numero
 
@@ -140,6 +141,25 @@ export function estadoDeLasEtapas(semana: number | null, elegida: string | null)
  */
 
 const PREFIJO = 'etapa:'
+
+/**
+ * Todo lo marcado de este cliente, con las claves como las espera el cálculo.
+ *
+ * Las etapas se guardan con el prefijo «etapa:» y los hitos sin prefijo, pero el
+ * avance las necesita a las dos juntas y sin prefijo: una etapa está hecha si
+ * está marcada ELLA o si están marcados todos SUS hitos.
+ *
+ * Existe porque no tenerla costó un bug entero: se le pasaba al cálculo sólo las
+ * etapas, así que marcar «Primera venta» guardaba bien en la base y no movía el
+ * avance ni un punto. Exactamente lo que se veía en la pantalla.
+ */
+export function todoLoMarcado(hechos: ReadonlyMap<string, HechoPorCliente>): Set<string> {
+  const salida = new Set<string>()
+  for (const clave of hechos.keys()) {
+    salida.add(clave.startsWith(PREFIJO) ? clave.slice(PREFIJO.length) : clave)
+  }
+  return salida
+}
 
 export function etapasHechasDe(hechos: ReadonlyMap<string, HechoPorCliente>): Set<string> {
   const salida = new Set<string>()

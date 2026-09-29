@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atrasoEnSemanas, avanceDe, etapasEsperadas, filasDeEtapas } from './avance'
+import { atrasoEnSemanas, avanceDe, etapaHecha, etapasEsperadas, filasDeEtapas } from './avance'
 import { ETAPAS } from './modulos'
 
 const claves = (cuantas: number) => new Set(ETAPAS.slice(0, cuantas).map((e) => e.clave))
@@ -131,5 +131,51 @@ describe('las catorce etapas, una por una', () => {
     expect(filas[4]!.elegida).toBe(true)
     expect(filas[4]!.estado).toBe('debia_estar')          // sigue diciendo que falta
     expect(filas.filter((f) => f.elegida)).toHaveLength(1)
+  })
+})
+
+describe('los hitos clave mueven el avance (una sola cuenta)', () => {
+  const ventas = ETAPAS.find((e) => e.clave === 'ventas_y_cierre')!
+  const identidad = ETAPAS.find((e) => e.clave === 'identidad')!
+
+  it('marcar TODOS los hitos de una etapa la da por hecha', () => {
+    const todos = new Set(ventas.hitosClave.map((h) => h.clave))
+    expect(etapaHecha(ventas, todos)).toBe(true)
+    expect(avanceDe(12, todos).hechas).toBe(1)
+  })
+
+  it('marcar sólo algunos no alcanza: la etapa no está cerrada', () => {
+    const uno = new Set([ventas.hitosClave[0]!.clave])
+    expect(etapaHecha(ventas, uno)).toBe(false)
+    expect(avanceDe(12, uno).hechas).toBe(0)
+  })
+
+  it('«Primera venta» cuelga de Ventas y Cierre, que es lo que se estaba marcando sin efecto', () => {
+    expect(ventas.hitosClave.map((h) => h.clave)).toContain('primera_venta')
+    expect(ventas.hitosClave.map((h) => h.clave)).toContain('segunda_venta')
+  })
+
+  it('una etapa sin hitos se marca a mano y nada más', () => {
+    expect(identidad.hitosClave).toHaveLength(0)
+    expect(etapaHecha(identidad, new Set())).toBe(false)
+    expect(etapaHecha(identidad, new Set(['identidad']))).toBe(true)
+  })
+
+  it('la fila dice si la etapa se dio por hecha sola o la marcó alguien', () => {
+    const todos = new Set(ventas.hitosClave.map((h) => h.clave))
+    const fila = filasDeEtapas(12, todos).find((f) => f.etapa.clave === 'ventas_y_cierre')!
+    expect(fila.hecha).toBe(true)
+    expect(fila.marcadaAMano).toBe(false)
+    expect(fila.hitosHechos).toBe(ventas.hitosClave.length)
+  })
+
+  it('los doce hitos siguen estando: ninguno se perdió al mudarlos', () => {
+    const todos = ETAPAS.flatMap((e) => e.hitosClave.map((h) => h.clave))
+    expect(new Set(todos).size).toBe(todos.length)   // sin repetidos
+    for (const viejo of ['presentacion_telegram', 'oferta_en_video', 'synoma_entrenado', 'reto_21_dias',
+                         'perfil_optimizado', 'primera_campana', 'script_dm', 'llamadas_agendadas',
+                         'primera_venta', 'plan_90_dias', 'antes_despues', 'que_sigue']) {
+      expect(todos, `${viejo} se perdió al mudar los hitos a las etapas`).toContain(viejo)
+    }
   })
 })

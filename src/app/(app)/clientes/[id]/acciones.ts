@@ -12,6 +12,7 @@ import type { ColorDeBandera } from '@/lib/banderas-tipos'
 import { desmarcarEtapa, desmarcarHito, marcarEtapa, marcarHito } from '@/lib/hitos-clave'
 import { borrarSesion, editarSesion } from '@/lib/sesiones'
 import { borrarDocumento, editarDocumento } from '@/lib/documentos'
+import { borrarMes, guardarMes } from '@/lib/meses'
 import { borrarNota, escribirNota } from '@/lib/notas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 import { cambiarDeCoach } from '@/lib/usuarios'
@@ -270,6 +271,28 @@ export async function eliminarDocumento(
   if (!puede.ok) return { ok: false, error: puede.error }
 
   const r = await borrarDocumento(documentoId, clienteId)
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── Los números del cliente, mes por mes ────────────────────────────────────
+
+export async function guardarUnMes(clienteId: number, datos: {
+  anio: number; mes: number; ventas?: string; ticket?: string; facturacion?: string; nota?: string
+}): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await guardarMes({ clienteId, ...datos, usuarioId: puede.usuario.id })
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function borrarUnMes(clienteId: number, id: number): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarMes(clienteId, id)
   if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

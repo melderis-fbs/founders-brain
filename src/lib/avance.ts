@@ -24,7 +24,7 @@ import { ETAPAS, SEMANAS_DEL_PROGRAMA, etapasDeLaSemana, type Etapa } from './mo
  * 3. No cuesta un peso: es restar fechas y contar. Corre siempre.
  */
 
-export type EstadoDeAvance = 'sin_fecha' | 'sin_marcar' | 'al_dia' | 'atrasado' | 'grave'
+export type EstadoDeAvance = 'sin_fecha' | 'sin_marcar' | 'al_dia' | 'atrasado' | 'grave' | 'camino_propio'
 
 /** A partir de cuántas etapas de atraso deja de ser un retraso y es un problema. */
 const ETAPAS_PARA_GRAVE = 3
@@ -64,13 +64,50 @@ export function etapasEsperadas(semana: number | null): number {
   return ETAPAS.filter((e) => semana > e.hastaSemana).length
 }
 
-export function avanceDe(semana: number | null, marcadas: ReadonlySet<string>): Avance {
+/**
+ * ¿Esta etapa está hecha?
+ *
+ * De dos maneras, y las dos valen: alguien la marcó, o están marcados todos sus
+ * hitos clave. Antes eran dos listas separadas y marcar «Primera venta» no movía
+ * el avance, que es exactamente lo que se veía: el hito tildado y el porcentaje
+ * quieto.
+ */
+export function etapaHecha(etapa: Etapa, marcadas: ReadonlySet<string>): boolean {
+  if (marcadas.has(etapa.clave)) return true
+  if (etapa.hitosClave.length === 0) return false
+  return etapa.hitosClave.every((h) => marcadas.has(h.clave))
+}
+
+/**
+ * Cuando el cliente no sigue el Road Map.
+ *
+ * Los M2 y las excepciones no tienen estructura definida: se trabaja sobre el
+ * caso puntual. Compararlos contra las catorce etapas los saca «graves» por no
+ * haber hecho algo que nunca les tocó hacer, y eso no es medir: es ensuciar el
+ * tablero para todos los demás.
+ */
+export function avanceDe(
+  semana: number | null,
+  marcadas: ReadonlySet<string>,
+  sigueElPrograma = true,
+): Avance {
   const total = ETAPAS.length
-  const hechas = ETAPAS.filter((e) => marcadas.has(e.clave)).length
+  const hechas = ETAPAS.filter((e) => etapaHecha(e, marcadas)).length
   const esperadas = etapasEsperadas(semana)
   const porReal = porciento(hechas)
   const porEsperado = porciento(esperadas)
   const atraso = Math.max(0, esperadas - hechas)
+
+  if (!sigueElPrograma) {
+    return {
+      semana, total, hechas, esperadas, porReal, porEsperado, atraso: 0,
+      estado: 'camino_propio',
+      palabra: 'camino propio',
+      titular: hechas > 0
+        ? `No sigue el Road Map: se trabaja sobre su caso. Tiene ${hechas} de las ${total} etapas marcadas, pero no se lo compara contra ellas.`
+        : 'No sigue el Road Map: se trabaja sobre su caso, así que no se lo compara contra las catorce etapas. El plan está en su ficha.',
+    }
+  }
 
   if (semana === null) {
     return {
@@ -134,6 +171,10 @@ export function atrasoEnSemanas(avance: Avance): number | null {
 export type FilaDeEtapa = {
   etapa: Etapa
   hecha: boolean
+  /** Marcada a mano, distinto de dada por hecha porque están todos sus hitos. */
+  marcadaAMano: boolean
+  /** Cuántos de sus hitos clave están marcados. */
+  hitosHechos: number
   estado: 'hecha' | 'debia_estar' | 'es_la_de_ahora' | 'todavia_no'
   /** La etapa que la consultora eligió a mano como «acá está». */
   elegida: boolean
@@ -148,14 +189,19 @@ export function filasDeEtapas(
   const ahora = etapasDeLaSemana(semana)
 
   return ETAPAS.map((etapa) => {
-    const hecha = marcadas.has(etapa.clave)
+    const hecha = etapaHecha(etapa, marcadas)
     const esLaDeAhora = ahora.some((e) => e.clave === etapa.clave)
     const yaPaso = semana !== null && semana > etapa.hastaSemana
     const cuando = etapa.desdeSemana === etapa.hastaSemana
       ? `semana ${etapa.desdeSemana}`
       : `semanas ${etapa.desdeSemana} a ${etapa.hastaSemana}`
 
-    const base = { etapa, hecha, elegida: elegida === etapa.nombre }
+    const base = {
+      etapa, hecha,
+      marcadaAMano: marcadas.has(etapa.clave),
+      hitosHechos: etapa.hitosClave.filter((h) => marcadas.has(h.clave)).length,
+      elegida: elegida === etapa.nombre,
+    }
 
     if (hecha) return { ...base, estado: 'hecha' as const, porque: `Marcada como hecha. Le tocaba en la ${cuando}.` }
     if (yaPaso) return { ...base, estado: 'debia_estar' as const, porque: `Le tocaba en la ${cuando} y no está marcada.` }

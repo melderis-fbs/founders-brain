@@ -9,13 +9,16 @@ import { notasDe } from '@/lib/notas'
 import { banderaDe, historialDeBanderas } from '@/lib/banderas'
 import { cambiosDeCoach } from '@/lib/usuarios'
 import { ElPrograma } from '@/componentes/ElPrograma'
-import { estadoDeLasFases, etapasHechasDe, hechosDe } from '@/lib/hitos-clave'
+import { estadoDeLasFases, hechosDe, todoLoMarcado } from '@/lib/hitos-clave'
 import { avanceDe, filasDeEtapas } from '@/lib/avance'
 import { LecturaDelCaso } from '@/componentes/LecturaDelCaso'
 import { bloquesDeLaFicha, leerElCaso } from '@/lib/lectura'
 import { CompletarFicha } from '@/componentes/CompletarFicha'
 import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
+import { MesAMes } from '@/componentes/MesAMes'
+import { archivosDe } from '@/lib/archivos'
+import { mesesDe, totalesDe } from '@/lib/meses'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
 import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
@@ -40,6 +43,7 @@ const PESTANAS = [
   { clave: 'resumen', texto: 'Resumen' },
   { clave: 'programa', texto: 'El programa' },
   { clave: 'cliente', texto: 'El cliente' },
+  { clave: 'numeros', texto: 'Mes a mes' },
   { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
   { clave: 'sesiones', texto: 'Sesiones' },
@@ -96,6 +100,8 @@ export default async function Ficha({
   ])
   const notas = await notasDe(cliente.id)
   const hechos = await hechosDe(cliente.id)
+  const mesesCargados = await mesesDe(cliente.id)
+  const archivos = await archivosDe(cliente.id)
 
   const inicio = cliente.valores.fecha_inicio as string
   const meses = cliente.valores.programa_meses as number
@@ -109,8 +115,11 @@ export default async function Ficha({
 
   // La comparación que contesta la pregunta de toda la aplicación. Aritmética
   // pura: restar fechas y contar etapas marcadas. No cuesta nada, corre siempre.
-  const etapasHechas = etapasHechasDe(hechos)
-  const avance = avanceDe(semanaEnLaQueVa(inicio), etapasHechas)
+  // Etapas Y hitos: una etapa está hecha si está marcada ella o si están
+  // marcados todos sus hitos, así que el cálculo necesita las dos cosas.
+  const etapasHechas = todoLoMarcado(hechos)
+  const sigueElPrograma = cliente.valores.sigue_el_programa !== false
+  const avance = avanceDe(semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma)
   const filasEtapas = filasDeEtapas(
     semanaEnLaQueVa(inicio),
     etapasHechas,
@@ -308,7 +317,7 @@ export default async function Ficha({
             {pestana === 'programa' ? (
               <ElPrograma
                 clienteId={cliente.id} avance={avance} filas={filasEtapas}
-                fases={fasesDelPrograma} hechos={Object.fromEntries(hechos)}
+                hechos={Object.fromEntries(hechos)}
               />
             ) : null}
 
@@ -332,6 +341,13 @@ export default async function Ficha({
               </>
             ) : null}
 
+            {pestana === 'numeros' ? (
+              <MesAMes
+                clienteId={cliente.id} meses={mesesCargados} totales={totalesDe(mesesCargados)}
+                moneda={(cliente.valores.moneda as string | null) ?? null}
+              />
+            ) : null}
+
             {pestana === 'completar' ? (
               <CompletarFicha
                 clienteId={cliente.id}
@@ -352,7 +368,12 @@ export default async function Ficha({
                 }, {})}
               />
             ) : null}
-            {pestana === 'documentos' ? <Documentos clienteId={cliente.id} documentos={documentos} suelto /> : null}
+            {pestana === 'documentos' ? (
+              <Documentos
+                clienteId={cliente.id} documentos={documentos} suelto
+                archivos={Object.fromEntries(archivos)}
+              />
+            ) : null}
           </div>
         </div>
 

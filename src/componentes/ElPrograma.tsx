@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { marcarEtapaDelPrograma, marcarHitoClave } from '@/app/(app)/clientes/[id]/acciones'
 import type { Avance, FilaDeEtapa } from '@/lib/avance'
-import type { FaseConEstado } from '@/lib/hitos-clave'
 import { nombreDeEtapa } from '@/lib/modulos'
 
 /**
@@ -19,12 +18,11 @@ import { nombreDeEtapa } from '@/lib/modulos'
  * calcularla ni leer dos porcentajes y restarlos mentalmente.
  */
 export function ElPrograma({
-  clienteId, avance, filas, fases, hechos,
+  clienteId, avance, filas, hechos,
 }: {
   clienteId: number
   avance: Avance
   filas: FilaDeEtapa[]
-  fases: FaseConEstado[]
   hechos: Record<string, { hecho_en: string; quien: string | null }>
 }) {
   const router = useRouter()
@@ -55,10 +53,19 @@ export function ElPrograma({
 
   async function marcarHito(clave: string, hecho: boolean) {
     setTocando(clave); setError(null)
+    setRecienTocadas((antes) => ({ ...antes, [clave]: hecho }))
     const r = await marcarHitoClave(clienteId, clave, hecho)
     setTocando(null)
-    if (r.ok) router.refresh()
-    else setError(r.error ?? 'No se pudo.')
+    if (r.ok) {
+      router.refresh()
+    } else {
+      setRecienTocadas((antes) => {
+        const copia = { ...antes }
+        delete copia[clave]
+        return copia
+      })
+      setError(r.error ?? 'No se pudo.')
+    }
   }
 
   const comparable = avance.estado !== 'sin_fecha' && avance.estado !== 'sin_marcar'
@@ -99,19 +106,22 @@ export function ElPrograma({
       <h3>Las catorce etapas</h3>
       <p className="mini" style={{ marginTop: 0 }}>
         Tildá lo que el cliente ya tiene cerrado. Esto no sale de ningún dato ni de ningún
-        documento: lo sabe quien estuvo en la sesión.
+        documento: lo sabe quien estuvo en la sesión. Una etapa con hitos adentro se da por
+        hecha cuando están todos marcados.
       </p>
 
       <ol className="las-etapas marcables">
-        {filas.map(({ etapa, estado: calculado, hecha: guardada, elegida, porque }) => {
+        {filas.map(({ etapa, estado, hecha, marcadaAMano, hitosHechos, elegida, porque }) => {
           const marca = hechos[`etapa:${etapa.clave}`]
-          const hecha = recienTocadas[etapa.clave] ?? guardada
-          const estado = hecha === guardada ? calculado : (hecha ? 'hecha' : 'debia_estar')
+          const tiene = etapa.hitosClave.length
           return (
             <li className={`una-etapa ${estado}${elegida ? ' elegida' : ''}`} key={etapa.clave} title={porque}>
               <label>
                 <input
                   type="checkbox" checked={hecha}
+                  // Una etapa completa por sus hitos no se destilda desde acá:
+                  // se destilda el hito que corresponda, que es donde está el dato.
+                  disabled={tocando === etapa.clave || (hecha && !marcadaAMano)}
                   onChange={(e) => void marcarEtapa(etapa.clave, e.target.checked)}
                 />
                 <span className="num">{etapa.numero}</span>
@@ -120,48 +130,47 @@ export function ElPrograma({
                   <span className="mini">
                     semana {etapa.desdeSemana}
                     {etapa.hastaSemana !== etapa.desdeSemana ? ` a ${etapa.hastaSemana}` : ''}
+                    {tiene > 0 ? ` · ${hitosHechos} de ${tiene} hitos` : ''}
                     {estado === 'debia_estar' ? ' · ya tendría que estar' : ''}
                     {estado === 'es_la_de_ahora' ? ' · es la de esta semana' : ''}
                     {elegida ? ' · acá dice la consultora que está' : ''}
+                    {hecha && !marcadaAMano ? ' · hecha porque están todos sus hitos' : ''}
                     {marca ? ` · la marcó ${marca.quien ?? 'alguien'} el ${marca.hecho_en.split('-').reverse().join('/')}` : ''}
                   </span>
                 </div>
               </label>
+
+              {/* Los hitos de la etapa, adentro de la etapa. Antes eran una lista
+                  aparte agrupada por fase, y marcar uno no movía el avance. */}
+              {tiene > 0 ? (
+                <div className="hitos-de-la-etapa">
+                  {etapa.hitosClave.map((h) => {
+                    const hecho = hechos[h.clave]
+                    const tildado = recienTocadas[h.clave] ?? Boolean(hecho)
+                    return (
+                      <label className={`hito-clave ${tildado ? 'hecho' : ''}`} key={h.clave}>
+                        <input
+                          type="checkbox" checked={tildado}
+                          onChange={(e) => void marcarHito(h.clave, e.target.checked)}
+                        />
+                        <span>
+                          {h.etiqueta}
+                          {h.cuando ? <i className="cuando"> · se espera {h.cuando}</i> : null}
+                          {hecho ? (
+                            <i className="cuando">
+                              {' '}· lo marcó {hecho.quien ?? 'alguien'} el {hecho.hecho_en.split('-').reverse().join('/')}
+                            </i>
+                          ) : null}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              ) : null}
             </li>
           )
         })}
       </ol>
-
-      <h3>Hitos clave</h3>
-      <p className="mini" style={{ marginTop: 0 }}>
-        Lo puntual que tiene que quedar hecho en cada fase. También lo marcás vos.
-      </p>
-
-      {fases.map(({ fase, hechos: cuantos, total }) => (
-        <div className="hitos-de" key={fase.numero}>
-          <span className="rotulo">{fase.periodo} · {cuantos} de {total}</span>
-          {fase.hitosClave.map((h) => {
-            const hecho = hechos[h.clave]
-            return (
-              <label className={`hito-clave ${hecho ? 'hecho' : ''}`} key={h.clave}>
-                <input
-                  type="checkbox" checked={Boolean(hecho)} disabled={tocando === h.clave}
-                  onChange={(e) => void marcarHito(h.clave, e.target.checked)}
-                />
-                <span>
-                  {h.etiqueta}
-                  {h.cuando ? <i className="cuando"> · se espera {h.cuando}</i> : null}
-                  {hecho ? (
-                    <i className="cuando">
-                      {' '}· lo marcó {hecho.quien ?? 'alguien'} el {hecho.hecho_en.split('-').reverse().join('/')}
-                    </i>
-                  ) : null}
-                </span>
-              </label>
-            )
-          })}
-        </div>
-      ))}
     </div>
   )
 }

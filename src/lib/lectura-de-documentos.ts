@@ -37,7 +37,7 @@ export type LecturaDeTipo = {
  */
 const DEL_ONBOARDING = [
   // quién es
-  'nombre', 'email', 'telefono', 'pais', 'redes', 'fuente', 'horas_por_semana',
+  'nombre', 'email', 'telefono', 'pais', 'redes', 'fuente',
   'profesion_actual', 'frustracion_negocio', 'frustraciones_top3', 'restricciones',
   'como_coachearlo', 'miedos', 'valores', 'motivo_ingreso', 'expectativas_programa', 'notas_cliente',
   // su negocio como llegó
@@ -133,6 +133,16 @@ export const LECTURA: Record<TipoDocumento, LecturaDeTipo> = {
       'Una sesión muestra el trabajo EN CURSO: mucho de lo que se dice es una idea que se está probando, no una ' +
       'decisión. Proponé sólo lo que quedó cerrado, con la frase que lo cierra. «Estaría bueno probar con…» no ' +
       'es una decisión.',
+  },
+
+  encuesta: {
+    queEs: 'Una encuesta de satisfacción: lo que el cliente contestó sobre NOSOTROS, no sobre su negocio.',
+    campos: [],
+    cuidado:
+      'Esto no es una fuente de datos del negocio del cliente: es lo que piensa del acompañamiento. De acá NO se ' +
+      'completa la ficha. Sirve para dos cosas: saber si este cliente está conforme, y —leída junto con las de ' +
+      'los demás— para ver qué se repite. Una queja dicha por una persona es un caso; dicha por ocho es un ' +
+      'problema nuestro.',
   },
 
   notas: {

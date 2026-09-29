@@ -3,6 +3,7 @@ import { puedeVerCliente } from '@/lib/permisos'
 import { quienMira } from '@/lib/quien-mira'
 import { guardarDocumento } from '@/lib/documentos'
 import { extraerTextoDeArchivo } from '@/lib/extraer-archivo'
+import { guardarArchivo } from '@/lib/archivos'
 
 /**
  * Subir un archivo de un cliente.
@@ -59,7 +60,8 @@ export async function POST(pedido: NextRequest) {
     return fallo('No elegiste ningún archivo, o el que elegiste está vacío.')
   }
 
-  const extraido = await extraerTextoDeArchivo(archivo.name, await archivo.arrayBuffer())
+  const crudo = await archivo.arrayBuffer()
+  const extraido = await extraerTextoDeArchivo(archivo.name, crudo)
   if (!extraido.ok) return fallo(extraido.error)
 
   const guardado = await guardarDocumento({
@@ -74,7 +76,18 @@ export async function POST(pedido: NextRequest) {
 
   if (!guardado.ok) return fallo(guardado.error)
 
+  // El original se guarda además del texto, para poder abrir un contrato como
+  // contrato. Si no entra, NO se cae la carga: el documento y su texto ya están,
+  // que es lo que hace falta para leerlo.
+  let avisoDelArchivo: string | null = null
+  if (guardado.yaEstaba !== true) {
+    const conArchivo = await guardarArchivo({
+      documentoId: guardado.id, nombre: archivo.name, bytes: Buffer.from(crudo),
+    })
+    if (!conArchivo.ok) avisoDelArchivo = conArchivo.error
+  }
+
   return enJson
-    ? NextResponse.json({ ok: true, yaEstaba: guardado.yaEstaba === true, nota: extraido.nota ?? null })
+    ? NextResponse.json({ ok: true, yaEstaba: guardado.yaEstaba === true, nota: avisoDelArchivo ?? extraido.nota ?? null })
     : volver(clienteId)
 }
