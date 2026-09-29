@@ -101,8 +101,14 @@ export async function listarClientes(
   if (filtros.buscar && filtros.buscar.trim() !== '') {
     // Buscar sí pliega acentos y mayúsculas: acá no se decide de quién es un
     // dato, sólo se filtra una lista. La regla 3 rige para lo otro.
+    //
+    // Por nombre Y por email: cuando llega un mail de alguien, lo que se tiene
+    // es la dirección, no cómo está escrito el nombre en la planilla.
     parametros.push(`%${plegado(filtros.buscar)}%`)
-    condiciones.push(`c.nombre_pleg like $${parametros.length}`)
+    const porNombre = `c.nombre_pleg like $${parametros.length}`
+    parametros.push(`%${filtros.buscar.trim()}%`)
+    const porEmail = `c.email ilike $${parametros.length}`
+    condiciones.push(`(${porNombre} or ${porEmail})`)
   }
   const donde = `where ${condiciones.join(' and ')}`
 

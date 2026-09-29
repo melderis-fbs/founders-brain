@@ -118,8 +118,14 @@ export function CampoEditable({
             <option key={o} value={o}>{o}</option>
           ))}
         </select>
+      ) : tipo === 'fecha' ? (
+        // Una fecha guarda al elegirla, por lo mismo que un select: el
+        // calendario del navegador es una ventanita aparte y elegir un día no
+        // saca el foco del campo. Con el onBlur solo, la fecha de inicio del
+        // programa se veía puesta y no se guardaba nunca.
+        <input {...comunes} type="date" placeholder={ayuda} onChange={() => void guardar()} />
       ) : (
-        <input {...comunes} type={tipo === 'fecha' ? 'date' : 'text'} placeholder={ayuda} />
+        <input {...comunes} type="text" placeholder={ayuda} />
       )}
       {error ? <div className="error-campo">{error}</div> : null}
     </div>

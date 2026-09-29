@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
+import { corregirSesion, eliminarSesion, nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
 import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, semanaDeLaSesion, type SesionEnLista } from '@/lib/sesiones-tipos'
 
 import { etapasDeLaSemana, faseDeLaSemana } from '@/lib/modulos'
@@ -156,10 +156,105 @@ function Fila({
       </tr>
       {abierta ? (
         <tr className="detalle-sesion">
-          <td colSpan={6}><Detalle clienteId={clienteId} sesionId={sesion.id} /></td>
+          <td colSpan={6}>
+            <CorregirSesion clienteId={clienteId} sesion={sesion} />
+            <Detalle clienteId={clienteId} sesionId={sesion.id} />
+          </td>
         </tr>
       ) : null}
     </>
+  )
+}
+
+/**
+ * Corregir o borrar una sesión ya cargada.
+ *
+ * La fecha era lo más urgente: se ponía al crearla y no se podía cambiar nunca
+ * más. Una sesión mal fechada cae en la semana equivocada del programa, y ahí
+ * la comparación entera queda corrida.
+ */
+function CorregirSesion({ clienteId, sesion }: { clienteId: number; sesion: SesionEnLista }) {
+  const router = useRouter()
+  const [abierto, setAbierto] = useState<'no' | 'corregir' | 'borrar'>('no')
+  const [yendo, setYendo] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function corregir(datos: FormData) {
+    setYendo(true); setError(null)
+    const r = await corregirSesion(clienteId, sesion.id, {
+      numero: String(datos.get('numero') ?? ''),
+      fecha: String(datos.get('fecha') ?? ''),
+      estado: String(datos.get('estado') ?? ''),
+      quePaso: String(datos.get('que_paso') ?? ''),
+    })
+    setYendo(false)
+    if (r.ok) { setAbierto('no'); router.refresh() } else setError(r.error ?? 'No se pudo corregir.')
+  }
+
+  async function borrar() {
+    setYendo(true); setError(null)
+    const r = await eliminarSesion(clienteId, sesion.id)
+    setYendo(false)
+    if (r.ok) router.refresh()
+    else setError(r.error ?? 'No se pudo borrar.')
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <p className="mini" style={{ margin: 0 }}>
+        <button type="button" className="como-enlace"
+                onClick={() => { setAbierto(abierto === 'corregir' ? 'no' : 'corregir'); setError(null) }}>
+          corregir los datos de esta sesión
+        </button>
+        {' · '}
+        <button type="button" className="como-enlace"
+                onClick={() => { setAbierto(abierto === 'borrar' ? 'no' : 'borrar'); setError(null) }}>
+          borrarla
+        </button>
+      </p>
+
+      {error ? <div className="error-campo">{error}</div> : null}
+
+      {abierto === 'corregir' ? (
+        <form action={corregir} className="al-corregir">
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="campo">
+              <label htmlFor={`n-${sesion.id}`}>Número</label>
+              <input id={`n-${sesion.id}`} name="numero" type="text" defaultValue={sesion.numero ?? ''} style={{ minWidth: 80 }} />
+            </div>
+            <div className="campo">
+              <label htmlFor={`f-${sesion.id}`}>Fecha</label>
+              <input id={`f-${sesion.id}`} name="fecha" type="date" defaultValue={sesion.fecha ?? ''} />
+            </div>
+            <div className="campo">
+              <label htmlFor={`e-${sesion.id}`}>Estado</label>
+              <select id={`e-${sesion.id}`} name="estado" defaultValue={sesion.estado}>
+                {ESTADOS_SESION.map((e) => <option key={e} value={e}>{ETIQUETA_ESTADO[e]}</option>)}
+              </select>
+            </div>
+            <div className="campo" style={{ flex: 1, minWidth: 180 }}>
+              <label htmlFor={`q-${sesion.id}`}>Qué pasó</label>
+              <input id={`q-${sesion.id}`} name="que_paso" type="text" defaultValue={sesion.que_paso ?? ''} />
+            </div>
+            <button className="boton" type="submit" disabled={yendo}>Guardar</button>
+            <button type="button" className="boton suave" onClick={() => setAbierto('no')}>Cancelar</button>
+          </div>
+          <p className="mini" style={{ margin: '7px 0 0' }}>
+            La transcripción y el análisis no se tocan desde acá.
+          </p>
+        </form>
+      ) : null}
+
+      {abierto === 'borrar' ? (
+        <div className="al-corregir">
+          <p style={{ margin: '0 0 8px' }}>
+            ¿Borrar la sesión {sesion.numero ?? 'sin número'}? Se va con su transcripción y su análisis.
+          </p>
+          <button type="button" className="boton" disabled={yendo} onClick={() => void borrar()}>Sí, borrarla</button>{' '}
+          <button type="button" className="boton suave" onClick={() => setAbierto('no')}>No</button>
+        </div>
+      ) : null}
+    </div>
   )
 }
 

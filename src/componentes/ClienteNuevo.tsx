@@ -48,7 +48,9 @@ export function ClienteNuevo({ consultoras }: { consultoras: { id: number; nombr
           <select id="programa_meses" name="programa_meses" defaultValue="">
             <option value="">Sin definir</option>
             <option value="4">4 meses</option>
+            <option value="5">5 meses</option>
             <option value="6">6 meses</option>
+            <option value="12">1 año</option>
           </select>
         </div>
         <div className="campo">

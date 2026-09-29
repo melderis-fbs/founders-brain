@@ -10,6 +10,8 @@ import { aceptar, rechazar } from '@/lib/propuestas'
 import { bajarBandera, ponerBandera } from '@/lib/banderas'
 import type { ColorDeBandera } from '@/lib/banderas-tipos'
 import { desmarcarEtapa, desmarcarHito, marcarEtapa, marcarHito } from '@/lib/hitos-clave'
+import { borrarSesion, editarSesion } from '@/lib/sesiones'
+import { borrarDocumento, editarDocumento } from '@/lib/documentos'
 import { borrarNota, escribirNota } from '@/lib/notas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 import { cambiarDeCoach } from '@/lib/usuarios'
@@ -214,6 +216,60 @@ export async function marcarEtapaDelPrograma(
     ? await marcarEtapa({ clienteId, clave, usuarioId: puede.usuario.id })
     : await desmarcarEtapa(clienteId, clave)
 
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── Corregir y borrar lo que se cargó mal ───────────────────────────────────
+// Cargar un documento en el cliente equivocado pasa, y una sesión con la fecha
+// mal aparece en la semana equivocada y desordena la comparación entera.
+
+export async function corregirSesion(
+  clienteId: number, sesionId: number,
+  datos: { numero?: string; fecha?: string; estado?: string; quePaso?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await editarSesion(sesionId, clienteId, {
+    numero: datos.numero, fechaBruta: datos.fecha, estado: datos.estado, quePaso: datos.quePaso,
+  })
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function eliminarSesion(
+  clienteId: number, sesionId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarSesion(sesionId, clienteId)
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function corregirDocumento(
+  clienteId: number, documentoId: number,
+  datos: { tipo?: string; fecha?: string; titulo?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await editarDocumento(documentoId, clienteId, {
+    tipo: datos.tipo, fechaBruta: datos.fecha, titulo: datos.titulo,
+  })
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function eliminarDocumento(
+  clienteId: number, documentoId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarDocumento(documentoId, clienteId)
   if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

@@ -153,3 +153,85 @@ export async function sesionesConAnalisis(clienteId: number): Promise<SesionConA
     [clienteId],
   )
 }
+
+/**
+ * Corregir los datos de una sesión ya cargada.
+ *
+ * La fecha se pone al crearla y hasta acá no había forma de cambiarla. Una
+ * sesión con la fecha mal no es un detalle: la semana del programa sale de ahí,
+ * así que una sesión mal fechada aparece en la semana equivocada y desordena la
+ * comparación entera.
+ *
+ * No toca la transcripción ni el análisis: eso tiene sus propios botones, y lo
+ * que devolvió el modelo no se pisa desde acá.
+ */
+export async function editarSesion(id: number, clienteId: number, datos: {
+  numero?: string | null
+  fechaBruta?: string | null
+  estado?: string | null
+  quePaso?: string | null
+}): Promise<Resultado> {
+  const actual = await fila<{ id: number }>('select id from sesiones where id = $1 and cliente_id = $2', [id, clienteId])
+  if (!actual) return { ok: false, error: 'Esa sesión no es de este cliente.' }
+
+  const cambios: string[] = []
+  const parametros: unknown[] = [id, clienteId]
+
+  if (datos.fechaBruta !== undefined) {
+    let fecha: string | null = null
+    if (datos.fechaBruta && datos.fechaBruta.trim() !== '') {
+      const leida = leerFecha(datos.fechaBruta)
+      if (leida.estado === 'error') return { ok: false, error: `La fecha: ${leida.motivo}` }
+      if (leida.estado === 'ok') fecha = leida.valor
+    }
+    parametros.push(fecha)
+    cambios.push(`fecha = $${parametros.length}`)
+  }
+
+  if (datos.numero !== undefined) {
+    let numero: number | null = null
+    if (datos.numero && datos.numero.trim() !== '') {
+      const n = Number(datos.numero)
+      if (!Number.isInteger(n) || n <= 0) return { ok: false, error: 'El número de sesión tiene que ser un entero.' }
+      const repetida = await fila<{ id: number }>(
+        'select id from sesiones where cliente_id = $1 and numero = $2 and id <> $3', [clienteId, n, id],
+      )
+      if (repetida) return { ok: false, error: `Ya hay otra sesión ${n} de este cliente.` }
+      numero = n
+    }
+    parametros.push(numero)
+    cambios.push(`numero = $${parametros.length}`)
+  }
+
+  if (datos.estado !== undefined && (ESTADOS_SESION as readonly string[]).includes(datos.estado ?? '')) {
+    parametros.push(datos.estado)
+    cambios.push(`estado = $${parametros.length}`)
+  }
+
+  if (datos.quePaso !== undefined) {
+    parametros.push((datos.quePaso ?? '').trim() || null)
+    cambios.push(`que_paso = $${parametros.length}`)
+  }
+
+  if (cambios.length === 0) return { ok: true, id }
+
+  await escribir(
+    `update sesiones set ${cambios.join(', ')}, actualizado_en = now() where id = $1 and cliente_id = $2`,
+    parametros, { esperadas: 1 },
+  )
+  return { ok: true, id }
+}
+
+/**
+ * Borrar una sesión.
+ *
+ * Se borra entera, con su transcripción y su análisis. Es lo que hay que hacer
+ * cuando se cargó en el cliente equivocado: dejarla ahí ensucia la comparación
+ * de los dos clientes, el que la tiene de más y el que la tiene de menos.
+ */
+export async function borrarSesion(id: number, clienteId: number): Promise<Resultado> {
+  const suya = await fila<{ id: number }>('select id from sesiones where id = $1 and cliente_id = $2', [id, clienteId])
+  if (!suya) return { ok: false, error: 'Esa sesión no es de este cliente.' }
+  await escribir('delete from sesiones where id = $1 and cliente_id = $2', [id, clienteId], { esperadas: 1 })
+  return { ok: true, id }
+}

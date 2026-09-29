@@ -57,6 +57,10 @@ export const ESQUEMA_ESPERADO: {
     tablas: ['cliente_quien_es', 'cliente_marca', 'cliente_comercializa', 'cliente_objetivos', 'cliente_venta'],
     columnas: [['clientes', 'pais'], ['cliente_negocio', 'cliente_ideal_inicial'], ['cliente_intentos', 'intentos_captacion']],
   },
+  {
+    migracion: '0017_telegram_skool_y_programas_raros.sql',
+    tablas: [], columnas: [['clientes', 'telegram'], ['clientes', 'skool']],
+  },
 ]
 
 /**

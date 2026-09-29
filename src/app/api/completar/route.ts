@@ -90,10 +90,15 @@ export async function POST(pedido: NextRequest) {
   const expediente = await armarExpediente(clienteId, quien.alcance, documentoId)
   if (!expediente) return new Response('Ese cliente no existe.', { status: 404 })
   if (expediente.incluidos.length === 0) {
-    return new Response(
-      elegido ? 'De ese documento no se pudo leer texto.' : 'Este cliente no tiene documentos cargados.',
-      { status: 400 },
-    )
+    // «No se pudo leer texto» era mentira en el caso más común: el texto estaba
+    // perfecto y el documento no había entrado por tamaño. Ahora se dice cuál de
+    // las dos cosas pasó, porque se arreglan distinto.
+    const porQue = expediente.omitidos.length > 0
+      ? `No entró ningún documento: ${expediente.omitidos.join('; ')}.`
+      : elegido
+        ? `«${elegido.titulo}» está cargado pero no tiene texto adentro. Si es un PDF escaneado, es una imagen: hay que pasarlo por un OCR o pegar el texto a mano.`
+        : 'Este cliente no tiene documentos cargados.'
+    return new Response(porQue, { status: 400 })
   }
 
   const permitidas = new Set(aBuscar.map((c) => c.clave))

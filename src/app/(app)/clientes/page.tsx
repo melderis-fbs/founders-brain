@@ -1,3 +1,4 @@
+import { FiltrosQueSeAplican } from '@/componentes/FiltrosQueSeAplican'
 import Link from 'next/link'
 import { ClienteNuevo } from '@/componentes/ClienteNuevo'
 import { Etapas } from '@/componentes/Comparacion'
@@ -71,7 +72,7 @@ export default async function Clientes({
         <ClienteNuevo consultoras={consultoras} />
       </header>
 
-      <form className="filtros" method="get">
+      <FiltrosQueSeAplican>
         {esAdmin ? (
           <div className="campo">
             <label htmlFor="consultora">Consultora</label>
@@ -92,7 +93,7 @@ export default async function Clientes({
         <button className="boton suave" type="submit">Filtrar</button>
         {buscar ? <input type="hidden" name="buscar" value={buscar} /> : null}
         {consultora || estado || buscar ? <Link className="boton suave" href="/clientes">Limpiar</Link> : null}
-      </form>
+      </FiltrosQueSeAplican>
 
       {clientes.length === 0 ? (
         <div className="tarjeta">

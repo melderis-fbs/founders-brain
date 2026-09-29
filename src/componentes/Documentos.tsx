@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { pegarDocumento } from '@/app/(app)/clientes/[id]/acciones'
+import { corregirDocumento, eliminarDocumento, pegarDocumento } from '@/app/(app)/clientes/[id]/acciones'
 import { ETIQUETA_DOCUMENTO, type TipoDocumento } from '@/lib/campos'
 import { EXTENSIONES_ACEPTADAS } from '@/lib/extensiones'
 import { VariosDocumentos } from './VariosDocumentos'
@@ -44,6 +44,26 @@ export function Documentos({
   const [error, setError] = useState<string | null>(null)
   const [abierto, setAbierto] = useState<number | null>(null)
   const [texto, setTexto] = useState<string>('')
+  const [editando, setEditando] = useState<number | null>(null)
+  const [borrando, setBorrando] = useState<number | null>(null)
+
+  async function corregir(id: number, datos: FormData) {
+    setGuardando(true); setError(null)
+    const r = await corregirDocumento(clienteId, id, {
+      tipo: String(datos.get('tipo') ?? ''),
+      fecha: String(datos.get('fecha') ?? ''),
+      titulo: String(datos.get('titulo') ?? ''),
+    })
+    setGuardando(false)
+    if (r.ok) { setEditando(null); router.refresh() } else setError(r.error ?? 'No se pudo corregir.')
+  }
+
+  async function borrar(id: number) {
+    setGuardando(true); setError(null)
+    const r = await eliminarDocumento(clienteId, id)
+    setGuardando(false)
+    if (r.ok) { setBorrando(null); setAbierto(null); router.refresh() } else setError(r.error ?? 'No se pudo borrar.')
+  }
 
   async function pegar(datos: FormData) {
     setGuardando(true)
@@ -81,7 +101,57 @@ export function Documentos({
                 <div className="mini">
                   {d.caracteres.toLocaleString('es-AR')} caracteres · entró por {d.origen}
                   {d.fecha ? ` · ${d.fecha.split('-').reverse().join('/')}` : ''}
+                  {' · '}
+                  <button type="button" className="como-enlace"
+                          onClick={() => { setEditando(editando === d.id ? null : d.id); setBorrando(null); setError(null) }}>
+                    corregir
+                  </button>
+                  {' · '}
+                  <button type="button" className="como-enlace"
+                          onClick={() => { setBorrando(borrando === d.id ? null : d.id); setEditando(null); setError(null) }}>
+                    borrar
+                  </button>
                 </div>
+
+                {editando === d.id ? (
+                  <form action={(datos) => corregir(d.id, datos)} className="al-corregir">
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <div className="campo">
+                        <label htmlFor={`tipo-${d.id}`}>Qué es</label>
+                        <select id={`tipo-${d.id}`} name="tipo" defaultValue={d.tipo}>
+                          {TIPOS.map((t) => <option key={t} value={t}>{ETIQUETA_DOCUMENTO[t]}</option>)}
+                        </select>
+                      </div>
+                      <div className="campo">
+                        <label htmlFor={`fecha-${d.id}`}>Fecha</label>
+                        <input id={`fecha-${d.id}`} name="fecha" type="date" defaultValue={d.fecha ?? ''} />
+                      </div>
+                      <div className="campo" style={{ flex: 1, minWidth: 160 }}>
+                        <label htmlFor={`titulo-${d.id}`}>Título</label>
+                        <input id={`titulo-${d.id}`} name="titulo" type="text" defaultValue={d.titulo} />
+                      </div>
+                      <button className="boton" type="submit" disabled={guardando}>Guardar</button>
+                      <button type="button" className="boton suave" onClick={() => setEditando(null)}>Cancelar</button>
+                    </div>
+                    <p className="mini" style={{ margin: '7px 0 0' }}>
+                      El texto no se toca: es lo que trajo el archivo. Si cambiás qué es, se borra el resumen,
+                      porque ese resumen se hizo leyéndolo como otra cosa.
+                    </p>
+                  </form>
+                ) : null}
+
+                {borrando === d.id ? (
+                  <div className="al-corregir">
+                    <p style={{ margin: '0 0 8px' }}>
+                      ¿Borrar <b>{d.titulo}</b>? Se va con su texto y su resumen, y el diagnóstico deja de verlo.
+                    </p>
+                    <button type="button" className="boton" disabled={guardando} onClick={() => void borrar(d.id)}>
+                      Sí, borrarlo
+                    </button>{' '}
+                    <button type="button" className="boton suave" onClick={() => setBorrando(null)}>No</button>
+                  </div>
+                ) : null}
+
                 {abierto === d.id ? <pre className="texto-documento">{texto}</pre> : null}
               </dd>
             </div>

@@ -34,7 +34,25 @@ import { semaforoDe } from './semaforo'
  * tres de once es uno en el que nadie puede confiar.
  */
 
+/**
+ * Cuánto texto entra cuando se arma el expediente ENTERO.
+ *
+ * Con muchos documentos, lo que viaja son los resúmenes, así que este tope casi
+ * nunca se toca. Existe para que un cliente con veinte documentos sin resumir no
+ * mande medio millón de caracteres a la primera.
+ */
 const TOPE_CARACTERES = 60_000
+
+/**
+ * Cuánto entra cuando se pidió UN documento.
+ *
+ * Mucho más, porque acá el documento es el punto: alguien lo eligió y apretó un
+ * botón para que lo lean. Antes compartía el tope de arriba con la ficha y el
+ * programa, y una transcripción larga de una llamada de venta no entraba —y la
+ * pantalla decía «no se pudo leer texto», que era mentira: se había leído
+ * perfecto y no había entrado por tamaño.
+ */
+const TOPE_DE_UN_DOCUMENTO = 400_000
 
 export type Expediente = {
   nombre: string
@@ -205,14 +223,22 @@ export async function armarExpediente(
       continue
     }
 
-    // Sin resumen todavía: entra el texto completo si hay lugar.
-    if (usados + d.caracteres + encabezado.length > TOPE_CARACTERES) {
+    // Sin resumen todavía: entra el texto completo si hay lugar. Cuando se pidió
+    // UN documento, ese documento entra sí o sí: es lo que vino a hacer.
+    const tope = soloDocumento === undefined ? TOPE_CARACTERES : TOPE_DE_UN_DOCUMENTO
+    if (usados + d.caracteres + encabezado.length > tope) {
       omitidos.push(`${d.titulo} (${d.caracteres.toLocaleString('es-AR')} caracteres, todavía sin resumir)`)
       sinLeer.push(d.titulo)
       continue
     }
     const [fila] = await filas<{ texto: string | null }>('select texto from documentos where id = $1', [d.id])
-    if (!fila?.texto) continue
+    if (!fila?.texto || fila.texto.trim() === '') {
+      // Guardado sin texto: casi siempre un PDF escaneado que pasó igual. Es
+      // distinto de «no entró por tamaño» y hay que decirlo distinto.
+      omitidos.push(`${d.titulo} (está cargado pero no tiene texto adentro)`)
+      sinLeer.push(d.titulo)
+      continue
+    }
     partes.push(encabezado + fila.texto.trim())
     usados += encabezado.length + fila.texto.length
     incluidos.push(d.titulo)
