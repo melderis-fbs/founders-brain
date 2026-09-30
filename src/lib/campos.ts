@@ -355,6 +355,8 @@ export const POR_QUE_EL_GRUPO: Partial<Record<Grupo, string>> = {
   marca: 'Lo que salió de trabajarlo con la consultora en el match de marca. Sale de ahí y de ningún otro lado: si el match no está, esto queda vacío.',
   intentos: 'Para no volver a proponerle una estrategia que ya le falló.',
   venta: 'Lo que se habló en la llamada, que no es lo firmado. Lo firmado está en «Lo comercial». Sirve para contrastar los dos.',
+  numeros: 'Cómo llegó y cómo cobra: lo que vale cada cosa que vende. Lo que factura cada mes está arriba, en el mes a mes, y es lo que manda: estos números son de una foto, ésos son la película.',
+  comercial: 'Lo que el cliente nos paga a NOSOTROS, que sale del contrato. No confundir con lo de arriba, que es lo que factura él.',
 }
 
 /** Los textos que la planilla trae en columnas y se guardan como documentos. */
@@ -384,7 +386,19 @@ export const ETIQUETA_DOCUMENTO: Record<TipoDocumento, string> = {
  * Es lo que permite que «falta la oferta» sea un enlace que te deja escribiendo
  * la oferta. Decir qué falta y no decir dónde se carga es la mitad del trabajo.
  */
-export const PESTANA_DEL_GRUPO: Record<Grupo, string> = {
+/**
+ * Las pestañas de la ficha, por su nombre interno.
+ *
+ * Vive acá y no en la pantalla para que el mapa de abajo no pueda apuntar a una
+ * pestaña que no existe: cuando podía, un error de tipeo mandaba al resumen sin
+ * decir nada y el enlace «falta la oferta» simplemente no llevaba a la oferta.
+ */
+export const PESTANAS_DE_LA_FICHA = [
+  'resumen', 'programa', 'cliente', 'facturacion', 'completar', 'diagnostico', 'sesiones', 'documentos',
+] as const
+export type PestanaDeLaFicha = (typeof PESTANAS_DE_LA_FICHA)[number]
+
+export const PESTANA_DEL_GRUPO: Record<Grupo, PestanaDeLaFicha> = {
   identidad: 'resumen',
   quien_es: 'cliente',
   negocio: 'cliente',
@@ -392,9 +406,12 @@ export const PESTANA_DEL_GRUPO: Record<Grupo, string> = {
   comercializa: 'cliente',
   intentos: 'cliente',
   objetivos: 'cliente',
-  numeros: 'cliente',
-  venta: 'cliente',
-  comercial: 'cliente',
+  // Los tres bloques de plata viven juntos en su propia pestaña, con el mes a
+  // mes arriba: lo que factura él, lo que nos paga a nosotros y lo que se le
+  // dijo en la llamada son la misma conversación.
+  numeros: 'facturacion',
+  venta: 'facturacion',
+  comercial: 'facturacion',
 }
 
 /** El enlace que lleva a cargar ese dato, ya abierto para escribir. */

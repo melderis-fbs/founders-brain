@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CampoEditable } from '@/componentes/CampoEditable'
-import { CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO } from '@/lib/campos'
+import { CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO, type PestanaDeLaFicha } from '@/lib/campos'
 import { Comparacion } from '@/componentes/Comparacion'
 import { BanderaYConsultora } from '@/componentes/BanderaYConsultora'
 import { Notas } from '@/componentes/Notas'
@@ -29,8 +29,21 @@ import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, sigueElRoadMap, 
 
 /** Los bloques de «El cliente», en el orden en que se conoce a alguien. */
 const GRUPOS_DEL_CLIENTE: Grupo[] = [
-  'quien_es', 'negocio', 'marca', 'comercializa', 'intentos', 'objetivos', 'numeros', 'venta', 'comercial',
+  'quien_es', 'negocio', 'marca', 'comercializa', 'intentos', 'objetivos',
 ]
+
+/**
+ * Los bloques de plata, todos en una pestaña.
+ *
+ * Estaban al final de «El cliente», después de siete bloques que no tienen
+ * nada que ver, y el mes a mes vivía en otra pestaña: para contestar «cuánto
+ * factura y cuánto nos paga» había que ir a dos lados y acordarse de los dos.
+ *
+ * El orden es el de la pregunta: primero lo que factura él —que es la
+ * película, mes por mes—, después de dónde salen esos números, después lo que
+ * nos paga a nosotros, y al final lo que se le dijo en la llamada.
+ */
+const GRUPOS_DE_FACTURACION: Grupo[] = ['numeros', 'comercial', 'venta']
 import { origenesDe, type OrigenDeCampo } from '@/lib/campos-escritura'
 import { documentosDe, fuentesDeLaCartera, listarConsultoras, traerCliente } from '@/lib/clientes'
 import { quienMira } from '@/lib/quien-mira'
@@ -42,19 +55,25 @@ import { hayAlgunaSesionEnLaCartera, listarSesiones } from '@/lib/sesiones'
 
 export const dynamic = 'force-dynamic'
 
-/** Las pestañas. Cada una es un bloque, no veinte tarjetas apiladas. */
-const PESTANAS = [
+/**
+ * Las pestañas. Cada una es un bloque, no veinte tarjetas apiladas.
+ *
+ * Los nombres internos salen de `campos.ts`, que es donde se dice en qué
+ * pestaña se carga cada dato: así no puede haber una pestaña a la que un campo
+ * apunte y que acá no exista.
+ */
+const PESTANAS: readonly { clave: PestanaDeLaFicha; texto: string }[] = [
   { clave: 'resumen', texto: 'Resumen' },
   { clave: 'programa', texto: 'El programa' },
   { clave: 'cliente', texto: 'El cliente' },
-  { clave: 'numeros', texto: 'Mes a mes' },
+  { clave: 'facturacion', texto: 'Facturación y ventas' },
   { clave: 'completar', texto: 'Completar la ficha' },
   { clave: 'diagnostico', texto: 'Diagnóstico' },
   { clave: 'sesiones', texto: 'Sesiones' },
   { clave: 'documentos', texto: 'Documentos' },
-] as const
+]
 
-type Pestana = (typeof PESTANAS)[number]['clave']
+type Pestana = PestanaDeLaFicha
 
 function comoSeLee(campo: Campo, valor: unknown): string | null {
   if (valor === null || valor === undefined || (typeof valor === 'string' && valor.trim() === '')) return null
@@ -161,7 +180,10 @@ export default async function Ficha({
   // enlace «falta la oferta» no depende de que quien lo escribió se acuerde de
   // en qué pestaña vive la oferta.
   const bloqueDelCampo = apuntado ? PESTANA_DEL_GRUPO[CAMPOS_POR_CLAVE.get(apuntado)?.grupo ?? 'identidad'] : null
-  const pestana: Pestana = (PESTANAS.find((p) => p.clave === (bloqueDelCampo ?? bloque))?.clave ?? 'resumen') as Pestana
+  // «numeros» era el nombre viejo de esta pestaña. Un enlace guardado o un
+  // favorito no puede terminar en el resumen sin decir por qué.
+  const pedida = bloqueDelCampo ?? (bloque === 'numeros' ? 'facturacion' : bloque)
+  const pestana: Pestana = (PESTANAS.find((p) => p.clave === pedida)?.clave ?? 'resumen') as Pestana
 
   // Arriba se muestra una sola etapa: la que eligió la consultora manda sobre
   // la del calendario, porque ella estuvo en la sesión y el calendario no.
@@ -367,12 +389,10 @@ export default async function Ficha({
               />
             ) : null}
 
-            {/* Todo lo que se sabe del cliente en un solo lado. Estaba repartido
-                en cuatro pestañas y eso obligaba a recordar en cuál vivía cada
-                dato para ir a buscarlo. */}
-            {/* Todo lo que se sabe del cliente en un solo lado, en el orden en
-                que se conoce a alguien: quién es, cómo llegó, qué trabajó,
-                cómo vende, qué probó, qué quiere y cuánto factura. */}
+            {/* Quién es el cliente, en el orden en que se conoce a alguien:
+                quién es, cómo llegó, qué se trabajó, cómo vende, qué probó y
+                qué quiere. Lo de plata se fue a su propia pestaña: son otra
+                pregunta y se miran en otro momento. */}
             {pestana === 'cliente' ? (
               <>
                 {GRUPOS_DEL_CLIENTE.map((grupo, i) => (
@@ -387,11 +407,25 @@ export default async function Ficha({
               </>
             ) : null}
 
-            {pestana === 'numeros' ? (
-              <MesAMes
-                clienteId={cliente.id} meses={mesesCargados} totales={totalesDe(mesesCargados)}
-                moneda={(cliente.valores.moneda as string | null) ?? null}
-              />
+            {/* Todo lo de plata en un solo lado: lo que factura él mes a mes, de
+                dónde salen esos números, lo que nos paga a nosotros y lo que se
+                le dijo en la llamada de venta. */}
+            {pestana === 'facturacion' ? (
+              <>
+                <MesAMes
+                  clienteId={cliente.id} meses={mesesCargados} totales={totalesDe(mesesCargados)}
+                  moneda={(cliente.valores.moneda as string | null) ?? null}
+                />
+                {GRUPOS_DE_FACTURACION.map((grupo) => (
+                  <section key={grupo}>
+                    <h2 style={{ marginTop: 26 }}>{ETIQUETA_GRUPO[grupo]}</h2>
+                    {POR_QUE_EL_GRUPO[grupo]
+                      ? <p className="mini" style={{ marginTop: 0 }}>{POR_QUE_EL_GRUPO[grupo]}</p>
+                      : null}
+                    <dl className="dos-columnas">{campos(grupo).map(dato)}</dl>
+                  </section>
+                ))}
+              </>
             ) : null}
 
             {pestana === 'completar' ? (

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { CAMPOS, CAMPOS_POR_CLAVE, PROGRAMAS, sigueElRoadMap, TOTAL_BASE, TOTAL_CAMPOS } from './campos'
+import {
+  CAMPOS, CAMPOS_POR_CLAVE, dondeSeCarga, PESTANA_DEL_GRUPO, PESTANAS_DE_LA_FICHA,
+  PROGRAMAS, sigueElRoadMap, TOTAL_BASE, TOTAL_CAMPOS,
+} from './campos'
 
 describe('el registro de campos', () => {
   /**
@@ -47,5 +50,27 @@ describe('los dos programas', () => {
   it('los nombres viejos se entienden: M1 es Growth, M1+ y M2 son Elite', () => {
     const campo = CAMPOS_POR_CLAVE.get('programa')!
     expect(campo.alias).toMatchObject({ m1: 'growth', 'm1+': 'elite', m2: 'elite' })
+  })
+})
+
+describe('dónde se carga cada dato', () => {
+  it('ningún grupo apunta a una pestaña que no existe', () => {
+    for (const [grupo, pestana] of Object.entries(PESTANA_DEL_GRUPO)) {
+      expect(PESTANAS_DE_LA_FICHA, `el grupo «${grupo}» apunta a «${pestana}»`)
+        .toContain(pestana)
+    }
+  })
+
+  it('todos los campos tienen un grupo con pestaña, así que todos se pueden ir a cargar', () => {
+    for (const campo of CAMPOS) {
+      expect(dondeSeCarga(1, campo.clave), campo.clave).toContain(`campo=${campo.clave}`)
+    }
+  })
+
+  // Lo de plata junto: el mes a mes y los tres bloques que lo explican.
+  it('los números, lo comercial y lo de la venta viven en la pestaña de facturación', () => {
+    expect(PESTANA_DEL_GRUPO.numeros).toBe('facturacion')
+    expect(PESTANA_DEL_GRUPO.comercial).toBe('facturacion')
+    expect(PESTANA_DEL_GRUPO.venta).toBe('facturacion')
   })
 })
