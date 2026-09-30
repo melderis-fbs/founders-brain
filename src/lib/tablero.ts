@@ -5,7 +5,7 @@ import { banderasLevantadas, contarBanderas, type BanderaEnLaLista } from './ban
 import type { Alcance } from './permisos'
 import { evaluarHitos, faltaCargar, FUENTES_ETIQUETA, HITOS, type Fuente } from './hitos'
 import { CAMPOS_BASE, TOTAL_BASE } from './campos'
-import { seLePasoElPrograma, semanaEnLaQueVa } from './programa'
+import { plazoDe, seLePasoElPrograma, semanaEnLaQueVa } from './programa'
 import { semaforoDe, type Color } from './semaforo'
 import { contarTemperaturas, loQueDijoLaCartera } from './temperatura'
 
@@ -80,7 +80,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
       conDatos,
     })
     const semaforo = semaforoDe(evaluados, {
-      seLePaso: seLePasoElPrograma(c.fechaInicio, c.programaMeses),
+      seLePaso: seLePasoElPrograma(plazoDe(c)),
       semana, marcadas: marcadas.get(c.id) ?? new Set<string>(),
       bandera: lasBanderas.get(c.id)?.color ?? null,
       banderaDesdeHaceSemanas: lasBanderas.get(c.id)?.semanas ?? null,
@@ -92,7 +92,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
     const noSePuedeMirar = semaforo.color === 'gris'
     if (esGrave) graves++
     if (noSePuedeMirar) sinPoderMirar++
-    if (seLePasoElPrograma(c.fechaInicio, c.programaMeses)) sePasaron++
+    if (seLePasoElPrograma(plazoDe(c))) sePasaron++
 
     // Sólo los datos con los que la aplicación saca cuentas. Contar los 95
     // decía «les faltan 9.450 datos» y eso no es una tarea: es una pared.
@@ -107,7 +107,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
     // terminaron, el número de una línea podía salir más alto que el total de
     // clientes de los que no se puede decir nada, y dos números que no cierran
     // en la misma tarjeta hacen que no se le crea a ninguno.
-    for (const e of seLePasoElPrograma(c.fechaInicio, c.programaMeses) ? [] : faltaCargar(evaluados)) {
+    for (const e of seLePasoElPrograma(plazoDe(c)) ? [] : faltaCargar(evaluados)) {
       const previo = porCargar.get(e.hito.clave)
       porCargar.set(e.hito.clave, { etiqueta: e.hito.etiqueta, clientes: (previo?.clientes ?? 0) + 1 })
     }

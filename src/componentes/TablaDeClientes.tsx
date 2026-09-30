@@ -7,7 +7,7 @@ import { Etapas } from './Comparacion'
 import { Semaforo } from './Semaforo'
 import { TOTAL_CAMPOS } from '@/lib/campos'
 import type { EstadoHito } from '@/lib/hitos'
-import { seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
+import { plazoDe, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
 import type { Semaforo as Estado } from '@/lib/semaforo'
 
 export type FilaDeCliente = {
@@ -17,6 +17,7 @@ export type FilaDeCliente = {
   estado: string | null
   fechaInicio: string | null
   programaMeses: number | null
+  finPrevisto: string | null
   faltan: number
   queFalta: string
   etapas: Record<string, EstadoHito>
@@ -86,8 +87,8 @@ export function TablaDeClientes({
                 <td><Link className="nombre-cliente" href={`/clientes/${f.id}`}>{f.nombre}</Link></td>
                 <td><Semaforo estado={f.semaforo} /></td>
                 <td className={f.consultora ? undefined : 'apagado'}>{f.consultora ?? 'sin asignar'}</td>
-                <td className={`semana ${seLePasoElPrograma(f.fechaInicio, f.programaMeses) ? 'rojo' : f.fechaInicio ? '' : 'apagado'}`}>
-                  {textoDeSemana(f.fechaInicio, f.programaMeses)}
+                <td className={`semana ${seLePasoElPrograma(plazoDe(f)) ? 'rojo' : f.fechaInicio ? '' : 'apagado'}`}>
+                  {textoDeSemana(plazoDe(f))}
                 </td>
                 <td><Etapas estados={f.etapas} /></td>
                 <td>{f.estado ? <span className={`chip ${f.estado}`}>{f.estado}</span> : <span className="apagado">sin estado</span>}</td>

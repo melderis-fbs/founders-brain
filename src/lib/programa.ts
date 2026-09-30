@@ -29,21 +29,80 @@ export function semanaEnLaQueVa(fechaInicio: string | null | undefined, hoy: Dat
   return Math.floor(dias / 7) + 1
 }
 
+/**
+ * EL PLAZO DE UN CLIENTE: de cuándo a cuándo va su programa.
+ *
+ * Son dos datos que pueden decir cosas distintas, y hasta acá la aplicación
+ * miraba uno solo. Una clienta que empezó el 09/10/2025 con fin previsto el
+ * 21/10/2027 —dos años— tenía cargado «12 meses» en cuánto dura, y el tablero
+ * hacía la cuenta con los meses: «semana 51 de 48, ya se pasó del programa».
+ * Estaba a mitad de camino.
+ */
+export type Plazo = {
+  inicio: string | null | undefined
+  meses: number | null | undefined
+  /** La fecha de fin que escribió una persona. Si está, manda. */
+  finPrevisto?: string | null
+}
+
+/**
+ * Cuántas semanas dura, de verdad.
+ *
+ * Si alguien escribió la fecha de fin, sale de las fechas. Es la regla 9: lo
+ * que escribió una persona no lo pisa un cálculo automático, y «12 meses» es
+ * casi siempre el default del contrato, no lo que se acordó con este cliente.
+ */
+export function semanasQueDura(plazo: Plazo): number | null {
+  const porFechas = semanasEntre(plazo.inicio, plazo.finPrevisto)
+  return porFechas ?? semanasDelPrograma(plazo.meses)
+}
+
+function semanasEntre(desde: string | null | undefined, hasta: string | null | undefined): number | null {
+  if (!desde || !hasta) return null
+  const a = Date.parse(`${String(desde).slice(0, 10)}T00:00:00Z`)
+  const b = Date.parse(`${String(hasta).slice(0, 10)}T00:00:00Z`)
+  if (Number.isNaN(a) || Number.isNaN(b)) return null
+  const semanas = Math.round((b - a) / (7 * MS_POR_DIA))
+  // Una fecha de fin anterior a la de inicio es un dato mal cargado, no un
+  // programa de duración negativa: no se usa, y se avisa aparte.
+  return semanas > 0 ? semanas : null
+}
+
 /** El texto de la semana, siempre con su comparación: «semana 31 de 17». */
-export function textoDeSemana(fechaInicio: string | null | undefined, meses: number | null | undefined, hoy?: Date): string {
-  const semana = semanaEnLaQueVa(fechaInicio, hoy)
-  const total = semanasDelPrograma(meses)
+export function textoDeSemana(plazo: Plazo, hoy?: Date): string {
+  const semana = semanaEnLaQueVa(plazo.inicio, hoy)
+  const total = semanasQueDura(plazo)
   if (semana === null) return 'sin fecha de inicio'
   if (semana === 0) return 'todavía no arrancó'
   if (total === null) return `semana ${semana}`
   return `semana ${semana} de ${total}`
 }
 
-export function seLePasoElPrograma(fechaInicio: string | null | undefined, meses: number | null | undefined, hoy?: Date): boolean {
-  const semana = semanaEnLaQueVa(fechaInicio, hoy)
-  const total = semanasDelPrograma(meses)
+export function seLePasoElPrograma(plazo: Plazo, hoy?: Date): boolean {
+  const semana = semanaEnLaQueVa(plazo.inicio, hoy)
+  const total = semanasQueDura(plazo)
   if (semana === null || total === null) return false
   return semana > total
+}
+
+/**
+ * Cuando los dos datos del plazo no dicen lo mismo.
+ *
+ * No se elige en silencio: manda la fecha de fin, y se dice que los meses
+ * cargados no cierran con ella para que alguien corrija el que esté mal. Elegir
+ * callado es cómo se llegó a «semana 51 de 48» sin que nadie pudiera ver por
+ * qué.
+ */
+export function desajusteDePlazo(plazo: Plazo): string | null {
+  const porFechas = semanasEntre(plazo.inicio, plazo.finPrevisto)
+  const porMeses = semanasDelPrograma(plazo.meses)
+  if (porFechas === null || porMeses === null) return null
+  if (Math.abs(porFechas - porMeses) <= 2) return null
+
+  const mesesDeLasFechas = Math.round((porFechas / 4) * 10) / 10
+  return `«Cuánto dura» dice ${plazo.meses} meses, pero entre el inicio y el fin previsto hay ` +
+    `${porFechas} semanas, que son unos ${mesesDeLasFechas} meses. Se usa la fecha de fin; ` +
+    'corregí el que esté mal.'
 }
 
 /**
@@ -69,4 +128,15 @@ export function cuandoTermina(
   const fin = new Date(inicio)
   fin.setUTCMonth(fin.getUTCMonth() + meses)
   return { fecha: fin.toISOString().slice(0, 10), calculada: true }
+}
+
+/**
+ * El plazo de un cliente de la lista, en un solo lugar.
+ *
+ * Existe para que ninguna pantalla vuelva a hacer la cuenta con los meses
+ * olvidándose de la fecha de fin: el que tenga los tres datos arma el plazo con
+ * esto y no piensa más en el tema.
+ */
+export function plazoDe(c: { fechaInicio: string | null; programaMeses: number | null; finPrevisto?: string | null }): Plazo {
+  return { inicio: c.fechaInicio, meses: c.programaMeses, finPrevisto: c.finPrevisto ?? null }
 }

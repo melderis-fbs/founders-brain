@@ -6,7 +6,7 @@ import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from 
 import { ETAPAS, etapasDeLaSemana, SEMANAS_DEL_PROGRAMA } from './modulos'
 import { semaforoDe, type Semaforo } from './semaforo'
 import { loQueDijoLaCartera } from './temperatura'
-import { semanaEnLaQueVa, semanasDelPrograma , seLePasoElPrograma } from './programa'
+import { plazoDe, semanaEnLaQueVa, semanasQueDura, seLePasoElPrograma } from './programa'
 
 /**
  * Las semanas que son columna: las que tienen un hito o un módulo.
@@ -62,7 +62,7 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       conDatos,
     })
     const semaforo = semaforoDe(evaluados, {
-      seLePaso: seLePasoElPrograma(c.fechaInicio, c.programaMeses),
+      seLePaso: seLePasoElPrograma(plazoDe(c)),
       semana, marcadas: marcadas.get(c.id) ?? new Set<string>(),
       bandera: banderas.get(c.id)?.color ?? null,
       banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
@@ -83,7 +83,7 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       nombre: c.nombre,
       consultora: c.consultora,
       semana,
-      totalSemanas: semanasDelPrograma(c.programaMeses),
+      totalSemanas: semanasQueDura(plazoDe(c)),
       semaforo,
       // La columna es dónde TENDRÍA que estar, no dónde se corta. Agrupar por
       // dónde se corta amontonaba 193 de 196 clientes en Definición: una

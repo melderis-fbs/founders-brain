@@ -12,7 +12,7 @@ import { quienMira } from '@/lib/quien-mira'
 import { dondeSeCorta, fasesSegunLosHitos, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { semaforoDe } from '@/lib/semaforo'
 import { loQueDijoLaCartera } from '@/lib/temperatura'
-import { semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
+import { plazoDe, semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +56,7 @@ export default async function Clientes({
       evaluados,
       etapas: fasesSegunLosHitos(evaluados),
       semaforo: semaforoDe(evaluados, {
-        seLePaso: seLePasoElPrograma(c.fechaInicio, c.programaMeses),
+        seLePaso: seLePasoElPrograma(plazoDe(c)),
         semana,
         marcadas: marcadas.get(c.id) ?? new Set<string>(),
         bandera: banderas.get(c.id)?.color ?? null,
@@ -139,6 +139,7 @@ export default async function Clientes({
             estado: c.estado,
             fechaInicio: c.fechaInicio,
             programaMeses: c.programaMeses,
+            finPrevisto: c.finPrevisto,
             faltan: c.faltan.length,
             queFalta: c.faltan.map((f) => f.etiqueta.toLowerCase()).join(', '),
             etapas,

@@ -99,13 +99,18 @@ export async function armarExpediente(
     ? todosLosDocumentos
     : todosLosDocumentos.filter((d) => d.id === soloDocumento)
   const inicio = cliente.valores.fecha_inicio as string
+  const plazo = {
+    inicio,
+    meses: cliente.valores.programa_meses as number,
+    finPrevisto: (cliente.valores.fecha_fin_prevista as string | null) ?? null,
+  }
   const evaluados = evaluarHitos({
     semana: semanaEnLaQueVa(inicio),
     valores: cliente.valores,
     tiposDeDocumento: new Set(todosLosDocumentos.map((d) => d.tipo)),
     conDatos,
   })
-  const semaforo = semaforoDe(evaluados, seLePasoElPrograma(inicio, cliente.valores.programa_meses as number))
+  const semaforo = semaforoDe(evaluados, seLePasoElPrograma(plazo))
   const lectura = leerElCaso({
     hitos: evaluados,
     valores: cliente.valores,
@@ -118,7 +123,7 @@ export async function armarExpediente(
   partes.push(`# ${cliente.nombre}`)
   partes.push(
     `Consultora: ${cliente.consultora ?? 'sin asignar'}\n` +
-    `Va en: ${textoDeSemana(inicio, cliente.valores.programa_meses as number)}\n` +
+    `Va en: ${textoDeSemana(plazo)}\n` +
     `Cómo va: ${semaforo.palabra} — ${semaforo.porque}`,
   )
 

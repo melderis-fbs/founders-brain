@@ -50,7 +50,7 @@ import { quienMira } from '@/lib/quien-mira'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { pendientesDe } from '@/lib/propuestas'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
-import { cuandoTermina, seLePasoElPrograma, semanaEnLaQueVa, semanasDelPrograma, textoDeSemana } from '@/lib/programa'
+import { cuandoTermina, desajusteDePlazo, seLePasoElPrograma, semanaEnLaQueVa, semanasQueDura, textoDeSemana } from '@/lib/programa'
 import { hayAlgunaSesionEnLaCartera, listarSesiones } from '@/lib/sesiones'
 
 export const dynamic = 'force-dynamic'
@@ -131,6 +131,15 @@ export default async function Ficha({
 
   const inicio = cliente.valores.fecha_inicio as string
   const meses = cliente.valores.programa_meses as number
+  // De cuándo a cuándo va su programa. Si alguien escribió el fin previsto,
+  // manda esa fecha y no los meses: «12 meses» suele ser el default del
+  // contrato, y la fecha la puso alguien mirando este caso.
+  const plazo = {
+    inicio,
+    meses,
+    finPrevisto: (cliente.valores.fecha_fin_prevista as string | null) ?? null,
+  }
+  const desajuste = desajusteDePlazo(plazo)
   const evaluados = evaluarHitos({
     semana: semanaEnLaQueVa(inicio),
     valores: cliente.valores,
@@ -147,7 +156,7 @@ export default async function Ficha({
   // Sólo Growth tiene Road Map contra el cual comparar: Elite se trabaja sobre el caso.
   const sigueElPrograma = sigueElRoadMap(cliente.valores.programa)
   const avance = avanceDe(
-    semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma, semanasDelPrograma(meses),
+    semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma, semanasQueDura(plazo),
     {
       hitos: evaluados,
       bandera: bandera?.color ?? null,
@@ -240,7 +249,7 @@ export default async function Ficha({
         <div className="titulo">
           <h1>{cliente.nombre}</h1>
           <span className={`chip-estado ${avance.estado}`}>{avance.palabra}</span>
-          {seLePasoElPrograma(inicio, meses) ? <span className="chip mal">ya se pasó del programa</span> : null}
+          {seLePasoElPrograma(plazo) ? <span className="chip mal">ya se pasó del programa</span> : null}
         </div>
 
         <div className="datos-clave">
@@ -274,7 +283,7 @@ export default async function Ficha({
           </div>
           <div>
             <span className="rotulo">Va en</span>
-            <b>{textoDeSemana(inicio, meses)}</b>
+            <b>{textoDeSemana(plazo)}</b>
           </div>
           <div>
             <span className="rotulo">Etapa</span>
@@ -282,10 +291,17 @@ export default async function Ficha({
           </div>
           <div>
             <span className="rotulo">Etapas hechas</span>
-            <b className={avance.estado === 'al_dia' ? 'verde' : avance.estado === 'grave' ? 'rojo' : 'ambar'}>
+            <b className={avance.estado === 'al_dia' ? 'verde'
+              : avance.estado === 'grave' ? 'rojo'
+                : avance.estado === 'camino_propio' ? undefined : 'ambar'}>
               {avance.hechas} de {avance.total}
+              {/* A un Elite no se le pide ninguna: no sigue el Road Map. Decir
+                  «le pedían 14» al lado del cartel de «camino propio» es la
+                  misma pantalla diciendo las dos cosas. */}
               <div className="mini">
-                {avance.estado === 'sin_fecha' ? 'sin fecha no hay con qué comparar' : `le pedían ${avance.esperadas}`}
+                {avance.estado === 'camino_propio' ? 'no se lo compara: su plan es el suyo'
+                  : avance.estado === 'sin_fecha' ? 'sin fecha no hay con qué comparar'
+                    : `le pedían ${avance.esperadas}`}
               </div>
             </b>
           </div>
@@ -299,6 +315,10 @@ export default async function Ficha({
             </b>
           </div>
         </div>
+
+        {desajuste ? (
+          <p className="aviso" style={{ margin: '12px 0 0' }}>{desajuste}</p>
+        ) : null}
 
         <BanderaYConsultora
           clienteId={cliente.id} bandera={bandera} historial={historialBanderas}

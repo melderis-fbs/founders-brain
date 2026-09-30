@@ -63,6 +63,8 @@ export type ClienteDeLista = {
   estado: string | null
   fechaInicio: string | null
   programaMeses: number | null
+  /** La fecha de fin que escribió una persona. Manda sobre los meses. */
+  finPrevisto: string | null
   documentos: number
   tieneOnboarding: boolean
   /** La etapa que eligió la consultora a mano, si eligió alguna. */
@@ -113,7 +115,8 @@ export async function listarClientes(
   const donde = `where ${condiciones.join(' and ')}`
 
   const encontrados = await filas<FilaDeLista>(
-    `select c.id, c.nombre, co.nombre as consultora, c.estado, c.fecha_inicio, c.programa_meses, c.etapa_actual,
+    `select c.id, c.nombre, co.nombre as consultora, c.estado, c.fecha_inicio, c.programa_meses,
+            c.fecha_fin_prevista::text as fecha_fin_prevista, c.etapa_actual,
             (select count(*)::int from documentos d where d.cliente_id = c.id) as documentos,
             exists(select 1 from documentos d where d.cliente_id = c.id and d.tipo = 'onboarding') as tiene_onboarding,
             ${seleccionDeTenencia()}
@@ -136,6 +139,7 @@ export async function listarClientes(
       estado: f.estado,
       fechaInicio: f.fecha_inicio,
       programaMeses: f.programa_meses,
+      finPrevisto: (f.fecha_fin_prevista as string) ?? null,
       documentos: f.documentos,
       tieneOnboarding: f.tiene_onboarding,
       etapaActual: (f.etapa_actual as string) ?? null,
