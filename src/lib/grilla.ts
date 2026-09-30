@@ -3,7 +3,7 @@ import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
 import { ETAPAS, etapasDeLaSemana, SEMANAS_DEL_PROGRAMA } from './modulos'
 import { semaforoDe, type Semaforo } from './semaforo'
-import { semanaEnLaQueVa, semanasDelPrograma } from './programa'
+import { semanaEnLaQueVa, semanasDelPrograma , seLePasoElPrograma } from './programa'
 
 /**
  * Las semanas que son columna: las que tienen un hito o un módulo.
@@ -55,7 +55,7 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       tiposDeDocumento: new Set(c.tieneOnboarding ? ['onboarding'] : []),
       conDatos,
     })
-    const semaforo = semaforoDe(evaluados)
+    const semaforo = semaforoDe(evaluados, seLePasoElPrograma(c.fechaInicio, c.programaMeses))
 
     const porSemana: Record<number, EstadoHito> = {}
     for (const nro of SEMANAS_CON_HITOS) {

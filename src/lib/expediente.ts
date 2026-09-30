@@ -13,7 +13,7 @@ import { hayAlgunaSesionEnLaCartera, listarSesiones, sesionesConAnalisis } from 
 import type { Alcance } from './permisos'
 import { filas } from './db'
 import { evaluarHitos } from './hitos'
-import { semanaEnLaQueVa, textoDeSemana } from './programa'
+import { semanaEnLaQueVa, textoDeSemana , seLePasoElPrograma } from './programa'
 import { semaforoDe } from './semaforo'
 
 /**
@@ -105,7 +105,7 @@ export async function armarExpediente(
     tiposDeDocumento: new Set(todosLosDocumentos.map((d) => d.tipo)),
     conDatos,
   })
-  const semaforo = semaforoDe(evaluados)
+  const semaforo = semaforoDe(evaluados, seLePasoElPrograma(inicio, cliente.valores.programa_meses as number))
   const lectura = leerElCaso({
     hitos: evaluados,
     valores: cliente.valores,

@@ -35,7 +35,7 @@ import { quienMira } from '@/lib/quien-mira'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { pendientesDe } from '@/lib/propuestas'
 import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
-import { cuandoTermina, seLePasoElPrograma, semanaEnLaQueVa, textoDeSemana } from '@/lib/programa'
+import { cuandoTermina, seLePasoElPrograma, semanaEnLaQueVa, semanasDelPrograma, textoDeSemana } from '@/lib/programa'
 import { hayAlgunaSesionEnLaCartera, listarSesiones } from '@/lib/sesiones'
 
 export const dynamic = 'force-dynamic'
@@ -123,7 +123,7 @@ export default async function Ficha({
   // marcados todos sus hitos, así que el cálculo necesita las dos cosas.
   const etapasHechas = todoLoMarcado(hechos)
   const sigueElPrograma = cliente.valores.sigue_el_programa !== false
-  const avance = avanceDe(semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma)
+  const avance = avanceDe(semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma, semanasDelPrograma(meses))
   const filasEtapas = filasDeEtapas(
     semanaEnLaQueVa(inicio),
     etapasHechas,

@@ -44,7 +44,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
   let sePasaron = 0
   let fichasAMedias = 0
   let datosQueFaltan = 0
-  const porColor: Record<Color, number> = { rojo: 0, amarillo: 0, verde: 0, gris: 0 }
+  const porColor: Record<Color, number> = { rojo: 0, naranja: 0, amarillo: 0, verde: 0, azul: 0, gris: 0 }
   const cortes = new Map<string, { etiqueta: string; semana: number; cuantos: number }>()
   const porConsultora = new Map<string, { nombre: string; clientes: number; conAtraso: number; fichasAMedias: number }>()
 
@@ -57,7 +57,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
     })
     const corte = dondeSeCorta(evaluados)
     const atrasado = corte !== null
-    porColor[semaforoDe(evaluados).color]++
+    porColor[semaforoDe(evaluados, seLePasoElPrograma(c.fechaInicio, c.programaMeses)).color]++
     const aMedias = c.faltan.length > 0
 
     if (atrasado) conAtraso++

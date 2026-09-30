@@ -748,3 +748,9 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .visor-pdf iframe {
   width: 100%; height: 640px; border: 1px solid var(--borde); border-radius: 10px; background: #fff;
 }
+.semaforo.naranja { color: #c2620f; } .semaforo.naranja i { background: #c2620f; }
+.chip-estado.atencion { background: var(--ambar-suave); color: var(--ambar); }
+.chip-estado.termino { background: var(--hover); color: var(--gris); }
+.avance.atencion .dos-barras .real { background: var(--ambar); }
+.avance.termino .dos-barras .real { background: var(--gris-suave); }
+.semaforo.azul { color: var(--azul); } .semaforo.azul i { background: var(--azul); }

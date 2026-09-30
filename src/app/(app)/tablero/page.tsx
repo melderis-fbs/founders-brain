@@ -94,13 +94,15 @@ export default async function Tablero() {
         <div className="semaforo-cartera">
           {([
             ['rojo', 'grave', t.porColor.rojo],
-            ['amarillo', 'atrasado', t.porColor.amarillo],
+            ['naranja', 'atrasado', t.porColor.naranja],
+            ['amarillo', 'para mirar', t.porColor.amarillo],
             ['verde', 'en tiempo', t.porColor.verde],
+            ['azul', 'terminaron', t.porColor.azul],
             ['gris', 'sin datos', t.porColor.gris],
           ] as const).map(([color, palabra, cuantos]) => (
             <div key={color}>
               <span className={`semaforo ${color}`}><i />{palabra}</span>
-              <div className={`cifra ${color === 'gris' ? 'apagado' : color === 'amarillo' ? 'ambar' : color}`}>
+              <div className={`cifra ${color === 'gris' ? 'apagado' : color === 'amarillo' || color === 'naranja' ? 'ambar' : color}`}>
                 {cuantos} <span className="de">de {t.total}</span>
               </div>
             </div>

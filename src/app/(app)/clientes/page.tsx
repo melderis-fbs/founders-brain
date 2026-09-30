@@ -49,7 +49,7 @@ export default async function Clientes({
       semana,
       evaluados,
       etapas: fasesSegunLosHitos(evaluados),
-      semaforo: semaforoDe(evaluados),
+      semaforo: semaforoDe(evaluados, seLePasoElPrograma(c.fechaInicio, c.programaMeses)),
       atraso: corte?.atrasoEnSemanas ?? -1,
       necesita: queNecesita(evaluados, c.faltan),
     }

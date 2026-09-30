@@ -59,12 +59,46 @@ describe('dónde está y dónde tendría que estar', () => {
     expect(a.atraso).toBe(0)
   })
 
-  it('dos etapas de menos es atrasado; tres es grave', () => {
+  /**
+   * El bug que ponía media cartera en rojo: tres etapas de atraso marcaban
+   * GRAVE. Tres etapas son tres semanas de un programa de dieciséis, y eso no
+   * es una emergencia: es una llamada.
+   */
+  it('un atraso chico es «para mirar», no grave', () => {
     const semana = 10
-    const debe = etapasEsperadas(semana)
-    expect(avanceDe(semana, claves(debe - 1)).palabra).toBe('atrasado')
-    expect(avanceDe(semana, claves(debe - 2)).palabra).toBe('atrasado')
-    expect(avanceDe(semana, claves(debe - 3)).palabra).toBe('grave')
+    const debe = etapasEsperadas(semana)                  // 7 en la semana 10
+    expect(avanceDe(semana, claves(debe - 1)).palabra).toBe('para mirar')
+    expect(avanceDe(semana, claves(debe - 2)).palabra).toBe('para mirar')
+    expect(avanceDe(semana, claves(debe - 3)).palabra).toBe('atrasado')
+    expect(avanceDe(semana, claves(debe - 4)).palabra).toBe('atrasado')
+  })
+
+  it('para grave no alcanza el número: tiene que faltarle la mitad de lo que le pedían', () => {
+    // Semana 16: le pedían 13. Cinco de atraso son menos de la mitad.
+    expect(avanceDe(16, claves(etapasEsperadas(16) - 5)).palabra).toBe('atrasado')
+    // Semana 10: le pedían 7. Cinco de atraso son más de la mitad.
+    expect(avanceDe(10, claves(etapasEsperadas(10) - 5)).palabra).toBe('grave')
+  })
+
+  it('«para mirar» dice que todavía se recupera; «grave» no', () => {
+    expect(avanceDe(10, claves(etapasEsperadas(10) - 1)).titular).toContain('Todavía se recupera')
+    expect(avanceDe(10, claves(etapasEsperadas(10) - 5)).titular).not.toContain('Todavía se recupera')
+  })
+
+  it('el que ya terminó el programa no está grave: terminó', () => {
+    const conTodo = avanceDe(20, claves(14), true, 16)
+    expect(conTodo.estado).toBe('termino')
+    expect(conTodo.palabra).toBe('terminó completo')
+
+    const aMedias = avanceDe(33, claves(7), true, 16)
+    expect(aMedias.estado).toBe('termino')
+    expect(aMedias.palabra).toBe('terminó sin cerrar')
+    expect(aMedias.titular).toContain('la conversación de la renovación')
+    expect(aMedias.titular).not.toContain('grave')
+  })
+
+  it('sin saber cuánto dura el programa no se declara terminado', () => {
+    expect(avanceDe(33, claves(7)).estado).not.toBe('termino')
   })
 
   it('el titular dice los dos números, no un porcentaje suelto', () => {

@@ -24,10 +24,26 @@ import { ETAPAS, SEMANAS_DEL_PROGRAMA, etapasDeLaSemana, type Etapa } from './mo
  * 3. No cuesta un peso: es restar fechas y contar. Corre siempre.
  */
 
-export type EstadoDeAvance = 'sin_fecha' | 'sin_marcar' | 'al_dia' | 'atrasado' | 'grave' | 'camino_propio'
+export type EstadoDeAvance =
+  | 'sin_fecha' | 'sin_marcar' | 'camino_propio' | 'termino'
+  | 'al_dia' | 'atencion' | 'atrasado' | 'grave'
 
-/** A partir de cuántas etapas de atraso deja de ser un retraso y es un problema. */
-const ETAPAS_PARA_GRAVE = 3
+/**
+ * Los escalones del atraso, en etapas.
+ *
+ * Antes había uno solo: tres etapas de atraso y el cliente salía GRAVE. Con
+ * catorce etapas en dieciséis semanas, tres etapas son tres semanas, y tres
+ * semanas de atraso no son una emergencia: son una llamada. El resultado era
+ * media cartera en rojo, y un tablero donde todo es grave no deja decidir a
+ * quién llamar primero.
+ *
+ * Ahora hay tres escalones, y para llegar al último no alcanza con el número
+ * absoluto: tiene que faltarle además la MITAD de lo que le pedían. Dos etapas
+ * de atraso en la semana 3 y dos en la semana 15 no son lo mismo.
+ */
+const ETAPAS_PARA_ATENCION = 1
+const ETAPAS_PARA_ATRASADO = 3
+const ETAPAS_PARA_GRAVE = 5
 
 export type Avance = {
   semana: number | null
@@ -90,6 +106,8 @@ export function avanceDe(
   semana: number | null,
   marcadas: ReadonlySet<string>,
   sigueElPrograma = true,
+  /** Cuántas semanas dura su programa: sin esto no se sabe si ya terminó. */
+  semanasQueDura: number | null = null,
 ): Avance {
   const total = ETAPAS.length
   const hechas = ETAPAS.filter((e) => etapaHecha(e, marcadas)).length
@@ -129,6 +147,21 @@ export function avanceDe(
     }
   }
 
+  // Un cliente que ya terminó el programa no está «grave»: terminó. Lo que le
+  // faltó es la conversación de la renovación, no la urgencia de esta semana, y
+  // ponerlo en rojo al lado de alguien que va en la semana 6 y se recupera es lo
+  // que hace que la lista deje de servir para decidir a quién llamar.
+  if (semanasQueDura !== null && semana > semanasQueDura) {
+    return {
+      semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+      estado: 'termino',
+      palabra: atraso === 0 ? 'terminó completo' : 'terminó sin cerrar',
+      titular: atraso === 0
+        ? `Terminó el programa con las ${total} etapas hechas.`
+        : `Terminó el programa con ${hechas} de ${total} etapas: le quedaron ${atraso} sin cerrar. No es una urgencia de esta semana, es la conversación de la renovación.`,
+    }
+  }
+
   if (atraso === 0) {
     return {
       semana, total, hechas, esperadas, porReal, porEsperado, atraso,
@@ -140,12 +173,25 @@ export function avanceDe(
     }
   }
 
-  const palabra = atraso >= ETAPAS_PARA_GRAVE ? 'grave' : 'atrasado'
+  // Para grave no alcanza el número: tiene que faltarle además la mitad de lo
+  // que le pedían. Cinco etapas de atraso sobre seis esperadas es grave; cinco
+  // sobre trece es alguien atrasado que todavía hizo más de la mitad.
+  const leFaltaLaMitad = esperadas > 0 && atraso >= esperadas / 2
+  const estado: EstadoDeAvance =
+    atraso >= ETAPAS_PARA_GRAVE && leFaltaLaMitad ? 'grave'
+      : atraso >= ETAPAS_PARA_ATRASADO ? 'atrasado'
+        : 'atencion'
+
+  const comoSeDice: Record<'grave' | 'atrasado' | 'atencion', string> = {
+    grave: 'grave', atrasado: 'atrasado', atencion: 'para mirar',
+  }
+
   return {
     semana, total, hechas, esperadas, porReal, porEsperado, atraso,
-    estado: atraso >= ETAPAS_PARA_GRAVE ? 'grave' : 'atrasado',
-    palabra,
-    titular: `Tiene ${hechas} de las ${esperadas} etapas que ya tendrían que estar: le faltan ${atraso}.`,
+    estado,
+    palabra: comoSeDice[estado as 'grave' | 'atrasado' | 'atencion'],
+    titular: `Tiene ${hechas} de las ${esperadas} etapas que ya tendrían que estar: le ${atraso === 1 ? 'falta 1' : `faltan ${atraso}`}.` +
+      (estado === 'atencion' ? ' Todavía se recupera.' : ''),
   }
 }
 

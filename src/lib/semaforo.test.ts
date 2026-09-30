@@ -9,7 +9,7 @@ const evaluar = (semana: number | null, valores: Record<string, unknown> = {}, d
   evaluarHitos({ semana, valores, tiposDeDocumento: docs, conDatos: CARTERA })
 
 const AL_DIA = {
-  fecha_cuenta_inversa: '2026-01-05', meta_mensual: 1, ticket: 1,
+  meta_mensual: 1, ticket: 1,
   cliente_ideal: 'x', problema: 'y', oferta: 'z', promesa: 'w', mensaje: 'm', canal: 'c',
 }
 
@@ -28,26 +28,42 @@ describe('el semáforo', () => {
     expect(s.fase).toBeNull()
   })
 
-  it('amarillo cuando hay un atraso chico que no bloquea', () => {
+  it('un atraso chico es «para mirar», no una emergencia', () => {
     const s = semaforoDe(evaluar(6, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
     expect(s.color).toBe('amarillo')
-    expect(s.palabra).toBe('atrasado')
+    expect(s.palabra).toBe('para mirar')
     expect(s.porque).toContain('1 semana')
+    expect(s.porque).toContain('Todavía se recupera')
     expect(s.fase).toBe(2)   // la semana 5 cae en la fase 2
   })
 
-  it('rojo cuando lo vencido bloquea lo que viene después', () => {
+  /**
+   * El bug que hacía que media cartera saliera en rojo: un hito bloqueante
+   * vencido marcaba GRAVE aunque el atraso fuera de dos semanas. Como casi
+   * ninguna ficha tiene la oferta cargada, todos eran graves, y un tablero
+   * donde todo es grave no deja decidir a quién llamar primero.
+   */
+  it('un bloqueante recién vencido sube un escalón, no salta a grave', () => {
     const s = semaforoDe(evaluar(6, { ...AL_DIA, oferta: '', promesa: '' }, new Set(['onboarding'])))
-    expect(s.color).toBe('rojo')
-    expect(s.palabra).toBe('grave')
+    expect(s.color).toBe('naranja')
+    expect(s.palabra).toBe('atrasado')
     expect(s.porque).toContain('bloquea')
     expect(s.fase).toBe(1)   // la semana 4 cae en la fase 1
   })
 
-  it('rojo también cuando el atraso ya es largo, aunque no bloquee', () => {
-    const s = semaforoDe(evaluar(12, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+  it('el mismo bloqueante, meses después, sí es grave', () => {
+    const s = semaforoDe(evaluar(14, { ...AL_DIA, oferta: '', promesa: '' }, new Set(['onboarding'])))
     expect(s.color).toBe('rojo')
-    expect(s.porque).toContain('7 semanas')
+    expect(s.palabra).toBe('grave')
+  })
+
+  it('sin bloqueante hace falta más atraso para llegar a rojo', () => {
+    const cortito = semaforoDe(evaluar(9, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    expect(cortito.color).toBe('naranja')
+
+    const largo = semaforoDe(evaluar(12, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    expect(largo.color).toBe('rojo')
+    expect(largo.porque).toContain('7 semanas')
   })
 
   it('cada color viene con una frase que lo explica, siempre', () => {
@@ -60,6 +76,33 @@ describe('el semáforo', () => {
 
   it('el semáforo dice en qué fase se corta, o null si no se corta', () => {
     expect(semaforoDe(evaluar(6, AL_DIA, new Set(['onboarding']))).fase).toBeNull()
-    expect(semaforoDe(evaluar(12, {}, new Set(['onboarding']))).fase).toBe(1)
+    // Con algo de la ficha cargado sí se puede decir dónde se corta.
+    expect(semaforoDe(evaluar(12, { cliente_ideal: 'x', problema: 'y' }, new Set(['onboarding']))).fase).toBe(1)
+  })
+})
+
+describe('rojo no es cualquier cosa', () => {
+  /**
+   * Con la ficha vacía, TODO da «falta» y el cliente salía grave. Pero ni un
+   * hito hecho no es un cliente que fracasó: es un cliente que no cargamos.
+   * Decir grave ahí afirma algo de él que no sabemos.
+   */
+  it('tener el onboarding subido no cuenta: eso lo hicimos nosotros, no el cliente', () => {
+    const s = semaforoDe(evaluar(12, {}, new Set(['onboarding'])))
+    expect(s.color).toBe('gris')
+    expect(s.palabra).toBe('ficha vacía')
+    expect(s.porque).toContain('no sabemos')
+  })
+
+  it('con algo hecho y el resto faltando sí se puede comparar', () => {
+    const s = semaforoDe(evaluar(12, { cliente_ideal: 'x', problema: 'y' }, new Set(['onboarding'])))
+    expect(s.color).not.toBe('gris')
+  })
+
+  it('el que terminó el programa sale de la urgencia, no del tablero', () => {
+    const s = semaforoDe(evaluar(30, { cliente_ideal: 'x', problema: 'y' }, new Set(['onboarding'])), true)
+    expect(s.palabra).toBe('terminó sin cerrar')
+    expect(s.color).toBe('azul')   // no compite por la atención de esta semana
+    expect(s.porque).toContain('renovación')
   })
 })
