@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { corregirSesion, eliminarSesion, nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
+import { corregirSesion, eliminarAnalisis, eliminarSesion, nuevaSesion, pegarTranscripcion } from '@/app/(app)/clientes/[id]/acciones'
 import { colorDeSesion, ESTADOS_SESION, ETIQUETA_ESTADO, semanaDeLaSesion, type SesionEnLista } from '@/lib/sesiones-tipos'
 
 import { etapasDeLaSemana, faseDeLaSemana } from '@/lib/modulos'
@@ -266,6 +266,7 @@ function Detalle({ clienteId, sesionId }: { clienteId: number; sesionId: number 
   const [editando, setEditando] = useState(false)
   const [analizando, setAnalizando] = useState(false)
   const [enVivo, setEnVivo] = useState('')
+  const [tirando, setTirando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // El texto de la sesión se trae sólo cuando se abre: una transcripción son
@@ -275,6 +276,17 @@ function Detalle({ clienteId, sesionId }: { clienteId: number; sesionId: number 
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { setSesion(d); setTexto(d?.transcripcion ?? ''); setEditando(!d?.transcripcion); setCargando(false) })
       .catch(() => setCargando(false))
+  }
+
+  async function tirarAnalisis() {
+    setTirando(true); setError(null)
+    const r = await eliminarAnalisis(clienteId, sesionId)
+    setTirando(false)
+    if (r.ok) {
+      setSesion((s) => (s ? { ...s, analisis: null, puntos: null, compromisos: null } : s))
+      setEnVivo('')
+      router.refresh()
+    } else setError(r.error ?? 'No se pudo borrar.')
   }
 
   async function guardar() {
@@ -325,6 +337,14 @@ function Detalle({ clienteId, sesionId }: { clienteId: number; sesionId: number 
               <ul>{sesion.compromisos.map((c, i) => <li key={i}>{c}</li>)}</ul>
             </>
           ) : null}
+          {/* Se tira el análisis, no la sesión: la transcripción es lo que dijo
+              la gente y eso no se toca. Después se vuelve a analizar. */}
+          <p className="mini" style={{ margin: '10px 0 0' }}>
+            <button type="button" className="como-enlace" disabled={tirando}
+                    onClick={() => void tirarAnalisis()}>
+              {tirando ? 'borrando…' : 'borrar este análisis y dejar la transcripción'}
+            </button>
+          </p>
         </div>
       ) : null}
 

@@ -13,6 +13,7 @@ import { desmarcarEtapa, desmarcarHito, marcarEtapa, marcarHito } from '@/lib/hi
 import { borrarSesion, editarSesion } from '@/lib/sesiones'
 import { borrarDocumento, editarDocumento } from '@/lib/documentos'
 import { borrarMes, guardarMes } from '@/lib/meses'
+import { borrarAnalisis, borrarBandera, borrarCliente, borrarDiagnostico } from '@/lib/borrar'
 import { borrarNota, escribirNota } from '@/lib/notas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 import { cambiarDeCoach } from '@/lib/usuarios'
@@ -294,5 +295,64 @@ export async function borrarUnMes(clienteId: number, id: number): Promise<{ ok: 
 
   const r = await borrarMes(clienteId, id)
   if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/clientes') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── Borrar lo que se cargó mal ──────────────────────────────────────────────
+// Todo lo que se carga a mano se carga mal alguna vez, y lo que no se puede
+// deshacer queda para siempre: el diagnóstico lo lee como si fuera cierto.
+
+/**
+ * Borrar un cliente entero. Sólo administración, y pidiendo el nombre escrito.
+ *
+ * Una consultora no puede borrar clientes: si uno está mal cargado, lo mira
+ * quien administra, que es quien ve toda la cartera y puede darse cuenta de si
+ * es un duplicado o es el cliente de otra persona.
+ */
+export async function eliminarCliente(
+  clienteId: number, nombreEscrito: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const quien = await quienMira()
+  if (!quien) return { ok: false, error: 'Se cerró la sesión. Volvé a entrar y probá de nuevo.' }
+  if (quien.usuario.rol !== 'admin') {
+    return { ok: false, error: 'Borrar un cliente lo hace quien administra. Pedíselo, con el nombre del cliente.' }
+  }
+
+  const r = await borrarCliente(clienteId, nombreEscrito)
+  if (r.ok) { revalidatePath('/clientes'); revalidatePath('/tablero'); revalidatePath('/grilla') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function eliminarAnalisis(
+  clienteId: number, sesionId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarAnalisis(sesionId, clienteId)
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+export async function eliminarDiagnostico(
+  clienteId: number, diagnosticoId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarDiagnostico(diagnosticoId, clienteId)
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+/** Distinto de resolverla: resolverla dice «pasó»; esto dice «nunca pasó». */
+export async function eliminarBandera(
+  clienteId: number, banderaId: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await borrarBandera(banderaId, clienteId)
+  if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/tablero') }
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

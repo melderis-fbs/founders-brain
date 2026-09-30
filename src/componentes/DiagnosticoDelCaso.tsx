@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { DiagnosticoGuardado } from '@/lib/diagnosticos'
+import { eliminarDiagnostico } from '@/app/(app)/clientes/[id]/acciones'
 
 /**
  * El diagnóstico del caso.
@@ -16,6 +17,18 @@ export function DiagnosticoDelCaso({
   clienteId: number
   guardado: DiagnosticoGuardado | null
 }) {
+  const [tirando, setTirando] = useState(false)
+  const [errorAlTirar, setErrorAlTirar] = useState<string | null>(null)
+
+  async function tirar() {
+    if (!guardado) return
+    setTirando(true); setErrorAlTirar(null)
+    const r = await eliminarDiagnostico(clienteId, guardado.id)
+    setTirando(false)
+    if (r.ok) router.refresh()
+    else setErrorAlTirar(r.error ?? 'No se pudo borrar.')
+  }
+
   const router = useRouter()
   const [corriendo, setCorriendo] = useState(false)
   const [enVivo, setEnVivo] = useState('')
@@ -84,7 +97,16 @@ export function DiagnosticoDelCaso({
     <div>
       <p className="mini" style={{ marginTop: 0 }}>
         Hecho el {new Date(guardado.creado_en).toLocaleString('es-AR')}. No se rehace solo.
+        {' · '}
+        {/* Un diagnóstico es una foto de un momento: si se hizo con la ficha a
+            medio cargar, lo que dice ya no es cierto y tenerlo ahí es peor que
+            no tenerlo. */}
+        <button type="button" className="como-enlace" disabled={tirando}
+                onClick={() => void tirar()}>
+          {tirando ? 'borrando…' : 'borrarlo'}
+        </button>
       </p>
+      {errorAlTirar ? <div className="error-campo" style={{ marginBottom: 10 }}>{errorAlTirar}</div> : null}
 
       {guardado.donde_se_corta ? (
         <div className="corte" style={{ marginTop: 0, marginBottom: 18 }}>

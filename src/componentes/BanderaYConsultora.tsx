@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { levantarBandera, pasarDeCoach, resolverBandera } from '@/app/(app)/clientes/[id]/acciones'
+import { eliminarBandera, levantarBandera, pasarDeCoach, resolverBandera } from '@/app/(app)/clientes/[id]/acciones'
 import { COLORES, CUANDO_SE_LEVANTA, QUE_DICE, type Bandera, type ColorDeBandera } from '@/lib/banderas-tipos'
 import type { CambioDeCoach } from '@/lib/usuarios'
 
@@ -72,6 +72,19 @@ export function BanderaYConsultora({
     setEligiendo(null); setBajando(false); setTexto(''); setError(null)
   }
 
+  /**
+   * Distinto de bajarla. Bajarla dice «pasó y se resolvió», y eso queda en el
+   * historial porque es cierto. Esto dice «nunca pasó», que es lo que hace
+   * falta cuando se levantó en la ficha equivocada.
+   */
+  async function borrar(id: number) {
+    setYendo(true); setError(null)
+    const r = await eliminarBandera(clienteId, id)
+    setYendo(false)
+    if (r.ok) router.refresh()
+    else setError(r.error ?? 'No se pudo borrar.')
+  }
+
   async function cambiarCoach() {
     setYendo(true); setError(null)
     const r = await pasarDeCoach(clienteId, aQuien === 'ninguna' ? null : Number(aQuien), porQue)
@@ -92,7 +105,16 @@ export function BanderaYConsultora({
           {COLORES.map((c) => <option key={c} value={c}>{QUE_DICE[c]}</option>)}
         </select>
 
-        {bandera && !abierto ? <span className="motivo-corto">{bandera.motivo}</span> : null}
+        {bandera && !abierto ? (
+          <>
+            <span className="motivo-corto">{bandera.motivo}</span>
+            <button type="button" className="como-enlace" disabled={yendo}
+                    title="Si la levantaste en la ficha equivocada. Resolverla es otra cosa: eso deja escrito que pasó."
+                    onClick={() => void borrar(bandera.id)}>
+              la levanté por error
+            </button>
+          </>
+        ) : null}
 
         {esAdmin && !cambiando ? (
           <button type="button" className="como-enlace" onClick={() => setCambiando(true)}>
@@ -162,6 +184,10 @@ export function BanderaYConsultora({
               <p className="motivo">{b.motivo}</p>
               <p className="mini">
                 Se resolvió el {b.resuelta_en!.slice(0, 10).split('-').reverse().join('/')}: {b.como_se_resolvio}
+                {' · '}
+                <button type="button" className="como-enlace" disabled={yendo} onClick={() => void borrar(b.id)}>
+                  borrarla del historial
+                </button>
               </p>
             </div>
           ))}

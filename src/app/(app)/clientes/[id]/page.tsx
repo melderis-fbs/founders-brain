@@ -18,6 +18,8 @@ import { DiagnosticoDelCaso } from '@/componentes/DiagnosticoDelCaso'
 import { Documentos } from '@/componentes/Documentos'
 import { MesAMes } from '@/componentes/MesAMes'
 import { archivosDe } from '@/lib/archivos'
+import { BorrarCliente } from '@/componentes/BorrarCliente'
+import { queSeVaConElCliente } from '@/lib/borrar'
 import { mesesDe, totalesDe } from '@/lib/meses'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
@@ -102,6 +104,8 @@ export default async function Ficha({
   const hechos = await hechosDe(cliente.id)
   const mesesCargados = await mesesDe(cliente.id)
   const archivos = await archivosDe(cliente.id)
+  const esAdmin = quien?.usuario.rol === 'admin'
+  const seVa = esAdmin ? await queSeVaConElCliente(cliente.id) : null
 
   const inicio = cliente.valores.fecha_inicio as string
   const meses = cliente.valores.programa_meses as number
@@ -399,6 +403,10 @@ export default async function Ficha({
           <Notas clienteId={cliente.id} notas={notas} yo={quien?.usuario.id ?? 0} />
 
           <Preguntar clienteId={cliente.id} nombre={cliente.nombre} />
+
+          {/* Abajo de todo y sólo para administración: es lo único de la
+              aplicación que no se puede deshacer. */}
+          {esAdmin && seVa ? <BorrarCliente clienteId={cliente.id} seVa={seVa} /> : null}
         </aside>
       </div>
     </>
