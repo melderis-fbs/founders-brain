@@ -754,3 +754,8 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .avance.atencion .dos-barras .real { background: var(--ambar); }
 .avance.termino .dos-barras .real { background: var(--gris-suave); }
 .semaforo.azul { color: var(--azul); } .semaforo.azul i { background: var(--azul); }
+
+/* Grave nunca sale solo: se nombra cada señal que lo prendió. */
+.por-que-grave { margin: 8px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.6; }
+.por-que-grave li { margin-bottom: 2px; }
+.chip-estado.grave { background: var(--rojo-suave); color: var(--rojo); }

@@ -123,7 +123,16 @@ export default async function Ficha({
   // marcados todos sus hitos, así que el cálculo necesita las dos cosas.
   const etapasHechas = todoLoMarcado(hechos)
   const sigueElPrograma = cliente.valores.sigue_el_programa !== false
-  const avance = avanceDe(semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma, semanasDelPrograma(meses))
+  const avance = avanceDe(
+    semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma, semanasDelPrograma(meses),
+    {
+      hitos: evaluados,
+      bandera: bandera?.color ?? null,
+      banderaDesdeHaceSemanas: bandera
+        ? Math.floor((Date.now() - new Date(bandera.puesta_en).getTime()) / 604_800_000)
+        : null,
+    },
+  )
   const filasEtapas = filasDeEtapas(
     semanaEnLaQueVa(inicio),
     etapasHechas,
@@ -274,6 +283,11 @@ export default async function Ficha({
                     <div className="barra real" style={{ width: `${avance.porReal}%` }} />
                   </div>
                   <p className="titular">{avance.titular}</p>
+                  {avance.senales.length > 1 ? (
+                    <ul className="por-que-grave">
+                      {avance.senales.map((s) => <li key={s.clave}>{s.dice}</li>)}
+                    </ul>
+                  ) : null}
                   <p className="mini" style={{ margin: 0 }}>
                     <Link href={`/clientes/${cliente.id}?bloque=programa`}>Ver y marcar las catorce etapas →</Link>
                   </p>

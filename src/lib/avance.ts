@@ -1,4 +1,5 @@
 import { ETAPAS, SEMANAS_DEL_PROGRAMA, etapasDeLaSemana, type Etapa } from './modulos'
+import { atrasoEnSemanas, lasQueSiguenValiendo, laQueQuedoAtras, senalesDeGrave, type LoQuePasa, type Senal } from './riesgo'
 
 /**
  * DÓNDE ESTÁ, Y DÓNDE TENDRÍA QUE ESTAR
@@ -62,6 +63,10 @@ export type Avance = {
   palabra: string
   /** Una línea que explica el estado sin que haya que interpretar los números. */
   titular: string
+  /** Hace cuántas semanas vencía lo primero que falta. */
+  atrasoEnSemanas: number | null
+  /** Cuando es grave: las señales que se prendieron, nombradas. */
+  senales: Senal[]
 }
 
 function porciento(cuantas: number): number {
@@ -108,9 +113,25 @@ export function avanceDe(
   sigueElPrograma = true,
   /** Cuántas semanas dura su programa: sin esto no se sabe si ya terminó. */
   semanasQueDura: number | null = null,
+  /** El resto de lo que puede hacer grave a un cliente, además del atraso. */
+  loDemas: Omit<LoQuePasa, 'semana' | 'marcadas'> = { hitos: [], bandera: null },
 ): Avance {
   const total = ETAPAS.length
   const hechas = ETAPAS.filter((e) => etapaHecha(e, marcadas)).length
+
+  // El atraso se mide en SEMANAS —hace cuánto vencía lo primero que falta— y no
+  // en etapas sin marcar. Tres etapas que vencían todas la semana pasada son
+  // una semana de atraso; una sola que vencía en la semana 4 son ocho.
+  const enSemanas = atrasoEnSemanas(semana, marcadas)
+  const todasLasSenales = sigueElPrograma
+    ? senalesDeGrave({ semana, marcadas, ...loDemas })
+    : []
+
+  // Al que ya terminó sólo le valen las señales humanas: una queja o una red
+  // flag siguen siendo graves —ahí es cuando pide la plata de vuelta— pero el
+  // atraso de un programa que acabó no es una urgencia de esta semana.
+  const yaTermino = semanasQueDura !== null && semana !== null && semana > semanasQueDura
+  const senales = yaTermino ? lasQueSiguenValiendo(todasLasSenales) : todasLasSenales
   const esperadas = etapasEsperadas(semana)
   const porReal = porciento(hechas)
   const porEsperado = porciento(esperadas)
@@ -119,6 +140,7 @@ export function avanceDe(
   if (!sigueElPrograma) {
     return {
       semana, total, hechas, esperadas, porReal, porEsperado, atraso: 0,
+      atrasoEnSemanas: enSemanas, senales,
       estado: 'camino_propio',
       palabra: 'camino propio',
       titular: hechas > 0
@@ -130,6 +152,7 @@ export function avanceDe(
   if (semana === null) {
     return {
       semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+      atrasoEnSemanas: enSemanas, senales,
       estado: 'sin_fecha',
       palabra: 'sin fecha de inicio',
       titular: hechas > 0
@@ -138,9 +161,23 @@ export function avanceDe(
     }
   }
 
+  // Grave lo deciden las cinco señales, no el número de etapas: una red flag,
+  // una queja, no haber vendido pasada su semana, o tres semanas de atraso.
+  if (senales.length > 0) {
+    const quedo = laQueQuedoAtras(semana, marcadas)
+    return {
+      semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+      atrasoEnSemanas: enSemanas, senales,
+      estado: 'grave',
+      palabra: 'grave',
+      titular: senales.map((s) => s.dice).join(' '),
+    }
+  }
+
   if (hechas === 0 && esperadas > 0) {
     return {
       semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+      atrasoEnSemanas: enSemanas, senales,
       estado: 'sin_marcar',
       palabra: 'sin marcar',
       titular: `Va en la semana ${semana} y tendría que tener ${esperadas} de ${total} etapas, pero no hay ninguna marcada. Eso no quiere decir que no las haya hecho: quiere decir que nadie las marcó.`,
@@ -154,6 +191,7 @@ export function avanceDe(
   if (semanasQueDura !== null && semana > semanasQueDura) {
     return {
       semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+      atrasoEnSemanas: enSemanas, senales,
       estado: 'termino',
       palabra: atraso === 0 ? 'terminó completo' : 'terminó sin cerrar',
       titular: atraso === 0
@@ -162,9 +200,11 @@ export function avanceDe(
     }
   }
 
+
   if (atraso === 0) {
     return {
       semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+      atrasoEnSemanas: enSemanas, senales,
       estado: 'al_dia',
       palabra: hechas > esperadas ? 'adelantado' : 'a término',
       titular: hechas > esperadas
@@ -173,40 +213,23 @@ export function avanceDe(
     }
   }
 
-  // Para grave no alcanza el número: tiene que faltarle además la mitad de lo
-  // que le pedían. Cinco etapas de atraso sobre seis esperadas es grave; cinco
-  // sobre trece es alguien atrasado que todavía hizo más de la mitad.
-  const leFaltaLaMitad = esperadas > 0 && atraso >= esperadas / 2
-  const estado: EstadoDeAvance =
-    atraso >= ETAPAS_PARA_GRAVE && leFaltaLaMitad ? 'grave'
-      : atraso >= ETAPAS_PARA_ATRASADO ? 'atrasado'
-        : 'atencion'
-
-  const comoSeDice: Record<'grave' | 'atrasado' | 'atencion', string> = {
-    grave: 'grave', atrasado: 'atrasado', atencion: 'para mirar',
-  }
+  // Lo que no llega a grave: una o dos semanas de atraso es para mirar, de ahí
+  // para arriba está atrasado. Grave ya se decidió arriba, con las señales.
+  const estado: EstadoDeAvance = (enSemanas ?? 0) >= 2 ? 'atrasado' : 'atencion'
+  const quedo = laQueQuedoAtras(semana, marcadas)
 
   return {
     semana, total, hechas, esperadas, porReal, porEsperado, atraso,
+    atrasoEnSemanas: enSemanas, senales,
     estado,
-    palabra: comoSeDice[estado as 'grave' | 'atrasado' | 'atencion'],
-    titular: `Tiene ${hechas} de las ${esperadas} etapas que ya tendrían que estar: le ${atraso === 1 ? 'falta 1' : `faltan ${atraso}`}.` +
-      (estado === 'atencion' ? ' Todavía se recupera.' : ''),
+    palabra: estado === 'atrasado' ? 'atrasado' : 'para mirar',
+    titular: enSemanas && enSemanas > 0
+      ? `Va ${enSemanas} ${enSemanas === 1 ? 'semana' : 'semanas'} atrasado${quedo ? `: «${quedo.nombre}» vencía en la semana ${quedo.hastaSemana}` : ''}.` +
+        (estado === 'atencion' ? ' Todavía se recupera.' : '')
+      : `Tiene ${hechas} de las ${esperadas} etapas que ya tendrían que estar: le ${atraso === 1 ? 'falta 1' : `faltan ${atraso}`}.`,
   }
 }
 
-/**
- * Cuántas semanas de programa representa el atraso.
- *
- * Sirve para decirlo en la unidad en la que habla el equipo —«va cuatro semanas
- * atrasado»— en vez de en porcentaje. Las catorce etapas ocupan dieciséis
- * semanas, así que cada etapa pesa algo más de una semana.
- */
-export function atrasoEnSemanas(avance: Avance): number | null {
-  if (avance.estado === 'sin_fecha' || avance.estado === 'sin_marcar') return null
-  if (avance.atraso === 0) return 0
-  return Math.round((avance.atraso * SEMANAS_DEL_PROGRAMA) / ETAPAS.length)
-}
 
 /**
  * Cada etapa con las dos cosas que hay que ver juntas: si está marcada y si ya

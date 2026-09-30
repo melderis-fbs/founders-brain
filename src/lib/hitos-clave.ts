@@ -202,3 +202,22 @@ export async function desmarcarEtapa(clienteId: number, clave: string): Promise<
   )
   return { ok: true }
 }
+
+/**
+ * Lo marcado de TODA la cartera, de una sola consulta.
+ *
+ * La lista de clientes necesita saber en qué va cada uno, y pedirlo cliente por
+ * cliente serían ciento noventa y cuatro consultas para dibujar una pantalla.
+ */
+export async function marcadasDeLaCartera(): Promise<Map<number, Set<string>>> {
+  const todo = await filas<{ cliente_id: number; clave: string }>(
+    'select cliente_id, clave from hitos_clave',
+  )
+  const salida = new Map<number, Set<string>>()
+  for (const { cliente_id, clave } of todo) {
+    const suyas = salida.get(cliente_id) ?? new Set<string>()
+    suyas.add(clave.startsWith(PREFIJO) ? clave.slice(PREFIJO.length) : clave)
+    salida.set(cliente_id, suyas)
+  }
+  return salida
+}

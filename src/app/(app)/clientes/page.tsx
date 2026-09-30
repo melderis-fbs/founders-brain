@@ -1,3 +1,5 @@
+import { marcadasDeLaCartera } from '@/lib/hitos-clave'
+import { banderasDeLaCartera } from '@/lib/banderas'
 import { FiltrosQueSeAplican } from '@/componentes/FiltrosQueSeAplican'
 import Link from 'next/link'
 import { ClienteNuevo } from '@/componentes/ClienteNuevo'
@@ -29,10 +31,12 @@ export default async function Clientes({
   const esAdmin = alcance.todo
   const sinAsignar = sinConsultoraAsignada(alcance)
 
-  const [clientes, consultoras, conDatos] = await Promise.all([
+  const [clientes, consultoras, conDatos, marcadas, banderas] = await Promise.all([
     listarClientes(alcance, { consultoraId, sinConsultora, estado: estado || null, buscar: buscar || null }),
     listarConsultoras(),
     fuentesDeLaCartera(),
+    marcadasDeLaCartera(),
+    banderasDeLaCartera(),
   ])
 
   const filas = clientes.map((c) => {
@@ -49,7 +53,13 @@ export default async function Clientes({
       semana,
       evaluados,
       etapas: fasesSegunLosHitos(evaluados),
-      semaforo: semaforoDe(evaluados, seLePasoElPrograma(c.fechaInicio, c.programaMeses)),
+      semaforo: semaforoDe(evaluados, {
+        seLePaso: seLePasoElPrograma(c.fechaInicio, c.programaMeses),
+        semana,
+        marcadas: marcadas.get(c.id) ?? new Set<string>(),
+        bandera: banderas.get(c.id)?.color ?? null,
+        banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
+      }),
       atraso: corte?.atrasoEnSemanas ?? -1,
       necesita: queNecesita(evaluados, c.faltan),
     }

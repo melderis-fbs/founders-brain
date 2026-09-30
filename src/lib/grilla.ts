@@ -1,3 +1,5 @@
+import { marcadasDeLaCartera } from './hitos-clave'
+import { banderasDeLaCartera } from './banderas'
 import { fuentesDeLaCartera, listarClientes } from './clientes'
 import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
@@ -41,9 +43,11 @@ export type ClienteEnGrilla = {
 }
 
 export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: number | null } = {}): Promise<ClienteEnGrilla[]> {
-  const [clientes, conDatos] = await Promise.all([
+  const [clientes, conDatos, marcadas, banderas] = await Promise.all([
     listarClientes(alcance, { consultoraId: filtros.consultoraId ?? null }),
     fuentesDeLaCartera(),
+    marcadasDeLaCartera(),
+    banderasDeLaCartera(),
   ])
 
   const armados = clientes.map((c) => {
@@ -55,7 +59,12 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       tiposDeDocumento: new Set(c.tieneOnboarding ? ['onboarding'] : []),
       conDatos,
     })
-    const semaforo = semaforoDe(evaluados, seLePasoElPrograma(c.fechaInicio, c.programaMeses))
+    const semaforo = semaforoDe(evaluados, {
+      seLePaso: seLePasoElPrograma(c.fechaInicio, c.programaMeses),
+      semana, marcadas: marcadas.get(c.id) ?? new Set<string>(),
+      bandera: banderas.get(c.id)?.color ?? null,
+      banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
+    })
 
     const porSemana: Record<number, EstadoHito> = {}
     for (const nro of SEMANAS_CON_HITOS) {

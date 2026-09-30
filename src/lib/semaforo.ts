@@ -1,4 +1,5 @@
 import { dondeSeCorta, faseDelHito, type HitoEvaluado } from './hitos'
+import { lasQueSiguenValiendo, senalesDeGrave, type Senal } from './riesgo'
 
 /**
  * EL SEMÁFORO
@@ -35,22 +36,40 @@ export type Semaforo = {
   porque: string
   /** En qué fase del programa se corta, si se corta. */
   fase: number | null
+  /** Cuando es grave: cuáles de las cinco señales se prendieron, nombradas. */
+  senales?: Senal[]
+}
+
+/** Lo que hay que saber del cliente para pintarlo. */
+export type ComoViene = {
+  /** Ya pasó la última semana del programa. */
+  seLePaso?: boolean
+  /** En qué semana va. */
+  semana?: number | null
+  /** Las etapas y los hitos que alguien marcó. */
+  marcadas?: ReadonlySet<string>
+  bandera?: 'roja' | 'naranja' | 'amarilla' | null
+  banderaDesdeHaceSemanas?: number | null
+  quejaEnSesiones?: boolean
+  quejaEnEncuestas?: boolean
 }
 
 /**
- * Los escalones, en semanas de atraso.
+ * Los escalones de lo que NO llega a grave.
  *
- * Una o dos semanas es algo para mirar, no una emergencia: en un programa de
- * dieciséis, dos semanas es lo que se recupera con una llamada.
+ * Grave lo deciden las cinco señales de `riesgo.ts`. Lo que queda abajo se
+ * separa en dos: una o dos semanas es algo para mirar —en un programa de
+ * dieciséis, eso se recupera con una llamada— y de ahí para arriba, atrasado.
  */
-const PARA_ATRASADO = 3
-const PARA_GRAVE = 6
+const PARA_ATRASADO = 2
 
-export function semaforoDe(
-  evaluados: readonly HitoEvaluado[],
-  /** Si ya pasó la última semana del programa. */
-  seLePaso = false,
-): Semaforo {
+export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene | boolean = {}): Semaforo {
+  // Antes el segundo argumento era sólo «ya se le pasó». Se acepta igual para
+  // no romper lo que todavía lo llama así.
+  const viene: ComoViene = typeof como === 'boolean' ? { seLePaso: como } : como
+  const seLePaso = viene.seLePaso ?? false
+  const marcadas = viene.marcadas ?? new Set<string>()
+
   const seSabeAlgo = evaluados.some((e) => e.estado === 'hecho' || e.estado === 'falta')
   if (!seSabeAlgo) {
     return {
@@ -91,6 +110,33 @@ export function semaforoDe(
   }
 
   const corte = dondeSeCorta(evaluados)!
+
+  // GRAVE es cualquiera de las cinco señales, y todas se nombran: un color sin
+  // motivo no le sirve a nadie un lunes a la mañana.
+  const todas = senalesDeGrave({
+    semana: viene.semana ?? null,
+    marcadas,
+    hitos: evaluados,
+    bandera: viene.bandera ?? null,
+    banderaDesdeHaceSemanas: viene.banderaDesdeHaceSemanas,
+    quejaEnSesiones: viene.quejaEnSesiones,
+    quejaEnEncuestas: viene.quejaEnEncuestas,
+  })
+
+  // Al que ya terminó sólo le valen las señales humanas: el atraso de un
+  // programa que acabó no es una urgencia de esta semana, pero una queja sí.
+  const senales = seLePaso ? lasQueSiguenValiendo(todas) : todas
+
+  if (senales.length > 0) {
+    return {
+      color: 'rojo',
+      palabra: 'grave',
+      porque: senales.map((s) => s.dice).join(' '),
+      fase: faseDelHito(corte.hito),
+      senales,
+    }
+  }
+
   const bloqueante = vencidos.find((e) => e.hito.bloquea)
   const atrasoMayor = Math.max(...vencidos.map((e) => e.atrasoEnSemanas ?? 0))
 
@@ -112,18 +158,14 @@ export function semaforoDe(
 
   // Un hito bloqueante es peor que uno que no lo es, pero no convierte dos
   // semanas en una emergencia: sube un escalón, y nada más.
-  const escalon = (atrasoMayor >= PARA_GRAVE ? 2 : atrasoMayor >= PARA_ATRASADO ? 1 : 0)
-    + (bloqueante ? 1 : 0)
+  const escalon = (atrasoMayor >= PARA_ATRASADO ? 1 : 0) + (bloqueante ? 1 : 0)
 
 
   const queFalta = bloqueante
     ? `«${bloqueante.hito.etiqueta}» bloquea todo lo que viene después y falta hace ${semanas(bloqueante.atrasoEnSemanas)}.`
     : `«${corte.hito.etiqueta}» falta hace ${semanas(corte.atrasoEnSemanas)}.`
 
-  if (escalon >= 2) {
-    return { color: 'rojo', palabra: 'grave', porque: queFalta, fase: faseDelHito(corte.hito) }
-  }
-  if (escalon === 1) {
+  if (escalon >= 1) {
     return { color: 'naranja', palabra: 'atrasado', porque: queFalta, fase: faseDelHito(corte.hito) }
   }
   return {

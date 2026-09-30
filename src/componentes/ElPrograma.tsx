@@ -101,6 +101,14 @@ export function ElPrograma({
         </div>
 
         <p className="titular">{avance.titular}</p>
+
+        {/* Grave nunca sale solo: se nombran las señales que lo prendieron.
+            Un color sin motivo no le sirve a nadie un lunes a la mañana. */}
+        {avance.senales.length > 1 ? (
+          <ul className="por-que-grave">
+            {avance.senales.map((s) => <li key={s.clave}>{s.dice}</li>)}
+          </ul>
+        ) : null}
       </div>
 
       <h3>Las catorce etapas</h3>

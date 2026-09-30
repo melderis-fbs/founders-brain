@@ -129,3 +129,20 @@ export async function banderasLevantadas(consultoraId: number | null): Promise<B
 
 export { COLORES, QUE_DICE } from './banderas-tipos'
 export type { Bandera, BanderaEnLaLista, ColorDeBandera } from './banderas-tipos'
+
+/**
+ * Las banderas levantadas de toda la cartera, con hace cuántas semanas.
+ *
+ * El equipo venía mirando esto a mano en su planilla, con una columna por cada
+ * revisión: «RED FLAG 3 DE SEPT», «RED FLAG 9 DE SEPT», «RED FLAG 18 DE SEPT».
+ * Lo que leían ahí no era si había bandera, era si SEGUÍA. Una levantada y
+ * bajada se resolvió; una que está hace cinco semanas es otra cosa.
+ */
+export async function banderasDeLaCartera(): Promise<Map<number, { color: ColorDeBandera; semanas: number }>> {
+  const puestas = await filas<{ cliente_id: number; color: ColorDeBandera; semanas: number }>(
+    `select cliente_id, color,
+            floor(extract(epoch from (now() - puesta_en)) / 604800)::int as semanas
+       from banderas where resuelta_en is null`,
+  )
+  return new Map(puestas.map((b) => [b.cliente_id, { color: b.color, semanas: b.semanas }]))
+}

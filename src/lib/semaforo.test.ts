@@ -57,13 +57,24 @@ describe('el semáforo', () => {
     expect(s.palabra).toBe('grave')
   })
 
-  it('sin bloqueante hace falta más atraso para llegar a rojo', () => {
-    const cortito = semaforoDe(evaluar(9, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
-    expect(cortito.color).toBe('naranja')
+  it('tres semanas de atraso ya es grave, con bloqueante o sin él', () => {
+    // «Mensaje y canal» vencía en la semana 5. En la 7 son 2 semanas: atrasado.
+    const dos = semaforoDe(evaluar(7, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    expect(dos.color).toBe('naranja')
+    expect(dos.palabra).toBe('atrasado')
 
-    const largo = semaforoDe(evaluar(12, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
-    expect(largo.color).toBe('rojo')
-    expect(largo.porque).toContain('7 semanas')
+    // En la 8 son 3 semanas: grave, y lo dice con el número.
+    const tres = semaforoDe(evaluar(8, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    expect(tres.color).toBe('rojo')
+    expect(tres.palabra).toBe('grave')
+    expect(tres.porque).toContain('3 semanas atrasado')
+  })
+
+  it('grave siempre viene con sus motivos nombrados, no con un color solo', () => {
+    const s = semaforoDe(evaluar(12, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    expect(s.senales).toBeDefined()
+    expect(s.senales!.length).toBeGreaterThan(0)
+    for (const una of s.senales!) expect(una.dice.length).toBeGreaterThan(15)
   })
 
   it('cada color viene con una frase que lo explica, siempre', () => {

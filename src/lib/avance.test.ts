@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atrasoEnSemanas, avanceDe, etapaHecha, etapasEsperadas, filasDeEtapas } from './avance'
+import { avanceDe, etapaHecha, etapasEsperadas, filasDeEtapas } from './avance'
 import { ETAPAS } from './modulos'
 
 const claves = (cuantas: number) => new Set(ETAPAS.slice(0, cuantas).map((e) => e.clave))
@@ -60,29 +60,36 @@ describe('dónde está y dónde tendría que estar', () => {
   })
 
   /**
-   * El bug que ponía media cartera en rojo: tres etapas de atraso marcaban
-   * GRAVE. Tres etapas son tres semanas de un programa de dieciséis, y eso no
-   * es una emergencia: es una llamada.
+   * Lo que cuenta es hace cuánto vencía lo primero que falta, no cuántas cosas
+   * faltan. Tres etapas que vencían todas la semana pasada son UNA semana de
+   * atraso; una sola que vencía en la semana 4 son ocho.
    */
-  it('un atraso chico es «para mirar», no grave', () => {
-    const semana = 10
-    const debe = etapasEsperadas(semana)                  // 7 en la semana 10
-    expect(avanceDe(semana, claves(debe - 1)).palabra).toBe('para mirar')
-    expect(avanceDe(semana, claves(debe - 2)).palabra).toBe('para mirar')
-    expect(avanceDe(semana, claves(debe - 3)).palabra).toBe('atrasado')
-    expect(avanceDe(semana, claves(debe - 4)).palabra).toBe('atrasado')
+  it('una semana de atraso es «para mirar»; dos o más, atrasado', () => {
+    // La etapa 5 vencía en la semana 4.
+    expect(avanceDe(5, claves(4)).palabra).toBe('para mirar')   // 1 semana
+    expect(avanceDe(6, claves(4)).palabra).toBe('atrasado')     // 2 semanas
+    expect(avanceDe(7, claves(4)).palabra).toBe('grave')        // 3 semanas
   })
 
-  it('para grave no alcanza el número: tiene que faltarle la mitad de lo que le pedían', () => {
-    // Semana 16: le pedían 13. Cinco de atraso son menos de la mitad.
-    expect(avanceDe(16, claves(etapasEsperadas(16) - 5)).palabra).toBe('atrasado')
-    // Semana 10: le pedían 7. Cinco de atraso son más de la mitad.
-    expect(avanceDe(10, claves(etapasEsperadas(10) - 5)).palabra).toBe('grave')
+  it('muchas etapas que vencieron recién NO son grave: es una semana de atraso', () => {
+    // En la semana 8 ya vencieron siete etapas. Tiene cinco: le faltan dos,
+    // pero la más vieja vencía hace poco.
+    const a = avanceDe(8, claves(6))
+    expect(a.atrasoEnSemanas).toBeLessThan(3)
+    expect(a.palabra).not.toBe('grave')
+  })
+
+  it('UNA etapa vieja sin hacer SÍ es grave, aunque tenga todo lo demás', () => {
+    const todoMenosLa2 = new Set(ETAPAS.filter((e) => e.clave !== 'identidad').map((e) => e.clave))
+    const a = avanceDe(12, todoMenosLa2)
+    expect(a.atrasoEnSemanas).toBe(10)
+    expect(a.palabra).toBe('grave')
+    expect(a.titular).toContain('«Identidad»')
   })
 
   it('«para mirar» dice que todavía se recupera; «grave» no', () => {
-    expect(avanceDe(10, claves(etapasEsperadas(10) - 1)).titular).toContain('Todavía se recupera')
-    expect(avanceDe(10, claves(etapasEsperadas(10) - 5)).titular).not.toContain('Todavía se recupera')
+    expect(avanceDe(5, claves(4)).titular).toContain('Todavía se recupera')
+    expect(avanceDe(7, claves(4)).titular).not.toContain('Todavía se recupera')
   })
 
   it('el que ya terminó el programa no está grave: terminó', () => {
@@ -101,10 +108,10 @@ describe('dónde está y dónde tendría que estar', () => {
     expect(avanceDe(33, claves(7)).estado).not.toBe('termino')
   })
 
-  it('el titular dice los dos números, no un porcentaje suelto', () => {
-    const a = avanceDe(10, claves(etapasEsperadas(10) - 2))
-    expect(a.titular).toContain(`${a.hechas} de las ${a.esperadas}`)
-    expect(a.titular).toContain('le faltan 2')
+  it('el titular dice las semanas y nombra la etapa, no un porcentaje suelto', () => {
+    const a = avanceDe(6, claves(4))
+    expect(a.titular).toContain('2 semanas atrasado')
+    expect(a.titular).toContain('vencía en la semana')
   })
 
   it('los porcentajes son sobre catorce, como los de la planilla', () => {
@@ -120,19 +127,18 @@ describe('dónde está y dónde tendría que estar', () => {
   })
 })
 
-describe('el atraso dicho en semanas, que es como habla el equipo', () => {
-  it('no lo dice cuando no hay con qué compararlo', () => {
-    expect(atrasoEnSemanas(avanceDe(null, new Set()))).toBeNull()
-    expect(atrasoEnSemanas(avanceDe(10, new Set()))).toBeNull()
+describe('el atraso viaja en semanas adentro del avance', () => {
+  it('lo trae medido, no estimado a partir del número de etapas', () => {
+    // La etapa 5 vencía en la semana 4. En la semana 7 son 3 semanas.
+    expect(avanceDe(7, claves(4)).atrasoEnSemanas).toBe(3)
   })
 
-  it('al día son cero semanas', () => {
-    expect(atrasoEnSemanas(avanceDe(5, claves(etapasEsperadas(5))))).toBe(0)
+  it('al día son cero', () => {
+    expect(avanceDe(5, claves(etapasEsperadas(5))).atrasoEnSemanas).toBe(0)
   })
 
-  it('tres etapas de atraso son tres semanas largas de programa', () => {
-    const a = avanceDe(10, claves(etapasEsperadas(10) - 3))
-    expect(atrasoEnSemanas(a)).toBe(3)
+  it('sin fecha de inicio no hay atraso que medir', () => {
+    expect(avanceDe(null, new Set()).atrasoEnSemanas).toBeNull()
   })
 })
 
@@ -211,5 +217,28 @@ describe('los hitos clave mueven el avance (una sola cuenta)', () => {
                          'primera_venta', 'plan_90_dias', 'antes_despues', 'que_sigue']) {
       expect(todos, `${viejo} se perdió al mudar los hitos a las etapas`).toContain(viejo)
     }
+  })
+})
+
+describe('el orden en que se decide el estado', () => {
+  const conFlag = { hitos: [], bandera: 'roja' as const }
+
+  it('una red flag le gana a «sin marcar»: es un hecho del cliente, no nuestro', () => {
+    const a = avanceDe(10, new Set(), true, 16, conFlag)
+    expect(a.estado).toBe('grave')
+    expect(a.titular).toContain('red flag')
+  })
+
+  it('y le gana también a «terminó»: si se está por ir, se está por ir', () => {
+    const a = avanceDe(30, claves(14), true, 16, conFlag)
+    expect(a.estado).toBe('grave')
+  })
+
+  it('pero no le gana a «camino propio»: a ése no se lo compara contra nada', () => {
+    expect(avanceDe(10, new Set(), false, 16, conFlag).estado).toBe('camino_propio')
+  })
+
+  it('sin señales, «sin marcar» sigue ganándole al atraso', () => {
+    expect(avanceDe(10, new Set()).estado).toBe('sin_marcar')
   })
 })

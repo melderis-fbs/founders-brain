@@ -1,3 +1,5 @@
+import { marcadasDeLaCartera } from './hitos-clave'
+import { banderasDeLaCartera } from './banderas'
 import { listarClientes, fuentesDeLaCartera } from './clientes'
 import { banderasLevantadas, contarBanderas, type BanderaEnLaLista } from './banderas'
 import type { Alcance } from './permisos'
@@ -35,9 +37,10 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
   // Las banderas se cuentan dentro del alcance de quien mira: una consultora
   // ve las de sus clientes, no las de la cartera entera.
   const deQuien = alcance.todo ? null : alcance.consultoraId
-  const [clientes, conDatos, banderas, losQueLevantaron] = await Promise.all([
+  const [clientes, conDatos, banderas, losQueLevantaron, marcadas, lasBanderas] = await Promise.all([
     listarClientes(alcance), fuentesDeLaCartera(),
     contarBanderas(deQuien), banderasLevantadas(deQuien),
+    marcadasDeLaCartera(), banderasDeLaCartera(),
   ])
 
   let conAtraso = 0
@@ -49,15 +52,21 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
   const porConsultora = new Map<string, { nombre: string; clientes: number; conAtraso: number; fichasAMedias: number }>()
 
   for (const c of clientes) {
+    const semana = semanaEnLaQueVa(c.fechaInicio)
     const evaluados = evaluarHitos({
-      semana: semanaEnLaQueVa(c.fechaInicio),
+      semana,
       valores: c.presencia,
       tiposDeDocumento: new Set(c.tieneOnboarding ? ['onboarding'] : []),
       conDatos,
     })
     const corte = dondeSeCorta(evaluados)
     const atrasado = corte !== null
-    porColor[semaforoDe(evaluados, seLePasoElPrograma(c.fechaInicio, c.programaMeses)).color]++
+    porColor[semaforoDe(evaluados, {
+      seLePaso: seLePasoElPrograma(c.fechaInicio, c.programaMeses),
+      semana, marcadas: marcadas.get(c.id) ?? new Set<string>(),
+      bandera: lasBanderas.get(c.id)?.color ?? null,
+      banderaDesdeHaceSemanas: lasBanderas.get(c.id)?.semanas ?? null,
+    }).color]++
     const aMedias = c.faltan.length > 0
 
     if (atrasado) conAtraso++
