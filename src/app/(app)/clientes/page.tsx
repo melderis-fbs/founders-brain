@@ -68,8 +68,16 @@ export default async function Clientes({
     }
   })
 
-  // Primero a quién hay que llamar: el más atrasado. Después, el más incompleto.
-  filas.sort((a, b) => b.atraso - a.atraso || b.cliente.faltan.length - a.cliente.faltan.length)
+  // El orden es el de a quién mirar primero, y ahora lo manda el color: los
+  // graves arriba, después los atrasados, después los que no se pueden mirar
+  // —porque ésos son trabajo de hoy— y al final los que están bien o
+  // terminaron. Ordenar por semanas de atraso dejó de servir cuando el atraso
+  // dejó de salir de casilleros vacíos: casi todos daban lo mismo.
+  const PRIORIDAD: Record<string, number> = { rojo: 0, naranja: 1, amarillo: 2, gris: 3, verde: 4, azul: 5 }
+  filas.sort((a, b) =>
+    (PRIORIDAD[a.semaforo.color] ?? 9) - (PRIORIDAD[b.semaforo.color] ?? 9)
+    || b.atraso - a.atraso
+    || b.cliente.faltan.length - a.cliente.faltan.length)
 
   return (
     <>

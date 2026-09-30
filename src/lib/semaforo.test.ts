@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { evaluarHitos, fuentesConDatos } from './hitos'
+import { ETAPAS } from './modulos'
 import { semaforoDe } from './semaforo'
+
+/** Las primeras N etapas marcadas por la consultora: es lo que prueba el avance. */
+const marcadas = (cuantas: number) => new Set(ETAPAS.slice(0, cuantas).map((e) => e.clave))
 
 const CARTERA = fuentesConDatos({ algunClienteConDatosDeFicha: true, algunOnboardingCargado: true })
 const SIN_DOCS = new Set<string>()
@@ -28,53 +32,61 @@ describe('el semáforo', () => {
     expect(s.fase).toBeNull()
   })
 
+  /**
+   * EL ATRASO LO PRUEBAN LAS ETAPAS QUE MARCÓ UNA PERSONA, NO LOS CASILLEROS
+   * VACÍOS DE LA FICHA.
+   *
+   * Antes estas mismas pruebas borraban dos campos de la ficha y esperaban
+   * amarillo o naranja. Eso era el bug: un campo vacío no prueba que el cliente
+   * no hizo algo, prueba que no lo escribimos. Ahora el atraso se mide sobre lo
+   * que la consultora marcó, que es una afirmación de alguien que estuvo ahí.
+   */
   it('un atraso chico es «para mirar», no una emergencia', () => {
-    const s = semaforoDe(evaluar(6, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    // La etapa 5 vencía en la semana 4; el cliente va por la 5: una semana.
+    const s = semaforoDe(evaluar(5, AL_DIA, new Set(['onboarding'])), { semana: 5, marcadas: marcadas(4) })
     expect(s.color).toBe('amarillo')
     expect(s.palabra).toBe('para mirar')
     expect(s.porque).toContain('1 semana')
     expect(s.porque).toContain('Todavía se recupera')
-    expect(s.fase).toBe(2)   // la semana 5 cae en la fase 2
   })
 
-  /**
-   * El bug que hacía que media cartera saliera en rojo: un hito bloqueante
-   * vencido marcaba GRAVE aunque el atraso fuera de dos semanas. Como casi
-   * ninguna ficha tiene la oferta cargada, todos eran graves, y un tablero
-   * donde todo es grave no deja decidir a quién llamar primero.
-   */
-  it('un bloqueante recién vencido sube un escalón, no salta a grave', () => {
-    const s = semaforoDe(evaluar(6, { ...AL_DIA, oferta: '', promesa: '' }, new Set(['onboarding'])))
+  it('dos semanas ya es «atrasado»', () => {
+    const s = semaforoDe(evaluar(6, AL_DIA, new Set(['onboarding'])), { semana: 6, marcadas: marcadas(4) })
     expect(s.color).toBe('naranja')
     expect(s.palabra).toBe('atrasado')
-    expect(s.porque).toContain('bloquea')
-    expect(s.fase).toBe(1)   // la semana 4 cae en la fase 1
+    expect(s.porque).toContain('2 semanas')
   })
 
-  it('el mismo bloqueante, meses después, sí es grave', () => {
-    const s = semaforoDe(evaluar(14, { ...AL_DIA, oferta: '', promesa: '' }, new Set(['onboarding'])))
+  it('tres semanas de atraso ya es grave, y lo dice con el número', () => {
+    const s = semaforoDe(evaluar(7, AL_DIA, new Set(['onboarding'])), { semana: 7, marcadas: marcadas(4) })
     expect(s.color).toBe('rojo')
     expect(s.palabra).toBe('grave')
-  })
-
-  it('tres semanas de atraso ya es grave, con bloqueante o sin él', () => {
-    // «Mensaje y canal» vencía en la semana 5. En la 7 son 2 semanas: atrasado.
-    const dos = semaforoDe(evaluar(7, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
-    expect(dos.color).toBe('naranja')
-    expect(dos.palabra).toBe('atrasado')
-
-    // En la 8 son 3 semanas: grave, y lo dice con el número.
-    const tres = semaforoDe(evaluar(8, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
-    expect(tres.color).toBe('rojo')
-    expect(tres.palabra).toBe('grave')
-    expect(tres.porque).toContain('3 semanas atrasado')
+    expect(s.porque).toContain('3 semanas atrasado')
   })
 
   it('grave siempre viene con sus motivos nombrados, no con un color solo', () => {
-    const s = semaforoDe(evaluar(12, { ...AL_DIA, mensaje: '', canal: '' }, new Set(['onboarding'])))
+    const s = semaforoDe(evaluar(12, AL_DIA, new Set(['onboarding'])), { semana: 12, marcadas: marcadas(4) })
     expect(s.senales).toBeDefined()
     expect(s.senales!.length).toBeGreaterThan(0)
     for (const una of s.senales!) expect(una.dice.length).toBeGreaterThan(15)
+  })
+
+  /**
+   * Lo que arreglamos, dicho al derecho: con la ficha a medias el cliente NO
+   * sale atrasado. Sale gris, y el gris dice qué cargar.
+   */
+  it('con la ficha a medias no sale atrasado: sale «falta cargarlo»', () => {
+    const s = semaforoDe(evaluar(12, { ...AL_DIA, oferta: '', promesa: '' }, new Set(['onboarding'])))
+    expect(s.color).toBe('gris')
+    expect(s.palabra).toBe('falta cargarlo')
+    expect(s.porque).toContain('no sabemos')
+    expect(s.sinCargar!.some((e) => e.hito.clave === 'oferta')).toBe(true)
+  })
+
+  it('sin el onboarding cargado tampoco sale atrasado', () => {
+    const s = semaforoDe(evaluar(12, AL_DIA, new Set()))
+    expect(s.color).toBe('gris')
+    expect(s.palabra).toBe('falta cargarlo')
   })
 
   it('cada color viene con una frase que lo explica, siempre', () => {
@@ -85,10 +97,8 @@ describe('el semáforo', () => {
     }
   })
 
-  it('el semáforo dice en qué fase se corta, o null si no se corta', () => {
+  it('sin nada vencido, no hay fase donde se corte', () => {
     expect(semaforoDe(evaluar(6, AL_DIA, new Set(['onboarding']))).fase).toBeNull()
-    // Con algo de la ficha cargado sí se puede decir dónde se corta.
-    expect(semaforoDe(evaluar(12, { cliente_ideal: 'x', problema: 'y' }, new Set(['onboarding']))).fase).toBe(1)
   })
 })
 
@@ -105,9 +115,14 @@ describe('rojo no es cualquier cosa', () => {
     expect(s.porque).toContain('no sabemos')
   })
 
-  it('con algo hecho y el resto faltando sí se puede comparar', () => {
+  // Antes esto decía que con algo hecho y el resto faltando «sí se puede
+  // comparar», y lo pintaba de rojo. No se puede: lo que falta no está hecho ni
+  // sin hacer, está sin cargar, y eso se dice.
+  it('con algo hecho y el resto sin cargar, no se compara: se dice qué cargar', () => {
     const s = semaforoDe(evaluar(12, { cliente_ideal: 'x', problema: 'y' }, new Set(['onboarding'])))
-    expect(s.color).not.toBe('gris')
+    expect(s.color).toBe('gris')
+    expect(s.palabra).toBe('falta cargarlo')
+    expect(s.sinCargar!.length).toBeGreaterThan(0)
   })
 
   it('el que terminó el programa sale de la urgencia, no del tablero', () => {

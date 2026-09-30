@@ -780,3 +780,7 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .las-alertas .citas { margin: 0 0 6px; padding-left: 16px; font-size: 13.5px; font-style: italic; }
 .las-alertas .citas li { margin: 2px 0; }
 .las-alertas .alerta textarea { width: 100%; }
+
+/* Lo que falta cargar: una lista de trabajo, no un reproche. */
+.lo-que-falta { margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--gris); }
+.lo-que-falta li { margin: 3px 0; }

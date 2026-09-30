@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { TOTAL_CAMPOS } from '@/lib/campos'
+import { TOTAL_BASE, TOTAL_CAMPOS } from '@/lib/campos'
 import { QUE_DICE } from '@/lib/banderas-tipos'
 import { quienMira } from '@/lib/quien-mira'
 import { traerTablero } from '@/lib/tablero'
@@ -38,22 +38,52 @@ export default async function Tablero() {
         </p>
       </header>
 
+      {/* A quién llamar sale de señales que puso o dijo una persona. Antes salía
+          de «algo vencido», que daba el 89% de la cartera porque contaba como
+          atraso del cliente lo que era trabajo nuestro sin cargar. */}
       <div className="tarjeta" style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span className="rotulo">A quién hay que llamar</span>
-          {t.conAtraso > 0 ? <span className="chip mal">{porcentaje(t.conAtraso)}% de la cartera</span> : null}
+          <span className="rotulo">A quién hay que llamar esta semana</span>
+          {t.graves > 0 ? <span className="chip mal">{porcentaje(t.graves)}% de la cartera</span> : null}
         </div>
-        <div className={`cifra ${t.conAtraso > 0 ? 'rojo' : 'verde'}`} style={{ fontSize: 44, marginTop: 6 }}>
-          {t.conAtraso} <span className="de">de {t.total}</span>
+        <div className={`cifra ${t.graves > 0 ? 'rojo' : 'verde'}`} style={{ fontSize: 44, marginTop: 6 }}>
+          {t.graves} <span className="de">de {t.total}</span>
         </div>
         <div className="barra-progreso">
-          <span className={t.conAtraso > 0 ? 'mal' : 'bien'} style={{ width: `${porcentaje(t.conAtraso)}%` }} />
+          <span className={t.graves > 0 ? 'mal' : 'bien'} style={{ width: `${porcentaje(t.graves)}%` }} />
         </div>
         <div className="pie">
-          Clientes con algo vencido de lo que tendría que estar hecho a esta altura del programa.
-          {' '}<Link href="/clientes">Ver la lista, ordenada por quién primero</Link>.
+          {t.graves === 0
+            ? 'Nadie tiene una red flag levantada, una queja, ni un atraso real de tres semanas o más sobre las etapas marcadas.'
+            : 'Una red flag levantada, una queja del cliente, o tres semanas o más de atraso sobre las etapas que alguien marcó.'}
+          {' '}Cada uno dice por qué. <Link href="/clientes">Ver la lista</Link>.
         </div>
       </div>
+
+      {/* El número que faltaba: de cuántos no se puede decir nada, y qué hacer
+          al respecto. Antes esto estaba escondido adentro del rojo. */}
+      {t.sinPoderMirar > 0 ? (
+        <div className="tarjeta" style={{ marginBottom: 14 }}>
+          <div className="rotulo">De cuántos no se puede decir nada todavía</div>
+          <div className="cifra ambar" style={{ fontSize: 34, marginTop: 6 }}>
+            {t.sinPoderMirar} <span className="de">de {t.total}</span>
+          </div>
+          <div className="pie">
+            No están atrasados: <b>no sabemos</b>. Les falta cargado lo que ya venció, así que no hay
+            con qué compararlos. Eso es trabajo nuestro, y se puede hacer hoy. De los que siguen en el
+            programa, esto es lo que más falta:
+          </div>
+          {t.loQueFaltaCargar.length > 0 ? (
+            <ul className="lo-que-falta">
+              {t.loQueFaltaCargar.map((f) => (
+                <li key={f.etiqueta}>
+                  <b>{f.clientes}</b> {f.clientes === 1 ? 'cliente espera' : 'clientes esperan'} «{f.etiqueta.toLowerCase()}»
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="tarjeta" style={{ marginBottom: 14 }}>
         <div className="rotulo" style={{ marginBottom: 12 }}>Banderas levantadas</div>
@@ -124,6 +154,7 @@ export default async function Tablero() {
         </div>
         <div className="pie">
           «Sin datos» no es «en tiempo»: son clientes de los que todavía no se puede afirmar nada.
+          Separarlos es todo: mezclados, el tablero decía que el 89% de la cartera necesitaba una llamada.
         </div>
       </div>
 
@@ -136,33 +167,22 @@ export default async function Tablero() {
           <div className="pie">Van por una semana más alta que la que dura lo que compraron.</div>
         </div>
 
+        {/* Los datos base, no los 95. «Les faltan 9.450 datos» no es una tarea:
+            es una pared, y encima hace pensar que sin los 95 no se puede
+            analizar nada, que es falso. */}
         <div className="tarjeta">
-          <div className="rotulo">Fichas a medias</div>
-          <div className={`cifra ${t.fichasAMedias > 0 ? 'ambar' : 'verde'}`}>
-            {t.fichasAMedias} <span className="de">de {t.total}</span>
+          <div className="rotulo">Con los datos base completos</div>
+          <div className={`cifra ${t.conBaseCompleta === t.total ? 'verde' : 'ambar'}`}>
+            {t.conBaseCompleta} <span className="de">de {t.total}</span>
           </div>
-          <div className="pie">Les faltan {t.datosQueFaltan.toLocaleString('es-AR')} datos en total, sobre {TOTAL_CAMPOS} por cliente.</div>
+          <div className="pie">
+            Son los {TOTAL_BASE} datos con los que la aplicación saca cuentas. Faltan{' '}
+            {t.faltanBase.toLocaleString('es-AR')} en total. Los otros {TOTAL_CAMPOS - TOTAL_BASE} suman al
+            caso, pero no hacen falta para analizarlo.
+          </div>
         </div>
 
-        <div className="tarjeta">
-          <div className="rotulo">Dónde se corta la mayoría</div>
-          {t.corteMasComun ? (
-            <>
-              <div className="cifra rojo">
-                {t.corteMasComun.cuantos} <span className="de">clientes</span>
-              </div>
-              <div className="pie">
-                En «{t.corteMasComun.etiqueta.toLowerCase()}», que vencía en la semana {t.corteMasComun.semana}.
-                Cuando se corta el mismo lugar en tantos, suele ser el programa y no el cliente.
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="cifra apagado">—</div>
-              <div className="pie">Nadie tiene vencido nada de lo que hoy se puede medir.</div>
-            </>
-          )}
-        </div>
+
       </div>
 
       <div className="bloques">
@@ -173,8 +193,8 @@ export default async function Tablero() {
               <tr>
                 <th>Consultora</th>
                 <th className="num">Clientes</th>
-                <th className="num">Con atraso</th>
-                <th className="num">Fichas a medias</th>
+                <th className="num">Graves</th>
+                <th className="num">Sin poder mirar</th>
               </tr>
             </thead>
             <tbody>
@@ -182,8 +202,8 @@ export default async function Tablero() {
                 <tr key={c.nombre}>
                   <td>{c.nombre}</td>
                   <td className="num">{c.clientes}</td>
-                  <td className={`num ${c.conAtraso > 0 ? 'rojo' : 'apagado'}`}>{c.conAtraso}</td>
-                  <td className={`num ${c.fichasAMedias > 0 ? 'ambar' : 'apagado'}`}>{c.fichasAMedias}</td>
+                  <td className={`num ${c.graves > 0 ? 'rojo' : 'apagado'}`}>{c.graves}</td>
+                  <td className={`num ${c.sinPoderMirar > 0 ? 'ambar' : 'apagado'}`}>{c.sinPoderMirar}</td>
                 </tr>
               ))}
             </tbody>

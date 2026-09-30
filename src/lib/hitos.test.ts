@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dondeSeCorta, fasesSegunLosHitos, evaluarHitos, fuentesConDatos, queNecesita, HITOS } from './hitos'
+import { dondeSeCorta, faltaCargar, fasesSegunLosHitos, evaluarHitos, fuentesConDatos, queNecesita, HITOS } from './hitos'
 
 const SIN_DOCUMENTOS = new Set<string>()
 // En estas pruebas la cartera tiene fichas cargadas pero ningún onboarding.
@@ -37,10 +37,38 @@ describe('la comparación con lo esperado', () => {
     const enLaSemana2 = evaluar(2, {})
     expect(enLaSemana2.find((e) => e.hito.clave === 'oferta')!.estado).toBe('todavia_no')
 
+    // Ya le tocaba, pero la oferta no está cargada: no se dice que falta —eso
+    // sería afirmar algo del cliente—, se dice qué hay que cargar.
     const enLaSemana10 = evaluar(10, {})
     const oferta = enLaSemana10.find((e) => e.hito.clave === 'oferta')!
-    expect(oferta.estado).toBe('falta')
-    expect(oferta.atrasoEnSemanas).toBe(6)   // vencía en la 4
+    expect(oferta.estado).toBe('sin_datos')
+    expect(oferta.porQue).toBe('no_cargado')
+    expect(oferta.porQueNoSeSabe).toContain('oferta')
+    expect(oferta.atrasoEnSemanas).toBeNull()
+  })
+
+  /**
+   * LA REGLA 2, PERO POR CLIENTE.
+   *
+   * Era el agujero que ponía a media cartera en grave. `conDatos` miraba si la
+   * fuente tenía datos en ALGÚN cliente: como alguien había subido un
+   * onboarding, el hito opinaba sobre los 114 clientes a los que nadie les
+   * subió el suyo, y decía que estaban atrasados desde la semana 1.
+   */
+  it('sin el onboarding DE ESTE CLIENTE, el hito no dice que falta: dice que no está cargado', () => {
+    const conAlguno = fuentesConDatos({ algunClienteConDatosDeFicha: true, algunOnboardingCargado: true })
+    const sinElSuyo = evaluarHitos({ semana: 13, valores: FICHA_COMPLETA, tiposDeDocumento: SIN_DOCUMENTOS, conDatos: conAlguno })
+    const onboarding = sinElSuyo.find((e) => e.hito.clave === 'onboarding')!
+    expect(onboarding.estado).toBe('sin_datos')
+    expect(onboarding.porQueNoSeSabe).toContain('de este cliente')
+    expect(onboarding.atrasoEnSemanas).toBeNull()
+  })
+
+  it('con la ficha en blanco, ningún hito de ficha dice que falta', () => {
+    const enBlanco = evaluar(13, {})
+    const deFicha = enBlanco.filter((e) => e.hito.fuente === 'ficha')
+    expect(deFicha.every((e) => e.estado === 'sin_datos')).toBe(true)
+    expect(enBlanco.filter((e) => e.estado === 'falta')).toHaveLength(0)
   })
 
   it('sin fecha de inicio no inventa un atraso', () => {
@@ -55,20 +83,22 @@ describe('la comparación con lo esperado', () => {
     const cuandoNoHayNinguno = evaluarHitos({ semana: 10, valores: {}, tiposDeDocumento: SIN_DOCUMENTOS, conDatos: sinNada })
     expect(cuandoNoHayNinguno.find((e) => e.hito.clave === 'onboarding')!.estado).toBe('sin_datos')
 
-    // En cuanto alguien cargó uno, la regla ya tiene con qué comparar y sí opina.
-    const cuandoYaHayAlguno = evaluarHitos({ semana: 10, valores: {}, tiposDeDocumento: SIN_DOCUMENTOS, conDatos: conAlguno })
-    expect(cuandoYaHayAlguno.find((e) => e.hito.clave === 'onboarding')!.estado).toBe('falta')
+    // Y con el suyo cargado, ahí sí queda hecho.
+    const conElSuyo = evaluarHitos({ semana: 10, valores: {}, tiposDeDocumento: new Set(['onboarding']), conDatos: conAlguno })
+    expect(conElSuyo.find((e) => e.hito.clave === 'onboarding')!.estado).toBe('hecho')
   })
 
-  it('dice dónde se corta: el primero que falta, no el último', () => {
+  // Con la ficha a medias ya no hay «corte»: no sabemos dónde se cortó. Lo que
+  // hay es una lista de lo que falta cargar, y lo primero es lo más viejo.
+  it('dice qué falta cargar primero: lo más viejo', () => {
     const evaluados = evaluar(10, { cliente_ideal: 'x', problema: 'y' })
-    const corte = dondeSeCorta(evaluados)!
-    expect(corte.hito.clave).toBe('cuenta_inversa')   // vencía en la semana 1
+    expect(dondeSeCorta(evaluados)).toBeNull()
+    expect(faltaCargar(evaluados)[0]!.hito.clave).toBe('cuenta_inversa')   // vencía en la semana 1
   })
 
-  it('la línea de qué necesita se lee como habla el equipo', () => {
+  it('la línea de qué necesita empieza por lo que hay que cargar', () => {
     const evaluados = evaluar(10, { ...FICHA_COMPLETA, oferta: '', promesa: '' })
-    expect(queNecesita(evaluados, [])).toBe('oferta y promesa cerradas: 6 semanas de atraso')
+    expect(queNecesita(evaluados, [])).toContain('cargar oferta y promesa cerradas')
   })
 
   it('cuando no falta nada exigible, no dice que va bien si no se sabe', () => {

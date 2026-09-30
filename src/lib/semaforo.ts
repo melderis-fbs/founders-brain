@@ -1,5 +1,7 @@
-import { dondeSeCorta, faseDelHito, type HitoEvaluado } from './hitos'
-import { lasQueSiguenValiendo, lasTibias, senalesDeGrave, type Senal } from './riesgo'
+import { dondeSeCorta, faltaCargar, faseDelHito, type HitoEvaluado } from './hitos'
+import { atrasoEnSemanas, lasQueSiguenValiendo, lasTibias, laQueQuedoAtras, senalesDeGrave, type Senal } from './riesgo'
+import { ETAPAS } from './modulos'
+import { etapaHecha } from './avance'
 import type { LoQueDijo } from './temperatura-tipos'
 
 /**
@@ -41,6 +43,8 @@ export type Semaforo = {
   senales?: Senal[]
   /** Lo tibio: se mira, no es grave. Va aparte para que nadie lo sume al rojo. */
   tibias?: Senal[]
+  /** Lo que ya venció y no está cargado: trabajo nuestro, no del cliente. */
+  sinCargar?: HitoEvaluado[]
 }
 
 /** Lo que hay que saber del cliente para pintarlo. */
@@ -100,6 +104,30 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
     }
   }
 
+  // Que el programa se le terminó lo dicen las fechas: se sabe con la ficha
+  // vacía y con la ficha llena. Va antes que los grises porque es lo primero
+  // que hay que saber de un cliente —esto ya no es de esta semana— y porque un
+  // «no sabemos» sobre alguien que terminó hace medio año no le sirve a nadie.
+  if (seLePaso) {
+    const vencidosAhora = evaluados.filter((e) => e.estado === 'falta')
+    const corteAhora = dondeSeCorta(evaluados)
+    const sinCargarAhora = faltaCargar(evaluados)
+    return {
+      color: 'azul',
+      palabra: 'terminó sin cerrar',
+      porque: vencidosAhora.length > 0 && corteAhora
+        ? `Se le terminó el programa y quedaron ${vencidosAhora.length} ${vencidosAhora.length === 1 ? 'cosa' : 'cosas'} sin cerrar, ` +
+          `la primera «${corteAhora.hito.etiqueta}». No es una urgencia de esta semana: es la conversación de la renovación.`
+        : sinCargarAhora.length > 0
+          ? `Se le terminó el programa. De lo que tendría que estar hecho hay ${sinCargarAhora.length} ` +
+            `${sinCargarAhora.length === 1 ? 'cosa' : 'cosas'} sin cargar, así que no se sabe cómo cerró. ` +
+            'Igual es la conversación de la renovación.'
+          : 'Se le terminó el programa y está todo lo medible hecho. Es la conversación de la renovación.',
+      fase: corteAhora ? faseDelHito(corteAhora.hito) : null,
+      sinCargar: sinCargarAhora.length > 0 ? sinCargarAhora : undefined,
+    }
+  }
+
   const seSabeAlgo = evaluados.some((e) => e.estado === 'hecho' || e.estado === 'falta')
   if (!seSabeAlgo) {
     return {
@@ -129,8 +157,45 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
     }
   }
 
+  // Lo que ya venció y no está cargado. No prueba que el cliente esté mal: es
+  // trabajo nuestro pendiente. Pero tampoco deja decir que está bien.
+  const sinCargar = faltaCargar(evaluados)
+
+  // EL ATRASO SALE DE LAS ETAPAS QUE MARCÓ UNA PERSONA.
+  //
+  // Los hitos de la ficha ya no pueden decir «falta»: un casillero vacío no
+  // prueba que algo no se hizo. Lo que sí lo prueba es que la consultora haya
+  // marcado las etapas hasta la 5 cuando el calendario iba por la 8. Eso lo
+  // afirmó alguien que estuvo en la sesión.
+  const hayAlgunaMarcada = ETAPAS.some((e) => etapaHecha(e, marcadas))
+  const atrasoPorEtapas = hayAlgunaMarcada ? atrasoEnSemanas(viene.semana ?? null, marcadas) ?? 0 : 0
+
   const vencidos = evaluados.filter((e) => e.estado === 'falta')
   if (vencidos.length === 0) {
+    // Grave por el calendario: tres semanas o más sobre las etapas marcadas, o
+    // no haber vendido pasada su semana. Sale de `senalesDeGrave`, que es el
+    // único lugar donde se decide qué es grave.
+    const delCalendario = seLePaso ? [] : todas.filter((s) => !humanas.includes(s))
+    if (delCalendario.length > 0) {
+      return {
+        color: 'rojo',
+        palabra: 'grave',
+        porque: delCalendario.map((s) => s.dice).join(' '),
+        fase: null,
+        senales: delCalendario,
+      }
+    }
+
+    // Uno o dos escalones de atraso, medidos sobre lo que alguien marcó.
+    if (atrasoPorEtapas >= 1) {
+      const quedo = laQueQuedoAtras(viene.semana ?? null, marcadas)
+      const dice = `Va ${semanas(atrasoPorEtapas)} atrasado sobre las etapas marcadas` +
+                   `${quedo ? `: «${quedo.nombre}» vencía en la semana ${quedo.hastaSemana}` : ''}.`
+      return atrasoPorEtapas >= PARA_ATRASADO
+        ? { color: 'naranja', palabra: 'atrasado', porque: dice, fase: null }
+        : { color: 'amarillo', palabra: 'para mirar', porque: `${dice} Todavía se recupera.`, fase: null }
+    }
+
     // Al día en el calendario, pero dijo algo de costado. No es grave —eso ya
     // se decidió— y tampoco es verde: verde es el color que hace que nadie lo
     // mire otra vez.
@@ -143,10 +208,29 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
         tibias,
       }
     }
+    // VERDE ES UNA AFIRMACIÓN, NO LA AUSENCIA DE MALAS NOTICIAS.
+    //
+    // Si de lo que ya tendría que estar hecho hay cosas que ni siquiera podemos
+    // mirar, no sabemos si está en tiempo: sabemos que no lo cargamos. Y verde
+    // es justo el color que hace que nadie lo vuelva a mirar.
+    if (sinCargar.length > 0) {
+      const primeros = sinCargar.slice(0, 2).map((e) => `«${e.hito.etiqueta}»`).join(' y ')
+      const otros = sinCargar.length - Math.min(2, sinCargar.length)
+      return {
+        color: 'gris',
+        palabra: 'falta cargarlo',
+        porque: `No se lo puede comparar todavía: de ${sinCargar.length} ${sinCargar.length === 1 ? 'cosa' : 'cosas'} que ya ` +
+                `${sinCargar.length === 1 ? 'venció' : 'vencieron'} no hay nada cargado —${primeros}` +
+                `${otros > 0 ? ` y ${otros} más` : ''}—. Eso no dice que esté atrasado: dice que no sabemos.`,
+        fase: null,
+        sinCargar,
+      }
+    }
+
     return {
       color: 'verde',
       palabra: 'en tiempo',
-      porque: 'No hay nada vencido de lo que hoy se puede medir.',
+      porque: 'Está cargado todo lo que ya venció, y no hay nada sin hacer.',
       fase: null,
     }
   }
@@ -171,22 +255,6 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
 
   const bloqueante = vencidos.find((e) => e.hito.bloquea)
   const atrasoMayor = Math.max(...vencidos.map((e) => e.atrasoEnSemanas ?? 0))
-
-  // Un cliente que ya terminó el programa no está «grave»: terminó. El atraso
-  // de algo que vencía en la semana 4 de un programa que acabó hace medio año
-  // no es una urgencia de hoy, y ponerlo en rojo junto a alguien que va en la
-  // semana 6 y se puede recuperar es lo que rompe la lista: deja de servir
-  // para decidir a quién llamar primero.
-  if (seLePaso) {
-    const cuantos = vencidos.length
-    return {
-      color: 'azul',
-      palabra: 'terminó sin cerrar',
-      porque: `Se le terminó el programa y quedaron ${cuantos} ${cuantos === 1 ? 'cosa' : 'cosas'} sin cerrar, ` +
-              `la primera «${corte.hito.etiqueta}». No es una urgencia de esta semana: es la conversación de la renovación.`,
-      fase: faseDelHito(corte.hito),
-    }
-  }
 
   // Un hito bloqueante es peor que uno que no lo es, pero no convierte dos
   // semanas en una emergencia: sube un escalón, y nada más.

@@ -87,6 +87,18 @@ export const HITOS: readonly Hito[] = [
 
 export type EstadoHito = 'hecho' | 'falta' | 'esta_semana' | 'sin_datos' | 'todavia_no'
 
+/**
+ * Por qué no se sabe. Son tres cosas distintas y confundirlas fue el bug:
+ *
+ *  · `no_cargado`      — la fuente existe, pero de ESTE cliente no está cargada.
+ *                        Es trabajo nuestro pendiente, y se puede hacer hoy.
+ *  · `no_hay_fuente`   — esa fuente todavía no existe en la aplicación para
+ *                        nadie. No es trabajo de nadie: es una funcionalidad
+ *                        que falta.
+ *  · `sin_fecha`       — sin fecha de inicio no se sabe si ya correspondía.
+ */
+export type PorQueNoSeSabe = 'no_cargado' | 'no_hay_fuente' | 'sin_fecha'
+
 export type HitoEvaluado = {
   hito: Hito
   estado: EstadoHito
@@ -94,6 +106,7 @@ export type HitoEvaluado = {
   atrasoEnSemanas: number | null
   /** Por qué no se puede saber, cuando el estado es «sin datos». */
   porQueNoSeSabe?: string
+  porQue?: PorQueNoSeSabe
 }
 
 const COMO_SE_CARGA: Partial<Record<Fuente, string>> = {
@@ -119,6 +132,7 @@ export function evaluarHitos(datos: {
         estado: 'sin_datos' as const,
         atrasoEnSemanas: null,
         porQueNoSeSabe: COMO_SE_CARGA[hito.fuente] ?? 'falta la fuente de este dato',
+        porQue: 'no_hay_fuente' as const,
       }
     }
 
@@ -127,13 +141,58 @@ export function evaluarHitos(datos: {
       : (hito.camposQueLoDan ?? []).every((clave) => tieneDato(datos.valores[clave]))
 
     if (hecho) return { hito, estado: 'hecho', atrasoEnSemanas: null }
-    if (datos.semana === null) return { hito, estado: 'sin_datos', atrasoEnSemanas: null, porQueNoSeSabe: 'no hay fecha de inicio, así que no se sabe si ya correspondía' }
+    if (datos.semana === null) {
+      return {
+        hito, estado: 'sin_datos', atrasoEnSemanas: null, porQue: 'sin_fecha',
+        porQueNoSeSabe: 'no hay fecha de inicio, así que no se sabe si ya correspondía',
+      }
+    }
+
     if (datos.semana < hito.semana) return { hito, estado: 'todavia_no', atrasoEnSemanas: null }
 
     // Lo que vence esta misma semana todavía no está atrasado: se está
     // trabajando. Contarlo como falta hace que un cliente que va en tiempo se
     // ponga en rojo el lunes por algo que tiene toda la semana para hacer.
     if (datos.semana === hito.semana) return { hito, estado: 'esta_semana', atrasoEnSemanas: 0 }
+
+    // LA REGLA 2, PERO POR CLIENTE. Acá estaba la mentira más cara del tablero.
+    //
+    // `conDatos` miraba si la fuente tenía datos en ALGÚN cliente de la
+    // cartera. Como alguien había subido un onboarding, el hito opinaba sobre
+    // los ciento catorce clientes a los que nadie les subió el suyo, y decía
+    // que estaban atrasados desde la semana 1. Lo mismo con la ficha: «no sabe
+    // cuántas ventas necesita, hace doce semanas» cuando lo que pasó es que
+    // nadie cargó la meta y el ticket.
+    //
+    // Estas dos fuentes las llenamos NOSOTROS. Pueden probar que algo ESTÁ
+    // hecho; no pueden probar que no se hizo. Un casillero vacío no es un cero
+    // (regla 1), y una regla sin datos no dispara (regla 2). Así que cuando no
+    // están cargadas, el hito no dice «falta»: dice qué hay que cargar.
+    //
+    // No hay umbrales ni medias tintas a propósito: cargar la mitad de un dato
+    // no puede empeorar a un cliente. Si cargar algo pusiera a alguien en rojo,
+    // el sistema estaría enseñando a no cargar nada.
+    if (hito.fuente === 'documentos') {
+      return {
+        hito,
+        estado: 'sin_datos',
+        atrasoEnSemanas: null,
+        porQueNoSeSabe: 'no está cargado el onboarding de este cliente',
+        porQue: 'no_cargado',
+      }
+    }
+
+    if (hito.fuente === 'ficha') {
+      const cuales = (hito.camposQueLoDan ?? []).join(' y ')
+      return {
+        hito,
+        estado: 'sin_datos',
+        atrasoEnSemanas: null,
+        porQueNoSeSabe: `no está cargado ${cuales} de este cliente`,
+        porQue: 'no_cargado',
+      }
+    }
+
 
     return { hito, estado: 'falta', atrasoEnSemanas: datos.semana - hito.semana }
   })
@@ -184,7 +243,13 @@ export function fasesSegunLosHitos(evaluados: readonly HitoEvaluado[]): Record<n
   return salida
 }
 
-/** La línea de qué necesita: corta, en el idioma del equipo. */
+/**
+ * La línea de qué necesita: corta, en el idioma del equipo.
+ *
+ * Lo primero que dice es lo que falta CARGAR, cuando falta. Es lo que se puede
+ * hacer hoy, y es lo que hay que hacer antes de poder decir cualquier otra cosa
+ * de ese cliente.
+ */
 export function queNecesita(evaluados: readonly HitoEvaluado[], faltanDatos: readonly Campo[]): string {
   const corte = dondeSeCorta(evaluados)
   if (corte) {
@@ -192,9 +257,29 @@ export function queNecesita(evaluados: readonly HitoEvaluado[], faltanDatos: rea
     if (semanas === 0) return `${corte.hito.etiqueta.toLowerCase()}, esta semana`
     return `${corte.hito.etiqueta.toLowerCase()}: ${semanas} ${semanas === 1 ? 'semana' : 'semanas'} de atraso`
   }
+  const sinCargar = faltaCargar(evaluados)
+  if (sinCargar.length > 0) {
+    return `cargar ${sinCargar[0]!.hito.etiqueta.toLowerCase()}` +
+      (sinCargar.length > 1 ? ` y ${sinCargar.length - 1} ${sinCargar.length === 2 ? 'cosa' : 'cosas'} más` : '')
+  }
   if (faltanDatos.length > 0) {
     return `completar la ficha: faltan ${faltanDatos.length} datos`
   }
   const seSabe = evaluados.some((e) => e.estado !== 'sin_datos')
   return seSabe ? 'va en tiempo' : 'no hay datos para saber cómo va'
+}
+
+/**
+ * Lo que ya venció y no se puede mirar porque no está cargado.
+ *
+ * Es la lista que convierte un gris en algo que se puede hacer hoy: no dice
+ * «no sabemos», dice qué cargar y de qué cliente.
+ *
+ * No hace falta pasarle la semana: `no_cargado` sólo se devuelve cuando la
+ * semana del hito ya pasó. Pedirla era una forma de que el dato se perdiera en
+ * silencio cuando el que llamaba no la tenía a mano, que es justo lo que pasaba
+ * en el expediente.
+ */
+export function faltaCargar(evaluados: readonly HitoEvaluado[]): HitoEvaluado[] {
+  return evaluados.filter((e) => e.porQue === 'no_cargado')
 }
