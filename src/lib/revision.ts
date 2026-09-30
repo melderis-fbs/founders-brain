@@ -72,6 +72,7 @@ export const ESQUEMA_ESPERADO: {
     tablas: [], columnas: [['clientes', 'programa']],
   },
   { migracion: '0020_la_temperatura.sql', tablas: ['temperaturas'], columnas: [] },
+  { migracion: '0021_las_ocho_del_equipo.sql', tablas: [], columnas: [['consultoras', 'del_equipo']] },
 ]
 
 /**

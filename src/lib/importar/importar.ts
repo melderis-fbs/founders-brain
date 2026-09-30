@@ -359,7 +359,17 @@ async function procesarUnaFila(
     valores.set(campo.clave, lectura.valor)
   }
 
-  // La consultora llega por nombre y se resuelve a una fila.
+  // La consultora llega por nombre y tiene que coincidir con una que ya existe.
+  //
+  // Antes, un nombre que no existía creaba una consultora nueva. Alcanzaba un
+  // error de tipeo en la planilla para partir una cartera en dos sin que nadie
+  // se enterara. Ahora no se crea nada: lo que no coincide se deja sin asignar
+  // y se dice, con el nombre que vino (regla 10).
+  //
+  // Tampoco se adivina por parecido (regla 3). «Victoria» no se resuelve sola
+  // aunque existan «Victoria P» y «Victoria A»: se nombran las candidatas y
+  // decide una persona. Vale igual con una sola candidata: que haya una nada
+  // más no la hace la correcta.
   let consultoraId: number | null = null
   let cambiaConsultora = false
   const columnaConsultora = mapeo.campos.get('consultora')
@@ -367,19 +377,22 @@ async function procesarUnaFila(
     const lectura = leerTexto(bruto[columnaConsultora])
     if (lectura.estado === 'ok') {
       const pleg = plegado(lectura.valor)
-      let consultora = consultorasPorPleg.get(pleg)
-      if (!consultora) {
-        const creada = await escribirDevolviendo<{ id: number }>(
-          'insert into consultoras (nombre, nombre_pleg) values ($1, $2) returning id',
-          [lectura.valor, pleg],
-          cli,
+      const consultora = consultorasPorPleg.get(pleg)
+      if (consultora) {
+        consultoraId = consultora.id
+        cambiaConsultora = !existente || existente.consultora_id !== consultora.id
+      } else {
+        const candidatas = [...consultorasPorPleg.values()]
+          .filter((c) => c.nombre_pleg.startsWith(`${pleg} `) || pleg.startsWith(`${c.nombre_pleg} `))
+          .map((c) => c.nombre)
+        avisos.push(
+          candidatas.length > 0
+            ? `«${lectura.valor}» no es ninguna consultora: puede ser ${candidatas.join(' o ')}. ` +
+              'Queda sin asignar hasta que lo diga alguien: escribilo completo en la planilla, o asignalo desde la ficha.'
+            : `«${lectura.valor}» no está en el equipo, así que ese cliente queda sin consultora. ` +
+              'Si es un error de tipeo corregilo en la planilla; si es alguien nuevo, sumala primero en «El equipo».',
         )
-        consultora = { id: creada.id, nombre: lectura.valor, nombre_pleg: pleg }
-        consultorasPorPleg.set(pleg, consultora)
-        avisos.push(`Consultora nueva: «${lectura.valor}». Si es un error de tipeo, corregilo en la planilla y volvé a subir.`)
       }
-      consultoraId = consultora.id
-      cambiaConsultora = !existente || existente.consultora_id !== consultora.id
     }
   }
 

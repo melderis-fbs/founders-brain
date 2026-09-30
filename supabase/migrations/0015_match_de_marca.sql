@@ -12,5 +12,12 @@
 
 alter table documentos drop constraint if exists documentos_tipo_check;
 
+-- «encuesta» lo agrega formalmente la 0018, pero tiene que estar también acá.
+-- Las migraciones se corren todas, en orden, cada vez: si esta restricción
+-- prohíbe un tipo que la 0018 permite, la primera vez que alguien vuelva a
+-- correrlas sobre una base que YA tiene una encuesta cargada, esto falla y
+-- ninguna de las migraciones siguientes llega a aplicarse. Una migración vieja
+-- no puede ser más angosta que la base que va a encontrar.
 alter table documentos add constraint documentos_tipo_check
-  check (tipo in ('onboarding', 'match_de_marca', 'llamada_venta', 'contrato', 'sesion', 'notas', 'otro'));
+  check (tipo in ('onboarding', 'match_de_marca', 'llamada_venta', 'contrato',
+                  'sesion', 'notas', 'encuesta', 'otro'));

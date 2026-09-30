@@ -30,7 +30,7 @@ export function BanderaYConsultora({
   historial: Bandera[]
   cambios: CambioDeCoach[]
   consultoraActual: string | null
-  consultoras: { id: number; nombre: string }[]
+  consultoras: { id: number; nombre: string; del_equipo: boolean }[]
   esAdmin: boolean
 }) {
   const router = useRouter()
@@ -152,7 +152,9 @@ export function BanderaYConsultora({
             <label htmlFor="a-quien">Hoy es de <b>{consultoraActual ?? 'nadie'}</b>. ¿A quién pasa?</label>
             <select id="a-quien" value={aQuien} onChange={(e) => setAQuien(e.target.value)}>
               <option value="">Elegí una…</option>
-              {consultoras.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              {consultoras.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}{c.del_equipo ? '' : ' · fuera del equipo'}</option>
+              ))}
               <option value="ninguna">— sin consultora —</option>
             </select>
           </div>

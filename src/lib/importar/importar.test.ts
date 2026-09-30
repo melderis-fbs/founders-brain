@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { exportarClientes } from '../clientes'
-import { fila, filas, pool } from '../db'
+import { escribirDevolviendo, fila, filas, pool } from '../db'
 import { importarCsv } from './importar'
 import { csvDeCartera } from './plantilla'
 
@@ -158,14 +158,42 @@ FB-001,María Márquez,Lucía`)
     expect(c?.nombre).toBe('María Márquez')
   })
 
-  it('la consultora se reutiliza y se avisa cuando es nueva', async () => {
+  // Antes, un nombre que no existía creaba la consultora. Un error de tipeo en
+  // la planilla partía una cartera en dos sin que nadie se enterara.
+  it('una consultora que no está en el equipo no se crea: el cliente queda sin asignar y se dice', async () => {
+    const r = await importar(`${ENCABEZADOS}
+Norma Márquez,Lucía Fernández,activo,4,03/02/2025,,,,,`)
+    expect(r.filas[0].avisos.join(' ')).toContain('no está en el equipo')
+    expect((await filas<{ n: number }>('select count(*)::int as n from consultoras'))[0].n).toBe(0)
+    const cliente = await fila<{ consultora_id: number | null }>('select consultora_id from clientes')
+    expect(cliente?.consultora_id).toBeNull()
+  })
+
+  it('la que sí está se reutiliza, aunque venga en minúscula y sin tilde', async () => {
+    await escribirDevolviendo(
+      `insert into consultoras (nombre, nombre_pleg, del_equipo) values ('Lucía Fernández', 'lucia fernandez', true) returning id`, [])
     const r = await importar(`${ENCABEZADOS}
 Norma Márquez,Lucía Fernández,activo,4,03/02/2025,,,,,
 Juan Pérez,lucia fernandez,activo,6,10/03/2025,,,,,`)
-    expect(r.filas[0].avisos.join(' ')).toContain('Consultora nueva')
+    expect(r.filas[0].avisos).toEqual([])
     expect(r.filas[1].avisos).toEqual([])
-    const cuantas = await filas<{ n: number }>('select count(*)::int as n from consultoras')
-    expect(cuantas[0].n).toBe(1)
+    expect((await filas<{ n: number }>('select count(*)::int as n from consultoras'))[0].n).toBe(1)
+  })
+
+  // Regla 3: no se adivina por parecido. Hay dos Victorias y «Victoria» sola no
+  // alcanza para saber cuál, así que no se elige ninguna.
+  it('un nombre incompleto nombra las candidatas y no asigna a ninguna', async () => {
+    for (const [nombre, pleg] of [['Victoria P', 'victoria p'], ['Victoria A', 'victoria a']]) {
+      await escribirDevolviendo(
+        `insert into consultoras (nombre, nombre_pleg, del_equipo) values ($1, $2, true) returning id`, [nombre, pleg])
+    }
+    const r = await importar(`${ENCABEZADOS}
+Norma Márquez,Victoria,activo,4,03/02/2025,,,,,`)
+    const dice = r.filas[0].avisos.join(' ')
+    expect(dice).toContain('Victoria P')
+    expect(dice).toContain('Victoria A')
+    const cliente = await fila<{ consultora_id: number | null }>('select consultora_id from clientes')
+    expect(cliente?.consultora_id).toBeNull()
   })
 
   it('la planilla sale de la app: se baja la cartera y se vuelve a subir sin que cambie nada', async () => {

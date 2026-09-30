@@ -7,18 +7,27 @@ import { altaDeConsultora, borrarUnaConsultora, corregirNombreDeConsultora } fro
 import type { ConsultoraDelEquipo } from '@/lib/usuarios'
 
 /**
- * Las consultoras, con o sin clientes.
+ * El equipo de consultoras: una lista cerrada.
  *
- * Las que vienen de la planilla aparecen solas, pero una que todavía no tiene
- * ningún cliente cargado no aparecía por ningún lado, y entonces no había
- * forma de crearla y después pasarle su cartera. Acá está la lista completa,
- * y el enlace para ir a asignarle clientes.
+ * En todas las demás pantallas la consultora SE ELIGE de esta lista. Acá es el
+ * único lugar donde se escribe un nombre, y es a propósito: sumar a alguien al
+ * equipo es una decisión, no el efecto secundario de tipear su nombre en la
+ * ficha de un cliente o en una celda de la planilla. Así era antes y por eso
+ * había tres «Romina».
+ *
+ * Las de afuera del equipo se muestran aparte y con sus clientes: son las que
+ * quedaron de arrastre. No se las esconde ni se las junta sola con la del
+ * equipo que se le parece —eso es adivinar (regla 3)—: se ven, y alguien pasa
+ * los clientes a quien corresponda.
  */
 export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[] }) {
   const router = useRouter()
   const [nueva, setNueva] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [tocando, setTocando] = useState<number | null>(null)
+
+  const delEquipo = consultoras.filter((c) => c.del_equipo)
+  const deAfuera = consultoras.filter((c) => !c.del_equipo)
 
   async function crear() {
     setError(null)
@@ -52,7 +61,8 @@ export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[
     <section style={{ marginTop: 30 }}>
       <h2>Las consultoras</h2>
       <p className="mini" style={{ marginTop: 0 }}>
-        Salen de la planilla. Si alguna no vino ahí —o vino escrita distinto— se crea o se corrige acá.
+        Es la lista de la que se elige en todas las demás pantallas: en ningún otro lado se escribe
+        una consultora a mano. {deAfuera.length > 0 ? 'Abajo están las que quedaron de afuera del equipo.' : null}
       </p>
 
       {error ? <div className="error-campo" style={{ marginBottom: 12 }}>{error}</div> : null}
@@ -68,7 +78,7 @@ export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[
             </tr>
           </thead>
           <tbody>
-            {consultoras.map((c) => (
+            {delEquipo.map((c) => (
               <tr key={c.id}>
                 <td><b>{c.nombre}</b></td>
                 <td className="num">
@@ -103,13 +113,50 @@ export function Consultoras({ consultoras }: { consultoras: ConsultoraDelEquipo[
       <p style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           type="text" value={nueva} onChange={(e) => setNueva(e.target.value)}
-          placeholder="Nombre de una consultora nueva" style={{ minWidth: 260 }}
+          placeholder="Nombre de alguien que se suma al equipo" style={{ minWidth: 280 }}
           onKeyDown={(e) => { if (e.key === 'Enter') void crear() }}
         />
         <button type="button" className="boton" onClick={() => void crear()} disabled={nueva.trim() === ''}>
-          Agregar
+          Sumar al equipo
         </button>
       </p>
+      <p className="mini apagado" style={{ marginTop: 0 }}>
+        Escribilo como se va a leer en todas las pantallas. Si hay dos con el mismo nombre de pila,
+        distinguilas acá —«Victoria P», «Victoria A»—: después no hay forma de saber cuál es cuál.
+      </p>
+
+      {deAfuera.length > 0 ? (
+        <div style={{ marginTop: 26 }}>
+          <h3 style={{ marginBottom: 4 }}>No son del equipo</h3>
+          <p className="mini" style={{ marginTop: 0 }}>
+            Quedaron de antes. No se juntan solas con la del equipo que se les parezca: que exista
+            una «Romina Gómez» no la convierte en «Romina». Pasá sus clientes y después borralas.
+          </p>
+          <div className="tabla-marco">
+            <table>
+              <tbody>
+                {deAfuera.map((c) => (
+                  <tr key={c.id}>
+                    <td><b>{c.nombre}</b></td>
+                    <td className="num">
+                      {c.clientes === 0
+                        ? <span className="apagado">sin clientes</span>
+                        : `${c.clientes} ${c.clientes === 1 ? 'cliente' : 'clientes'}`}
+                    </td>
+                    <td className="num">
+                      <Link className="boton suave chico" href={`/clientes?asignar=${c.id}`}>Pasar sus clientes</Link>{' '}
+                      <button type="button" className="boton suave chico peligro" disabled={tocando === c.id}
+                              onClick={() => void borrar(c)}>
+                        Borrar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -71,6 +71,9 @@ export async function crearUsuario(datos: {
   if (yaEsta) return { ok: false, error: `Ese email ya es de ${yaEsta.nombre}. Si le querés cambiar la clave, usá «Cambiar la clave».` }
 
   const consultoraId = await idDeConsultora(datos.consultora)
+  if (consultoraId === 'no_existe') {
+    return { ok: false, error: `«${datos.consultora}» no está en el equipo. Elegila de la lista, o sumala primero en «Las consultoras».` }
+  }
   const hash = await hashearClave(datos.clave)
 
   const creado = await escribirDevolviendo<{ id: number }>(
@@ -95,6 +98,9 @@ export async function cambiarClave(usuarioId: number, clave: string): Promise<Re
 /** Cambiar de qué consultora es. Sin consultora pasa a ver todo. */
 export async function cambiarConsultora(usuarioId: number, consultora: string | null): Promise<Resultado> {
   const consultoraId = await idDeConsultora(consultora)
+  if (consultoraId === 'no_existe') {
+    return { ok: false, error: `«${consultora}» no está en el equipo. Elegila de la lista.` }
+  }
   await escribir(
     'update usuarios set consultora_id = $2, rol = $3 where id = $1',
     [usuarioId, consultoraId, consultoraId === null ? 'admin' : 'consultora'],
@@ -120,18 +126,21 @@ export async function cuantosAdminsActivos(): Promise<number> {
   return r?.n ?? 0
 }
 
-async function idDeConsultora(nombre: string | null): Promise<number | null> {
+/**
+ * Resolver una consultora por su nombre. NO la crea.
+ *
+ * Antes la creaba si no existía, y por eso alcanzaba un error de tipeo para
+ * tener dos: los clientes quedaban repartidos entre «Romina» y «Romi» y el
+ * filtro por consultora mostraba de menos sin que nadie pudiera saber por qué.
+ * Las consultoras son una lista cerrada; darse de alta es un acto explícito en
+ * la pantalla del equipo, no el efecto secundario de escribir un nombre.
+ */
+async function idDeConsultora(nombre: string | null): Promise<number | null | 'no_existe'> {
   const limpio = (nombre ?? '').trim()
   if (limpio === '') return null
 
   const existe = await fila<{ id: number }>('select id from consultoras where nombre_pleg = $1', [plegado(limpio)])
-  if (existe) return existe.id
-
-  const creada = await escribirDevolviendo<{ id: number }>(
-    'insert into consultoras (nombre, nombre_pleg) values ($1, $2) returning id',
-    [limpio, plegado(limpio)],
-  )
-  return creada.id
+  return existe ? existe.id : 'no_existe'
 }
 
 // ── Las consultoras ─────────────────────────────────────────────────────────
@@ -139,6 +148,8 @@ async function idDeConsultora(nombre: string | null): Promise<number | null> {
 export type ConsultoraDelEquipo = {
   id: number
   nombre: string
+  /** Si está en la lista cerrada del equipo. Las de afuera quedan de arrastre. */
+  del_equipo: boolean
   clientes: number
   /** Cuántas personas entran a la aplicación viendo esta cartera. */
   usuarios: number
@@ -153,13 +164,34 @@ export type ConsultoraDelEquipo = {
  */
 export async function listarConsultorasDelEquipo(): Promise<ConsultoraDelEquipo[]> {
   return filas<ConsultoraDelEquipo>(
-    `select co.id, co.nombre,
+    `select co.id, co.nombre, co.del_equipo,
             (select count(*)::int from clientes c where c.consultora_id = co.id) as clientes,
             (select count(*)::int from usuarios u where u.consultora_id = co.id and u.activo) as usuarios
-       from consultoras co order by co.nombre`,
+       from consultoras co order by co.del_equipo desc, co.nombre`,
   )
 }
 
+/**
+ * Las que se pueden elegir: las ocho del equipo, más cualquiera de afuera que
+ * todavía tenga clientes colgando.
+ *
+ * Las de afuera se ofrecen igual a propósito. Si se escondieran, un cliente de
+ * una consultora vieja mostraría «sin consultora» en la pantalla y estaría
+ * asignado en la base: la ficha diría una cosa y el filtro otra. Se ven, se
+ * marcan, y se vacían pasando los clientes.
+ */
+export async function consultorasParaElegir(): Promise<{ id: number; nombre: string; del_equipo: boolean }[]> {
+  return filas<{ id: number; nombre: string; del_equipo: boolean }>(
+    `select co.id, co.nombre, co.del_equipo
+       from consultoras co
+      where co.del_equipo
+         or exists (select 1 from clientes c where c.consultora_id = co.id)
+         or exists (select 1 from usuarios u where u.consultora_id = co.id)
+      order by co.del_equipo desc, co.nombre`,
+  )
+}
+
+/** Sumar a alguien al equipo. Es un acto explícito, no el efecto de tipear. */
 export async function crearConsultora(nombre: string): Promise<Resultado> {
   const limpio = nombre.trim()
   if (limpio === '') return { ok: false, error: 'Falta el nombre.' }
@@ -168,7 +200,7 @@ export async function crearConsultora(nombre: string): Promise<Resultado> {
   if (existe) return { ok: false, error: `«${existe.nombre}» ya está.` }
 
   const creada = await escribirDevolviendo<{ id: number }>(
-    'insert into consultoras (nombre, nombre_pleg) values ($1, $2) returning id',
+    'insert into consultoras (nombre, nombre_pleg, del_equipo) values ($1, $2, true) returning id',
     [limpio, plegado(limpio)],
   )
   return { ok: true, id: creada.id }

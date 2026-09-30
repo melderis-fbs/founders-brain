@@ -303,7 +303,7 @@ export default async function Ficha({
         <BanderaYConsultora
           clienteId={cliente.id} bandera={bandera} historial={historialBanderas}
           cambios={cambios} consultoraActual={cliente.consultora}
-          consultoras={lasConsultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
+          consultoras={lasConsultoras.map((c) => ({ id: c.id, nombre: c.nombre, del_equipo: c.del_equipo }))}
           esAdmin={quien?.usuario.rol === 'admin'}
         />
       </header>

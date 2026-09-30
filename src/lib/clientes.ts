@@ -254,10 +254,20 @@ export async function fuentesDeLaCartera(): Promise<FuentesConDatos> {
   })
 }
 
+/**
+ * Las consultoras que se ofrecen para elegir, el equipo primero.
+ *
+ * Se incluyen las de afuera del equipo que todavía tengan clientes: esconderlas
+ * haría que la ficha de esos clientes muestre «sin consultora» mientras en la
+ * base siguen asignados, y eso es una pantalla que miente.
+ */
 export async function listarConsultoras() {
-  return filas<{ id: number; nombre: string; clientes: number }>(
-    `select co.id, co.nombre, (select count(*)::int from clientes c where c.consultora_id = co.id) as clientes
-       from consultoras co order by co.nombre`,
+  return filas<{ id: number; nombre: string; del_equipo: boolean; clientes: number }>(
+    `select co.id, co.nombre, co.del_equipo,
+            (select count(*)::int from clientes c where c.consultora_id = co.id) as clientes
+       from consultoras co
+      where co.del_equipo or exists (select 1 from clientes c where c.consultora_id = co.id)
+      order by co.del_equipo desc, co.nombre`,
   )
 }
 

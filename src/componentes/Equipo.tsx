@@ -8,15 +8,16 @@ import type { UsuarioDelEquipo } from '@/lib/usuarios'
 /**
  * El equipo: quién entra y qué ve cada uno.
  *
- * La consultora se escribe, no se elige de una lista cerrada: las consultoras
- * entran con la planilla y el nombre tiene que poder coincidir con el que ya
- * está ahí. La lista de las que hay se ofrece como sugerencia.
+ * La consultora SE ELIGE de la lista, no se escribe. Cuando se escribía, un
+ * error de tipeo creaba una consultora nueva sin avisar: los clientes quedaban
+ * repartidos entre «Romina» y «Romi», el filtro mostraba de menos y no había
+ * forma de darse cuenta mirando la pantalla.
  */
 export function Equipo({
   usuarios, consultoras, yo,
 }: {
   usuarios: UsuarioDelEquipo[]
-  consultoras: string[]
+  consultoras: { id: number; nombre: string; del_equipo: boolean }[]
   yo: number
 }) {
   const router = useRouter()
@@ -45,14 +46,9 @@ export function Equipo({
     else setError(r.error)
   }
 
-  async function laConsultora(u: UsuarioDelEquipo) {
-    const puesto = prompt(
-      `¿De qué consultora es ${u.nombre}?\n\nDejalo vacío para que sea admin y vea toda la cartera.\n\nLas que hay: ${consultoras.join(', ')}`,
-      u.consultora ?? '',
-    )
-    if (puesto === null) return
+  async function laConsultora(u: UsuarioDelEquipo, nombre: string) {
     setTocando(u.id); setError(null); setListo(null)
-    const r = await moverDeConsultora(u.id, puesto.trim() || null)
+    const r = await moverDeConsultora(u.id, nombre || null)
     setTocando(null)
     if (r.ok) router.refresh()
     else setError(r.error)
@@ -97,21 +93,29 @@ export function Equipo({
                   <b>{u.nombre}</b>{u.id === yo ? <span className="mini"> · sos vos</span> : null}
                   <div className="mini">{u.email}{u.activo ? '' : ' · sin acceso'}</div>
                 </td>
+                {/* Qué ve cada uno se elige de la lista, acá mismo: era un
+                    prompt donde se escribía el nombre, y cualquier tipeo creaba
+                    una consultora nueva. */}
                 <td>
-                  {u.rol === 'admin'
-                    ? <span className="semaforo verde"><i />toda la cartera</span>
-                    : u.consultora
-                      ? <>los de {u.consultora}</>
-                      : <span className="semaforo gris" title="Sin consultora asignada no ve ningún cliente"><i />ningún cliente</span>}
+                  <select
+                    value={u.rol === 'admin' ? '' : (u.consultora ?? '')}
+                    disabled={tocando === u.id}
+                    onChange={(e) => void laConsultora(u, e.target.value)}
+                    title="Sin consultora, es admin y ve toda la cartera"
+                  >
+                    <option value="">toda la cartera (admin)</option>
+                    {consultoras.map((c) => (
+                      <option key={c.id} value={c.nombre}>
+                        los de {c.nombre}{c.del_equipo ? '' : ' · fuera del equipo'}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td className="num">{u.clientes}</td>
                 <td className="mini">
                   {u.ultima_entrada ? u.ultima_entrada.slice(0, 10).split('-').reverse().join('/') : <span className="apagado">nunca entró</span>}
                 </td>
                 <td className="num">
-                  <button type="button" className="boton suave chico" disabled={tocando === u.id} onClick={() => void laConsultora(u)}>
-                    Qué ve
-                  </button>{' '}
                   <button type="button" className="boton suave chico" disabled={tocando === u.id} onClick={() => void laClave(u)}>
                     Clave
                   </button>{' '}
@@ -148,10 +152,12 @@ export function Equipo({
             </div>
             <div className="campo" style={{ flex: 1, minWidth: 200 }}>
               <label htmlFor="consultora">De qué consultora</label>
-              <input id="consultora" name="consultora" type="text" list="las-consultoras" placeholder="vacío = admin, ve todo" />
-              <datalist id="las-consultoras">
-                {consultoras.map((c) => <option key={c} value={c} />)}
-              </datalist>
+              <select id="consultora" name="consultora" defaultValue="">
+                <option value="">— admin, ve toda la cartera —</option>
+                {consultoras.map((c) => (
+                  <option key={c.id} value={c.nombre}>{c.nombre}{c.del_equipo ? '' : ' · fuera del equipo'}</option>
+                ))}
+              </select>
             </div>
           </div>
           <p className="mini" style={{ marginTop: 0 }}>
