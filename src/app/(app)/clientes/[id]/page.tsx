@@ -23,7 +23,7 @@ import { queSeVaConElCliente } from '@/lib/borrar'
 import { mesesDe, totalesDe } from '@/lib/meses'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
-import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
+import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, sigueElRoadMap, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 
 /** Los bloques de «El cliente», en el orden en que se conoce a alguien. */
 const GRUPOS_DEL_CLIENTE: Grupo[] = [
@@ -122,7 +122,8 @@ export default async function Ficha({
   // Etapas Y hitos: una etapa está hecha si está marcada ella o si están
   // marcados todos sus hitos, así que el cálculo necesita las dos cosas.
   const etapasHechas = todoLoMarcado(hechos)
-  const sigueElPrograma = cliente.valores.sigue_el_programa !== false
+  // Sólo Growth tiene Road Map contra el cual comparar: Elite se trabaja sobre el caso.
+  const sigueElPrograma = sigueElRoadMap(cliente.valores.programa)
   const avance = avanceDe(
     semanaEnLaQueVa(inicio), etapasHechas, sigueElPrograma, semanasDelPrograma(meses),
     {
@@ -218,6 +219,17 @@ export default async function Ficha({
             <b className={termina ? undefined : 'apagado'}>
               {termina ? termina.fecha.split('-').reverse().join('/') : 'sin fecha'}
               {termina?.calculada ? <div className="mini">calculada: {meses} meses desde el inicio</div> : null}
+            </b>
+          </div>
+          <div>
+            <span className="rotulo">Programa</span>
+            <b className={cliente.valores.programa ? undefined : 'apagado'}>
+              {cliente.valores.programa === 'elite' ? 'Elite'
+                : cliente.valores.programa === 'growth' ? 'Growth'
+                  : 'sin elegir'}
+              {cliente.valores.programa === 'elite'
+                ? <div className="mini">sin estructura fija: se trabaja sobre el caso</div>
+                : null}
             </b>
           </div>
           <div>

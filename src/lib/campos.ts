@@ -57,6 +57,23 @@ export const ESTADOS = ['activo', 'pausado', 'baja', 'finalizado'] as const
 export const MODELOS = ['servicio', 'producto', 'infoproducto', 'mixto'] as const
 export const FORMAS_PAGO = ['contado', 'cuotas'] as const
 
+/**
+ * Los dos programas.
+ *
+ * Growth es el de las catorce etapas en dieciséis semanas: se compara contra el
+ * Road Map. Elite no tiene estructura fija —se trabaja sobre el caso puntual—
+ * así que no se lo compara contra nada y su plan lo escribe su coach.
+ *
+ * Antes eran M1, M1+ y M2. M1 pasó a ser Growth; M1+ y M2 pasaron a ser Elite.
+ */
+export const PROGRAMAS = ['growth', 'elite'] as const
+export type Programa = (typeof PROGRAMAS)[number]
+
+/** Sólo Growth tiene Road Map contra el cual comparar. */
+export function sigueElRoadMap(programa: unknown): boolean {
+  return programa !== 'elite'
+}
+
 export const CAMPOS: readonly Campo[] = [
   // ── Identidad ───────────────────────────────────────────────────────────
   { clave: 'nombre', etiqueta: 'Nombre y apellido', grupo: 'identidad', tabla: 'clientes', columna: 'nombre', tipo: 'texto', cuenta: true, base: true,
@@ -80,8 +97,8 @@ export const CAMPOS: readonly Campo[] = [
     ayuda: 'Con esto se lo encuentra en la comunidad' },
   { clave: 'fuente', etiqueta: 'Cómo nos conoció', grupo: 'identidad', tabla: 'clientes', columna: 'fuente', tipo: 'texto', cuenta: true,
     sinonimos: ['fuente', 'de donde vino', 'origen', 'como nos conocio', 'como nos conociste', 'canal de entrada'] },
-  { clave: 'programa_meses', etiqueta: 'Programa', grupo: 'identidad', tabla: 'clientes', columna: 'programa_meses', tipo: 'entero', cuenta: true, base: true,
-    sinonimos: ['programa', 'meses', 'duracion', 'duracion del programa', 'plan'],
+  { clave: 'programa_meses', etiqueta: 'Cuánto dura', grupo: 'identidad', tabla: 'clientes', columna: 'programa_meses', tipo: 'entero', cuenta: true, base: true,
+    sinonimos: ['meses', 'duracion', 'duracion del programa', 'cuanto dura', 'meses del programa'],
     ayuda: '4 o 6 meses, y 5 o 12 para las excepciones y los pagos full' },
   { clave: 'fecha_inicio', etiqueta: 'Inicio del programa', grupo: 'identidad', tabla: 'clientes', columna: 'fecha_inicio', tipo: 'fecha', cuenta: true, base: true,
     sinonimos: ['inicio', 'fecha de inicio', 'inicio del programa', 'arranque', 'ingreso', 'ingreso reintegro'] },
@@ -92,9 +109,11 @@ export const CAMPOS: readonly Campo[] = [
     sinonimos: ['closer', 'cerrador', 'quien cerro'] },
   { clave: 'setter', etiqueta: 'Setter', grupo: 'identidad', tabla: 'clientes', columna: 'setter', tipo: 'texto', cuenta: true,
     sinonimos: ['setter', 'quien agendo', 'agendador'] },
-  { clave: 'sigue_el_programa', etiqueta: 'Sigue el Road Map', grupo: 'identidad', tabla: 'clientes', columna: 'sigue_el_programa', tipo: 'booleano', cuenta: false,
-    sinonimos: ['sigue el programa', 'sigue el road map', 'road map'],
-    ayuda: 'Los M2 y las excepciones trabajan sobre el caso puntual. Poné «no» y deja de compararse contra las catorce etapas' },
+  { clave: 'programa', etiqueta: 'Programa', grupo: 'identidad', tabla: 'clientes', columna: 'programa', tipo: 'opcion', cuenta: true, base: true,
+    opciones: PROGRAMAS,
+    alias: { m1: 'growth', 'm1+': 'elite', m2: 'elite', 'growth ': 'growth' },
+    sinonimos: ['programa', 'tipo de programa', 'plan'],
+    ayuda: 'Growth se compara contra las catorce etapas. Elite no tiene estructura fija: se trabaja sobre el caso' },
   { clave: 'plan_propio', etiqueta: 'El plan de este cliente', grupo: 'identidad', tabla: 'clientes', columna: 'plan_propio', tipo: 'texto_largo', cuenta: false,
     sinonimos: ['plan propio', 'plan del cliente', 'camino propio'],
     ayuda: 'Para los que no siguen el Road Map: qué se acordó trabajar con este cliente, en las palabras de su coach' },
@@ -157,7 +176,7 @@ export const CAMPOS: readonly Campo[] = [
   { clave: 'modelo_negocio', etiqueta: 'Modelo de negocio', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'modelo_negocio', tipo: 'opcion', cuenta: true, base: true, opciones: MODELOS, alias: { servicios: 'servicio', productos: 'producto', curso: 'infoproducto', 'info producto': 'infoproducto', digital: 'infoproducto' },
     sinonimos: ['modelo', 'modelo de negocio', 'tipo de negocio'] },
   { clave: 'a_quien_hoy', etiqueta: 'A quién le vende hoy', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'a_quien_hoy', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['a quien le vende', 'clientes actuales', 'a quien vende hoy'],
+    sinonimos: ['a quien le vende hoy', 'clientes actuales', 'a quien vende hoy'],
     ayuda: 'Los clientes reales que tiene, no su cliente ideal' },
   { clave: 'cliente_ideal_inicial', etiqueta: 'Cliente ideal al entrar', grupo: 'negocio', tabla: 'cliente_negocio', columna: 'cliente_ideal_inicial', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['cliente ideal inicial', 'cliente ideal onboarding'] },
@@ -279,7 +298,7 @@ export const CAMPOS: readonly Campo[] = [
 
   // ── Lo que se dijo en la venta ──────────────────────────────────────────
   { clave: 'dolor_textual', etiqueta: 'El dolor con sus palabras', grupo: 'venta', tabla: 'cliente_venta', columna: 'dolor_textual', tipo: 'texto_largo', cuenta: true,
-    sinonimos: ['dolor textual', 'dolor', 'cita del dolor'],
+    sinonimos: ['dolor textual', 'cita del dolor', 'dolor con sus palabras'],
     ayuda: 'Cita literal, sin resumir' },
   { clave: 'objeciones_venta', etiqueta: 'Lo que lo hizo dudar', grupo: 'venta', tabla: 'cliente_venta', columna: 'objeciones_venta', tipo: 'texto_largo', cuenta: true,
     sinonimos: ['objeciones de la venta', 'objeciones venta', 'dudas'] },

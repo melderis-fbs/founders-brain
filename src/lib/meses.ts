@@ -1,4 +1,5 @@
 import { escribir, escribirDevolviendo, filas } from './db'
+import { condicionDeAlcance, type Alcance } from './permisos'
 import type { MesDelCliente } from './meses-tipos'
 
 export * from './meses-tipos'
@@ -90,4 +91,93 @@ export async function borrarMes(clienteId: number, id: number): Promise<Resultad
   if (suyo.length === 0) return { ok: false, error: 'Ese mes no es de este cliente.' }
   await escribir('delete from cliente_mes where id = $1 and cliente_id = $2', [id, clienteId], { esperadas: 1 })
   return { ok: true, id }
+}
+
+export type MesDeLaCartera = {
+  anio: number
+  mes: number
+  clientes: number
+  ventas: number | null
+  facturacion: number | null
+}
+
+export type PorConsultora = {
+  consultora: string | null
+  clientes: number
+  ventas: number | null
+  facturacion: number | null
+}
+
+export type VentasDeLaCartera = {
+  meses: MesDeLaCartera[]
+  porConsultora: PorConsultora[]
+  /** Cuántos clientes de la cartera tienen al menos un mes cargado. */
+  conDatos: number
+  total: number
+}
+
+/**
+ * LAS VENTAS DE TODA LA CARTERA, MES A MES
+ *
+ * Lo mismo que la ficha muestra de un cliente, sumado. Sirve para lo que un
+ * cliente solo no puede contestar: si el mes que viene va a ser mejor que éste,
+ * y de qué consultoras sale lo que se factura.
+ *
+ * Los totales no inventan ceros: un mes que nadie cargó no vale cero, no vale.
+ * Y se dice cuántos clientes tienen datos cargados, porque «facturamos ocho
+ * millones» significa una cosa si son 194 clientes y otra si son 12.
+ */
+export async function ventasDeLaCartera(alcance: Alcance): Promise<VentasDeLaCartera> {
+  const suyo = condicionDeAlcance(alcance, 'c.consultora_id', 1)
+  const parametros = suyo.parametro === null ? [] : [suyo.parametro]
+
+  const meses = await filas<MesDeLaCartera>(
+    `select m.anio, m.mes,
+            count(distinct m.cliente_id)::int as clientes,
+            sum(m.ventas)::int as ventas,
+            sum(m.facturacion)::float8 as facturacion
+       from cliente_mes m join clientes c on c.id = m.cliente_id
+      where ${suyo.condicion}
+      group by m.anio, m.mes
+      order by m.anio, m.mes`,
+    parametros,
+  )
+
+  const porConsultora = await filas<PorConsultora>(
+    `select co.nombre as consultora,
+            count(distinct m.cliente_id)::int as clientes,
+            sum(m.ventas)::int as ventas,
+            sum(m.facturacion)::float8 as facturacion
+       from cliente_mes m
+       join clientes c on c.id = m.cliente_id
+       left join consultoras co on co.id = c.consultora_id
+      where ${suyo.condicion}
+      group by co.nombre
+      order by sum(m.facturacion) desc nulls last`,
+    parametros,
+  )
+
+  const [cuentas] = await filas<{ conDatos: number; total: number }>(
+    `select
+       (select count(distinct m.cliente_id) from cliente_mes m
+          join clientes c on c.id = m.cliente_id where ${suyo.condicion})::int as "conDatos",
+       (select count(*) from clientes c where ${suyo.condicion})::int as total`,
+    parametros,
+  )
+
+  return { meses, porConsultora, conDatos: cuentas?.conDatos ?? 0, total: cuentas?.total ?? 0 }
+}
+
+/** Cuánto creció el último mes contra el anterior, o null si no hay con qué. */
+export function comoVieneElMes(meses: readonly MesDeLaCartera[]): { cuanto: number; desde: number; hasta: number } | null {
+  const conFacturacion = meses.filter((m) => m.facturacion !== null && m.facturacion > 0)
+  if (conFacturacion.length < 2) return null
+
+  const ultimo = conFacturacion[conFacturacion.length - 1]!
+  const anterior = conFacturacion[conFacturacion.length - 2]!
+  return {
+    cuanto: Math.round(((ultimo.facturacion! - anterior.facturacion!) / anterior.facturacion!) * 100),
+    desde: anterior.facturacion!,
+    hasta: ultimo.facturacion!,
+  }
 }

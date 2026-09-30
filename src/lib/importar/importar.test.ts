@@ -15,7 +15,7 @@ async function importar(csv: string, archivo = 'planilla.csv') {
   return importarCsv({ contenido: csv, archivo, usuarioId: null })
 }
 
-const ENCABEZADOS = 'nombre,consultora,estado,programa,fecha inicio,meta mensual,ticket,ventas ultimo mes,oferta,texto_onboarding'
+const ENCABEZADOS = 'nombre,consultora,estado,meses,fecha inicio,meta mensual,ticket,ventas ultimo mes,oferta,texto_onboarding'
 
 prueba('la importación de la planilla madre', () => {
   beforeEach(limpiar)

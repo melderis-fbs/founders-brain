@@ -67,6 +67,10 @@ export const ESQUEMA_ESPERADO: {
     columnas: [['clientes', 'sigue_el_programa'], ['clientes', 'plan_propio']],
     restricciones: [['documentos', 'encuesta']],
   },
+  {
+    migracion: '0019_growth_y_elite.sql',
+    tablas: [], columnas: [['clientes', 'programa']],
+  },
 ]
 
 /**

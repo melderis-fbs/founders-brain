@@ -759,3 +759,10 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .por-que-grave { margin: 8px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.6; }
 .por-que-grave li { margin-bottom: 2px; }
 .chip-estado.grave { background: var(--rojo-suave); color: var(--rojo); }
+
+/* Las ventas de la cartera, mes a mes. */
+.barras-mes { display: flex; gap: 6px; align-items: flex-end; height: 130px; }
+.barras-mes .una-barra { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 22px; }
+.barras-mes .tronco { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.barras-mes .tronco span { width: 100%; background: var(--azul); border-radius: 4px 4px 0 0; display: block; }
+.barras-mes .una-barra:hover .tronco span { background: var(--tinta); }

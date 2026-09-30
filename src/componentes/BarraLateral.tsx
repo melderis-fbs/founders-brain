@@ -8,6 +8,7 @@ const AHORA = [
   { href: '/tablero', texto: 'Tablero', icono: Iconos.tablero, soloAdmin: false },
   { href: '/clientes', texto: 'Clientes', icono: Iconos.clientes, soloAdmin: false },
   { href: '/grilla', texto: 'La grilla', icono: Iconos.grilla, soloAdmin: false },
+  { href: '/ventas', texto: 'Las ventas', icono: Iconos.tablero, soloAdmin: false },
   { href: '/encuestas', texto: 'Las encuestas', icono: Iconos.importar, soloAdmin: false },
   // La planilla madre reparte clientes entre consultoras: no es de cada una.
   { href: '/importar', texto: 'Importar', icono: Iconos.importar, soloAdmin: true },
