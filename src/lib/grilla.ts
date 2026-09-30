@@ -5,6 +5,7 @@ import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from './hitos'
 import { ETAPAS, etapasDeLaSemana, SEMANAS_DEL_PROGRAMA } from './modulos'
 import { semaforoDe, type Semaforo } from './semaforo'
+import { loQueDijoLaCartera } from './temperatura'
 import { semanaEnLaQueVa, semanasDelPrograma , seLePasoElPrograma } from './programa'
 
 /**
@@ -43,11 +44,12 @@ export type ClienteEnGrilla = {
 }
 
 export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: number | null } = {}): Promise<ClienteEnGrilla[]> {
-  const [clientes, conDatos, marcadas, banderas] = await Promise.all([
+  const [clientes, conDatos, marcadas, banderas, dichos] = await Promise.all([
     listarClientes(alcance, { consultoraId: filtros.consultoraId ?? null }),
     fuentesDeLaCartera(),
     marcadasDeLaCartera(),
     banderasDeLaCartera(),
+    loQueDijoLaCartera(),
   ])
 
   const armados = clientes.map((c) => {
@@ -64,6 +66,7 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       semana, marcadas: marcadas.get(c.id) ?? new Set<string>(),
       bandera: banderas.get(c.id)?.color ?? null,
       banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
+      loQueDijo: dichos.get(c.id),
     })
 
     const porSemana: Record<number, EstadoHito> = {}

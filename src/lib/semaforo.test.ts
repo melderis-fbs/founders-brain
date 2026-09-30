@@ -117,3 +117,70 @@ describe('rojo no es cualquier cosa', () => {
     expect(s.porque).toContain('renovación')
   })
 })
+
+/**
+ * Lo que dijo el cliente de NOSOTROS, que no sale de ninguna fecha.
+ *
+ * El equipo lo dejó dicho así: «un tibio no cuenta como grave, es un yellow
+ * flag». Estas cuatro pruebas son esa frase, escrita para que no se pueda
+ * desarmar sin querer.
+ */
+describe('la temperatura en el semáforo', () => {
+  const alDia = () => evaluar(6, AL_DIA, new Set(['onboarding']))
+
+  it('un tibio no pinta rojo: sube el verde a «para mirar» y nada más', () => {
+    const s = semaforoDe(alDia(), {
+      semana: 6,
+      loQueDijo: [{ de: 'sesion', temperatura: 'tibio', cita: 'me cuesta seguir el ritmo' }],
+    })
+    expect(s.color).toBe('amarillo')
+    expect(s.palabra).toBe('para mirar')
+    expect(s.porque).toContain('me cuesta seguir el ritmo')
+    expect(s.senales ?? []).toHaveLength(0)
+  })
+
+  it('un caliente sí es grave, aunque esté al día con todo', () => {
+    const s = semaforoDe(alDia(), {
+      semana: 6,
+      loQueDijo: [{ de: 'sesion', temperatura: 'caliente', cita: 'esto no me está sirviendo' }],
+    })
+    expect(s.color).toBe('rojo')
+    expect(s.palabra).toBe('grave')
+    expect(s.porque).toContain('esto no me está sirviendo')
+  })
+
+  it('un quemando en la encuesta también, y dice de dónde salió', () => {
+    const s = semaforoDe(alDia(), {
+      semana: 6,
+      loQueDijo: [{ de: 'encuesta', temperatura: 'quemando', cita: 'estoy evaluando si sigo' }],
+    })
+    expect(s.color).toBe('rojo')
+    expect(s.senales![0]!.clave).toBe('encuesta')
+    expect(s.porque).toContain('encuesta')
+  })
+
+  it('«bien» deja el verde como estaba', () => {
+    const s = semaforoDe(alDia(), {
+      semana: 6,
+      loQueDijo: [{ de: 'sesion', temperatura: 'bien', cita: null }],
+    })
+    expect(s.color).toBe('verde')
+  })
+
+  // Antes, una red flag levantada sobre un cliente al día se perdía: la rama
+  // del verde devolvía antes de mirar las señales. Lo humano no depende del
+  // calendario y por eso ahora se mira primero.
+  it('una red flag sobre un cliente al día ya no sale en verde', () => {
+    const s = semaforoDe(alDia(), { semana: 6, bandera: 'roja', banderaDesdeHaceSemanas: 2 })
+    expect(s.color).toBe('rojo')
+    expect(s.porque).toContain('red flag')
+  })
+
+  it('una queja en un cliente sin fecha de inicio tampoco se pierde en el gris', () => {
+    const s = semaforoDe(evaluar(null, {}), {
+      loQueDijo: [{ de: 'sesion', temperatura: 'quemando', cita: 'quiero que me devuelvan la plata' }],
+    })
+    expect(s.color).toBe('rojo')
+    expect(s.porque).toContain('devuelvan la plata')
+  })
+})

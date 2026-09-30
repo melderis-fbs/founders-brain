@@ -1,7 +1,8 @@
 import { type NextRequest } from 'next/server'
 import { quienMira } from '@/lib/quien-mira'
 import { armarExpediente } from '@/lib/expediente'
-import { analizarSesionEnVivo, explicarError, hayModelo, partirAnalisis } from '@/lib/modelo'
+import { analizarSesionEnVivo, explicarError, hayModelo, partirAnalisis, partirTemperatura } from '@/lib/modelo'
+import { guardarTemperatura } from '@/lib/temperatura'
 import { guardarAnalisis, traerSesion } from '@/lib/sesiones'
 
 /**
@@ -66,6 +67,24 @@ export async function POST(pedido: NextRequest) {
           analisis: partido.texto, puntos: partido.puntos,
           compromisos: partido.compromisos, quePaso: partido.quePaso,
         })
+
+        // La temperatura viene en la misma respuesta: no es otra llamada ni
+        // otro botón, así que no cuesta una moneda más. Se guarda aparte porque
+        // el semáforo la necesita sin leer el análisis entero.
+        //
+        // Va después de guardar el análisis y en su propio try: si esto falla,
+        // el análisis —que es lo que se pagó— ya está guardado. Perderlo por no
+        // poder anotar una alerta sería el peor de los dos errores.
+        try {
+          const t = partirTemperatura(completo)
+          await guardarTemperatura({
+            clienteId, de: 'sesion', origenId: sesionId,
+            temperatura: t.temperatura, deQue: t.deQue, porque: t.porque,
+            citas: t.citas, loOtro: t.loOtro, quePreguntar: t.quePreguntar,
+          })
+        } catch (error) {
+          escribir(`\n\n[El análisis quedó guardado, pero no se pudo anotar la temperatura. ${explicarError(error)}]`)
+        }
       } catch (error) {
         escribir(`\n\n[No se pudo analizar. ${explicarError(error)}]`)
       } finally {

@@ -1,6 +1,7 @@
 import { ETAPAS } from './modulos'
 import { etapaHecha } from './avance'
 import type { HitoEvaluado } from './hitos'
+import { DE_DONDE_SE_DICE, esQueja, esTibia, type LoQueDijo } from './temperatura-tipos'
 
 /**
  * CUÁNDO UN CLIENTE ES GRAVE
@@ -70,10 +71,13 @@ export type LoQuePasa = {
   bandera: 'roja' | 'naranja' | 'amarilla' | null
   /** Hace cuántas semanas está levantada sin resolverse. */
   banderaDesdeHaceSemanas?: number | null
-  /** Se detectó o se confirmó una queja en una sesión. */
-  quejaEnSesiones?: boolean
-  /** Se detectó o se confirmó una queja en una encuesta. */
-  quejaEnEncuestas?: boolean
+  /**
+   * Lo que el cliente dijo de NOSOTROS, en sesiones y encuestas, con su cita.
+   *
+   * Caliente y quemando son grave. Tibio no: es un yellow flag, y se devuelve
+   * aparte en `lasTibias`. La diferencia la pidió el equipo con esas palabras.
+   */
+  loQueDijo?: readonly LoQueDijo[]
 }
 
 /**
@@ -95,12 +99,12 @@ export function senalesDeGrave(lo: LoQuePasa): Senal[] {
     })
   }
 
-  if (lo.quejaEnSesiones) {
-    senales.push({ clave: 'queja', dice: 'Se quejó en una sesión.' })
-  }
-
-  if (lo.quejaEnEncuestas) {
-    senales.push({ clave: 'encuesta', dice: 'Dejó una queja en la encuesta de satisfacción.' })
+  // Las quejas: caliente y quemando. Un tibio NO entra acá.
+  for (const dicho of (lo.loQueDijo ?? []).filter((d) => esQueja(d.temperatura))) {
+    senales.push({
+      clave: dicho.de === 'encuesta' ? 'encuesta' : 'queja',
+      dice: comoSeCuenta(dicho),
+    })
   }
 
   // No vendió pasada su semana de venta. Es lo que vino a comprar: si eso no
@@ -170,4 +174,35 @@ const SIGUEN_VALIENDO: ReadonlySet<ClaveDeSenal> = new Set(['red_flag', 'queja',
 
 export function lasQueSiguenValiendo(senales: readonly Senal[]): Senal[] {
   return senales.filter((s) => SIGUEN_VALIENDO.has(s.clave))
+}
+
+/**
+ * LO TIBIO: lo que se mira pero no es grave.
+ *
+ * «Un tibio no cuenta como grave, es un yellow flag.» Pinta amarillo —«para
+ * mirar»— y nada más. Que algo se diga de costado no alcanza para mandar a una
+ * consultora a tener una conversación incómoda, pero tampoco puede quedar
+ * invisible hasta que sea caliente.
+ */
+export function lasTibias(lo: Pick<LoQuePasa, 'loQueDijo'>): Senal[] {
+  return (lo.loQueDijo ?? [])
+    .filter((d) => esTibia(d.temperatura))
+    .map((d) => ({ clave: (d.de === 'encuesta' ? 'encuesta' : 'queja') as ClaveDeSenal, dice: comoSeCuenta(d) }))
+}
+
+/**
+ * Cómo se lee la señal en pantalla, con la frase que la prendió.
+ *
+ * La cita va siempre que exista: una alerta que no puede mostrar lo que el
+ * cliente dijo no se puede discutir, y entonces o se obedece a ciegas o se
+ * ignora. Las dos cosas son malas.
+ */
+function comoSeCuenta(dicho: LoQueDijo): string {
+  const donde = DE_DONDE_SE_DICE[dicho.de]
+  const que = dicho.temperatura === 'quemando'
+    ? `Habló de irse en ${donde}`
+    : dicho.temperatura === 'caliente'
+      ? `Se quejó de nosotros en ${donde}`
+      : `Dijo algo de costado en ${donde}`
+  return dicho.cita ? `${que}: «${dicho.cita}»` : `${que}.`
 }

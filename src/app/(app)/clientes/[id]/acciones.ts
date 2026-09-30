@@ -17,6 +17,7 @@ import { borrarAnalisis, borrarBandera, borrarCliente, borrarDiagnostico } from 
 import { borrarNota, escribirNota } from '@/lib/notas'
 import { crearSesion, guardarTranscripcion } from '@/lib/sesiones'
 import { cambiarDeCoach } from '@/lib/usuarios'
+import { anotarEnLaTemperatura, descartarTemperatura, volverAPrender } from '@/lib/temperatura'
 
 /**
  * Quién está tocando este cliente, y si tiene permiso de tocarlo.
@@ -354,5 +355,52 @@ export async function eliminarBandera(
 
   const r = await borrarBandera(banderaId, clienteId)
   if (r.ok) { revalidatePath(`/clientes/${clienteId}`); revalidatePath('/tablero') }
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+// ── La temperatura: lo que dijo el cliente de nosotros ──────────────────────
+
+/**
+ * «Esto no era una queja.»
+ *
+ * Lo que decide una persona manda sobre lo que leyó el modelo (regla 9). No se
+ * borra: queda quién la descartó y por qué, que es lo único que después
+ * permite ver qué está leyendo mal.
+ */
+export async function descartarAlerta(
+  clienteId: number, id: number, porQue: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await descartarTemperatura({ id, clienteId, usuarioId: puede.usuario.id, porQue })
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+/** Alguien la descartó y estaba equivocado. */
+export async function prenderAlerta(clienteId: number, id: number): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await volverAPrender(id, clienteId)
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
+/**
+ * Lo que agrega la consultora.
+ *
+ * El modelo leyó una transcripción; ella estuvo en la sesión. Esto no lo pisa
+ * ningún análisis posterior.
+ */
+export async function anotarEnLaAlerta(
+  clienteId: number, id: number, nota: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const puede = await quienPuedeTocar(clienteId)
+  if (!puede.ok) return { ok: false, error: puede.error }
+
+  const r = await anotarEnLaTemperatura({ id, clienteId, usuarioId: puede.usuario.id, nota })
+  if (r.ok) revalidatePath(`/clientes/${clienteId}`)
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }

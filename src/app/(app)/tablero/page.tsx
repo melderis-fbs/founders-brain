@@ -71,6 +71,20 @@ export default async function Tablero() {
             </div>
           ))}
         </div>
+        {t.dijeron.quejas > 0 || t.dijeron.tibios > 0 ? (
+          <p className="pie" style={{ marginTop: 12 }}>
+            Además, de lo que se leyó en sesiones y encuestas:{' '}
+            {t.dijeron.quejas > 0 ? (
+              <b className="rojo">{t.dijeron.quejas} {t.dijeron.quejas === 1 ? 'cliente se quejó' : 'clientes se quejaron'} de nosotros</b>
+            ) : null}
+            {t.dijeron.quejas > 0 && t.dijeron.tibios > 0 ? ' y ' : null}
+            {t.dijeron.tibios > 0 ? (
+              <b className="ambar">{t.dijeron.tibios} {t.dijeron.tibios === 1 ? 'dijo' : 'dijeron'} algo de costado</b>
+            ) : null}
+            . Lo primero cuenta como grave; lo segundo es para mirar, no es grave.
+          </p>
+        ) : null}
+
         {t.losQueLevantaron.length > 0 ? (
           <ul className="con-bandera">
             {t.losQueLevantaron.map((b) => (

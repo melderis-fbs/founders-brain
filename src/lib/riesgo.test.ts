@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { atrasoEnSemanas, laQueQuedoAtras, senalesDeGrave, type LoQuePasa } from './riesgo'
+import { atrasoEnSemanas, laQueQuedoAtras, lasTibias, senalesDeGrave, type LoQuePasa } from './riesgo'
 import { ETAPAS } from './modulos'
 import type { HitoEvaluado } from './hitos'
 
@@ -62,14 +62,40 @@ describe('las cinco señales de grave', () => {
     expect(senalesDeGrave(base({ bandera: 'naranja', marcadas: claves(14) }))).toHaveLength(0)
   })
 
-  it('una queja en una sesión alcanza sola', () => {
-    const s = senalesDeGrave(base({ quejaEnSesiones: true, marcadas: claves(14) }))
+  it('una queja caliente en una sesión alcanza sola, y muestra la cita', () => {
+    const s = senalesDeGrave(base({
+      loQueDijo: [{ de: 'sesion', temperatura: 'caliente', cita: 'esto no me está sirviendo para nada' }],
+      marcadas: claves(14),
+    }))
     expect(s[0]!.clave).toBe('queja')
+    expect(s[0]!.dice).toContain('esto no me está sirviendo para nada')
   })
 
-  it('una queja en la encuesta alcanza sola', () => {
-    const s = senalesDeGrave(base({ quejaEnEncuestas: true, marcadas: claves(14) }))
+  it('un quemando en la encuesta alcanza solo', () => {
+    const s = senalesDeGrave(base({
+      loQueDijo: [{ de: 'encuesta', temperatura: 'quemando', cita: 'estoy evaluando si sigo' }],
+      marcadas: claves(14),
+    }))
     expect(s[0]!.clave).toBe('encuesta')
+  })
+
+  // Lo que pidió el equipo con estas palabras: «un tibio no cuenta como grave,
+  // es un yellow flag». Si esto se rompe, media cartera vuelve a salir en rojo
+  // por un tono, que es lo peor que puede pasarle a este tablero.
+  it('un tibio NO es grave: es un yellow flag y sale aparte', () => {
+    const lo = base({
+      loQueDijo: [{ de: 'sesion', temperatura: 'tibio', cita: 'me está costando seguir el ritmo' }],
+      marcadas: claves(14),
+    })
+    expect(senalesDeGrave(lo)).toHaveLength(0)
+    expect(lasTibias(lo)).toHaveLength(1)
+    expect(lasTibias(lo)[0]!.dice).toContain('me está costando seguir el ritmo')
+  })
+
+  it('«bien» no prende nada, ni grave ni tibio', () => {
+    const lo = base({ loQueDijo: [{ de: 'sesion', temperatura: 'bien', cita: null }], marcadas: claves(14) })
+    expect(senalesDeGrave(lo)).toHaveLength(0)
+    expect(lasTibias(lo)).toHaveLength(0)
   })
 
   it('no haber vendido pasada la semana 9 alcanza solo, y dice hace cuánto', () => {
@@ -92,7 +118,10 @@ describe('las cinco señales de grave', () => {
 
   it('cuando hay varias, se nombran todas: un color sin motivo no sirve', () => {
     const hitos = [{ hito: { clave: 'primera_venta' }, estado: 'falta', atrasoEnSemanas: 3 }] as unknown as HitoEvaluado[]
-    const s = senalesDeGrave(base({ semana: 12, hitos, bandera: 'roja', quejaEnEncuestas: true, marcadas: claves(4) }))
+    const s = senalesDeGrave(base({
+      semana: 12, hitos, bandera: 'roja', marcadas: claves(4),
+      loQueDijo: [{ de: 'encuesta', temperatura: 'caliente', cita: 'no me contestan nunca' }],
+    }))
     expect(s.map((x) => x.clave).sort()).toEqual(['atraso', 'encuesta', 'red_flag', 'sin_venta'])
     for (const una of s) expect(una.dice.length).toBeGreaterThan(15)
   })

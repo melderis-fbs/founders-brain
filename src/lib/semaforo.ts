@@ -1,5 +1,6 @@
 import { dondeSeCorta, faseDelHito, type HitoEvaluado } from './hitos'
-import { lasQueSiguenValiendo, senalesDeGrave, type Senal } from './riesgo'
+import { lasQueSiguenValiendo, lasTibias, senalesDeGrave, type Senal } from './riesgo'
+import type { LoQueDijo } from './temperatura-tipos'
 
 /**
  * EL SEMÁFORO
@@ -38,6 +39,8 @@ export type Semaforo = {
   fase: number | null
   /** Cuando es grave: cuáles de las cinco señales se prendieron, nombradas. */
   senales?: Senal[]
+  /** Lo tibio: se mira, no es grave. Va aparte para que nadie lo sume al rojo. */
+  tibias?: Senal[]
 }
 
 /** Lo que hay que saber del cliente para pintarlo. */
@@ -50,8 +53,8 @@ export type ComoViene = {
   marcadas?: ReadonlySet<string>
   bandera?: 'roja' | 'naranja' | 'amarilla' | null
   banderaDesdeHaceSemanas?: number | null
-  quejaEnSesiones?: boolean
-  quejaEnEncuestas?: boolean
+  /** Lo que el cliente dijo de nosotros, con su cita: sesiones y encuestas. */
+  loQueDijo?: readonly LoQueDijo[]
 }
 
 /**
@@ -69,6 +72,33 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
   const viene: ComoViene = typeof como === 'boolean' ? { seLePaso: como } : como
   const seLePaso = viene.seLePaso ?? false
   const marcadas = viene.marcadas ?? new Set<string>()
+
+  const todas = senalesDeGrave({
+    semana: viene.semana ?? null,
+    marcadas,
+    hitos: evaluados,
+    bandera: viene.bandera ?? null,
+    banderaDesdeHaceSemanas: viene.banderaDesdeHaceSemanas,
+    loQueDijo: viene.loQueDijo,
+  })
+
+  // Las señales HUMANAS —red flag levantada, queja del cliente— se miran antes
+  // que nada, porque no dependen del calendario y por eso se perdían justo
+  // donde más importan: un cliente sin fecha de inicio salía gris, y uno con
+  // todo al día salía verde, aunque estuviera pidiendo la plata de vuelta. El
+  // atraso se calcula; esto lo dijo alguien.
+  const humanas = lasQueSiguenValiendo(todas)
+  const tibias = lasTibias({ loQueDijo: viene.loQueDijo })
+
+  if (humanas.length > 0) {
+    return {
+      color: 'rojo',
+      palabra: 'grave',
+      porque: humanas.map((s) => s.dice).join(' '),
+      fase: faseDeDondeSeCorta(evaluados),
+      senales: humanas,
+    }
+  }
 
   const seSabeAlgo = evaluados.some((e) => e.estado === 'hecho' || e.estado === 'falta')
   if (!seSabeAlgo) {
@@ -101,6 +131,18 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
 
   const vencidos = evaluados.filter((e) => e.estado === 'falta')
   if (vencidos.length === 0) {
+    // Al día en el calendario, pero dijo algo de costado. No es grave —eso ya
+    // se decidió— y tampoco es verde: verde es el color que hace que nadie lo
+    // mire otra vez.
+    if (tibias.length > 0) {
+      return {
+        color: 'amarillo',
+        palabra: 'para mirar',
+        porque: `${tibias.map((s) => s.dice).join(' ')} No está atrasado: esto es lo que dijo.`,
+        fase: null,
+        tibias,
+      }
+    }
     return {
       color: 'verde',
       palabra: 'en tiempo',
@@ -111,21 +153,11 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
 
   const corte = dondeSeCorta(evaluados)!
 
-  // GRAVE es cualquiera de las cinco señales, y todas se nombran: un color sin
-  // motivo no le sirve a nadie un lunes a la mañana.
-  const todas = senalesDeGrave({
-    semana: viene.semana ?? null,
-    marcadas,
-    hitos: evaluados,
-    bandera: viene.bandera ?? null,
-    banderaDesdeHaceSemanas: viene.banderaDesdeHaceSemanas,
-    quejaEnSesiones: viene.quejaEnSesiones,
-    quejaEnEncuestas: viene.quejaEnEncuestas,
-  })
-
-  // Al que ya terminó sólo le valen las señales humanas: el atraso de un
-  // programa que acabó no es una urgencia de esta semana, pero una queja sí.
-  const senales = seLePaso ? lasQueSiguenValiendo(todas) : todas
+  // Lo humano ya se fue arriba. Acá queda lo del calendario: el atraso y la
+  // venta que no pasó. Al que ya terminó no le valen —el atraso de un programa
+  // que acabó hace medio año no es una urgencia de hoy—, y por eso una queja
+  // sí lo sigue pintando de rojo y esto no.
+  const senales = seLePaso ? [] : todas.filter((s) => !humanas.includes(s))
 
   if (senales.length > 0) {
     return {
@@ -174,6 +206,11 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
     porque: `${queFalta} Todavía se recupera.`,
     fase: faseDelHito(corte.hito),
   }
+}
+
+function faseDeDondeSeCorta(evaluados: readonly HitoEvaluado[]): number | null {
+  const corte = dondeSeCorta(evaluados)
+  return corte ? faseDelHito(corte.hito) : null
 }
 
 function semanas(n: number | null): string {

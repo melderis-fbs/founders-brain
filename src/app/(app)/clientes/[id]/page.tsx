@@ -23,6 +23,8 @@ import { queSeVaConElCliente } from '@/lib/borrar'
 import { mesesDe, totalesDe } from '@/lib/meses'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
+import { Temperatura } from '@/componentes/Temperatura'
+import { comoLoLeeElSemaforo, temperaturasDe } from '@/lib/temperatura'
 import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, sigueElRoadMap, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 
 /** Los bloques de «El cliente», en el orden en que se conoce a alguien. */
@@ -101,6 +103,7 @@ export default async function Ficha({
     banderaDe(cliente.id), historialDeBanderas(cliente.id), cambiosDeCoach(cliente.id), listarConsultoras(),
   ])
   const notas = await notasDe(cliente.id)
+  const alertas = await temperaturasDe(cliente.id)
   const hechos = await hechosDe(cliente.id)
   const mesesCargados = await mesesDe(cliente.id)
   const archivos = await archivosDe(cliente.id)
@@ -132,6 +135,9 @@ export default async function Ficha({
       banderaDesdeHaceSemanas: bandera
         ? Math.floor((Date.now() - new Date(bandera.puesta_en).getTime()) / 604_800_000)
         : null,
+      // Lo que dijo de nosotros. Un caliente o un quemando es grave; un tibio
+      // no —es un yellow flag— y esa diferencia la resuelve `riesgo.ts`.
+      loQueDijo: comoLoLeeElSemaforo(alertas),
     },
   )
   const filasEtapas = filasDeEtapas(
@@ -169,6 +175,14 @@ export default async function Ficha({
   const laEtapaDeAhora = (cliente.valores.etapa_actual as string | null)
     ?? filasEtapas.find((f) => f.estado === 'es_la_de_ahora')?.etapa.nombre
     ?? null
+
+  // Las encuestas cargadas a las que todavía nadie les tomó la temperatura.
+  // El botón se ofrece sólo por esas: volver a leer una que ya se leyó es pagar
+  // dos veces por lo mismo.
+  const yaLeidas = new Set(alertas.filter((a) => a.de === 'encuesta').map((a) => a.origen_id))
+  const encuestasSinLeer = documentos
+    .filter((d) => d.tipo === 'encuesta' && !yaLeidas.has(d.id))
+    .map((d) => ({ id: d.id, titulo: d.titulo }))
 
   const campos = (grupo: Grupo) => CAMPOS.filter((c) => c.grupo === grupo)
   const dato = (campo: Campo) => (
@@ -304,6 +318,8 @@ export default async function Ficha({
                     <Link href={`/clientes/${cliente.id}?bloque=programa`}>Ver y marcar las catorce etapas →</Link>
                   </p>
                 </div>
+
+                <Temperatura clienteId={cliente.id} alertas={alertas} encuestasSinLeer={encuestasSinLeer} />
 
                 <LecturaDelCaso lectura={lectura} ficha={ficha} clienteId={cliente.id} />
                 <Comparacion evaluados={evaluados} suelto />

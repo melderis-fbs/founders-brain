@@ -6,6 +6,7 @@ import type { Alcance } from './permisos'
 import { dondeSeCorta, evaluarHitos, FUENTES_ETIQUETA, HITOS, type Fuente } from './hitos'
 import { seLePasoElPrograma, semanaEnLaQueVa } from './programa'
 import { semaforoDe, type Color } from './semaforo'
+import { contarTemperaturas, loQueDijoLaCartera } from './temperatura'
 
 /**
  * Los números de la semana.
@@ -31,17 +32,20 @@ export type Tablero = {
   banderas: { roja: number; naranja: number; amarilla: number }
   /** Las rojas y naranjas, con nombre y motivo: son a quién llamar hoy. */
   losQueLevantaron: BanderaEnLaLista[]
+  /** Cuántos clientes dijeron algo de nosotros: quejas (grave) y tibios (no). */
+  dijeron: { tibios: number; quejas: number }
 }
 
 export async function traerTablero(alcance: Alcance): Promise<Tablero> {
   // Las banderas se cuentan dentro del alcance de quien mira: una consultora
   // ve las de sus clientes, no las de la cartera entera.
   const deQuien = alcance.todo ? null : alcance.consultoraId
-  const [clientes, conDatos, banderas, losQueLevantaron, marcadas, lasBanderas] = await Promise.all([
+  const [clientes, conDatos, banderas, losQueLevantaron, marcadas, lasBanderas, dichos] = await Promise.all([
     listarClientes(alcance), fuentesDeLaCartera(),
     contarBanderas(deQuien), banderasLevantadas(deQuien),
-    marcadasDeLaCartera(), banderasDeLaCartera(),
+    marcadasDeLaCartera(), banderasDeLaCartera(), loQueDijoLaCartera(),
   ])
+  const dijeron = await contarTemperaturas()
 
   let conAtraso = 0
   let sePasaron = 0
@@ -66,6 +70,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
       semana, marcadas: marcadas.get(c.id) ?? new Set<string>(),
       bandera: lasBanderas.get(c.id)?.color ?? null,
       banderaDesdeHaceSemanas: lasBanderas.get(c.id)?.semanas ?? null,
+      loQueDijo: dichos.get(c.id),
     }).color]++
     const aMedias = c.faltan.length > 0
 
@@ -112,5 +117,10 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
     sinFuente,
     banderas,
     losQueLevantaron: losQueLevantaron.filter((b) => b.color !== 'amarilla'),
+    // Lo que dijeron los clientes de nosotros. Va al lado de las banderas y no
+    // mezclado con ellas: una bandera la levanta una persona, esto lo dijo el
+    // cliente, y no es lo mismo saber que alguien se preocupó que saber que el
+    // cliente se quejó.
+    dijeron,
   }
 }

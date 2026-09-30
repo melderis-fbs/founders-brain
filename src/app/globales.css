@@ -766,3 +766,17 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 .barras-mes .tronco { flex: 1; width: 100%; display: flex; align-items: flex-end; }
 .barras-mes .tronco span { width: 100%; background: var(--azul); border-radius: 4px 4px 0 0; display: block; }
 .barras-mes .una-barra:hover .tronco span { background: var(--tinta); }
+
+/* ── La temperatura: lo que el cliente dijo de nosotros ──────────────────── */
+.las-alertas { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 12px; }
+.las-alertas .alerta { border-left: 3px solid var(--borde); padding: 10px 14px; border-radius: 0 10px 10px 0; background: var(--hover); }
+.las-alertas .alerta.rojo { border-left-color: var(--rojo); background: var(--rojo-suave); }
+.las-alertas .alerta.naranja { border-left-color: var(--ambar); background: var(--ambar-suave); }
+.las-alertas .alerta.amarillo { border-left-color: var(--ambar); background: var(--ambar-suave); }
+.las-alertas .alerta .cabeza { margin: 0 0 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.las-alertas .alerta .texto { margin: 0 0 6px; font-size: 13.5px; }
+/* La cita es lo único que sostiene la alerta: se lee como lo que es, algo que
+   dijo una persona, y no como una etiqueta más del tablero. */
+.las-alertas .citas { margin: 0 0 6px; padding-left: 16px; font-size: 13.5px; font-style: italic; }
+.las-alertas .citas li { margin: 2px 0; }
+.las-alertas .alerta textarea { width: 100%; }

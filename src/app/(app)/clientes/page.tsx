@@ -11,6 +11,7 @@ import { sinConsultoraAsignada } from '@/lib/permisos'
 import { quienMira } from '@/lib/quien-mira'
 import { dondeSeCorta, fasesSegunLosHitos, evaluarHitos, queNecesita } from '@/lib/hitos'
 import { semaforoDe } from '@/lib/semaforo'
+import { loQueDijoLaCartera } from '@/lib/temperatura'
 import { semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
 
 export const dynamic = 'force-dynamic'
@@ -31,12 +32,13 @@ export default async function Clientes({
   const esAdmin = alcance.todo
   const sinAsignar = sinConsultoraAsignada(alcance)
 
-  const [clientes, consultoras, conDatos, marcadas, banderas] = await Promise.all([
+  const [clientes, consultoras, conDatos, marcadas, banderas, dichos] = await Promise.all([
     listarClientes(alcance, { consultoraId, sinConsultora, estado: estado || null, buscar: buscar || null }),
     listarConsultoras(),
     fuentesDeLaCartera(),
     marcadasDeLaCartera(),
     banderasDeLaCartera(),
+    loQueDijoLaCartera(),
   ])
 
   const filas = clientes.map((c) => {
@@ -59,6 +61,7 @@ export default async function Clientes({
         marcadas: marcadas.get(c.id) ?? new Set<string>(),
         bandera: banderas.get(c.id)?.color ?? null,
         banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
+        loQueDijo: dichos.get(c.id),
       }),
       atraso: corte?.atrasoEnSemanas ?? -1,
       necesita: queNecesita(evaluados, c.faltan),

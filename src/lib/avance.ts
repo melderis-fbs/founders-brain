@@ -170,7 +170,12 @@ export function avanceDe(
       atrasoEnSemanas: enSemanas, senales,
       estado: 'grave',
       palabra: 'grave',
-      titular: senales.map((s) => s.dice).join(' '),
+      // Con una sola señal, el titular ES la señal. Con varias, la lista de
+      // abajo las dice todas y repetirlas acá arriba hace un párrafo que nadie
+      // termina de leer: se pierde justo lo que había que leer.
+      titular: senales.length === 1
+        ? senales[0]!.dice
+        : `Grave por ${senales.length} motivos:`,
     }
   }
 

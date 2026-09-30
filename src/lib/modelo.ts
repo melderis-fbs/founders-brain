@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Campo } from './campos'
 import type { LecturaDeTipo } from './lectura-de-documentos'
 import { escribirDevolviendo } from './db'
+import { leerDeQue, leerTemperatura, type DeQue, type Temperatura } from './temperatura-tipos'
 
 /**
  * Hablar con el modelo.
@@ -179,6 +180,138 @@ async function anotarLlamada(
   }
 }
 
+// ── La vara con la que se mide la temperatura ───────────────────────────────
+
+/**
+ * CÓMO SE LE TOMA LA TEMPERATURA A UN CLIENTE.
+ *
+ * Esto se pega al final de dos prompts distintos —el de analizar una sesión y
+ * el de leer una encuesta— para que las dos cosas se midan con la misma vara.
+ * Si se separaran, en tres meses una sesión y una encuesta dirían cosas
+ * distintas sobre el mismo cliente y nadie sabría cuál creer.
+ *
+ * Va pegado al análisis de la sesión a propósito, y no como un botón aparte:
+ * es la misma llamada, así que no cuesta una moneda más.
+ */
+export const COMO_SE_TOMA_LA_TEMPERATURA = `
+TAMBIÉN LE TOMÁS LA TEMPERATURA
+
+Además de lo anterior, tenés que decir cómo viene la relación de este cliente
+CON NOSOTROS, y decirlo con las frases que él dijo.
+
+Esto alimenta el semáforo de la cartera. Un falso positivo manda a una
+consultora a tener una conversación incómoda que no hacía falta; un falso
+negativo deja que un cliente se vaya sin que nadie se entere. Los dos errores se
+pagan, así que lo que no está claro se dice que no está claro.
+
+LA DISTINCIÓN QUE MÁS IMPORTA
+
+Estar frustrado con SU NEGOCIO no es estar disconforme con NOSOTROS.
+
+Un cliente que dice «estoy hace tres meses y no vendo nada, estoy podrido» está
+frustrado con su negocio. Eso es normal, es el problema que vino a resolver, y
+tratarlo como queja hace que el tablero se llene de rojos que no son rojos.
+
+Un cliente que dice «hace tres meses que hago lo que me dicen y no pasa nada»
+está diciendo otra cosa: está poniendo en duda el método. Eso sí.
+
+La diferencia no está en el tono: está en DE QUIÉN HABLA. Si el sujeto de la
+frase es su mercado, sus clientes, su falta de tiempo o él mismo, es
+frustración. Si el sujeto somos nosotros —el programa, el material, la
+consultora, lo que le prometieron— es queja.
+
+Cuando no puedas decidir de quién habla, NO ES QUEJA. Que se te escape una vale
+menos que inventar diez.
+
+LAS OTRAS TRES DISTINCIONES
+
+Desahogo no es queja. «Estoy agotada, esto es durísimo» en un programa exigente
+es lo esperable. «Esto no es lo que me vendieron» es otra cosa. El desahogo
+describe cómo se siente; la queja dice que algo está mal hecho.
+
+Quién habla. Si hay dos personas en el texto y la consultora dice «el cliente
+está flojo», eso no es una queja del cliente: es la opinión de ella. Sólo cuenta
+lo que dijo el cliente, y tenés que poder señalar dónde lo dijo.
+
+Una vez no es un patrón. Si vuelve tres veces sobre lo mismo, decilo: «lo trajo
+tres veces». Eso pesa distinto que mencionarlo al pasar, pero NO sube la
+temperatura por sí solo.
+
+LA TEMPERATURA
+
+Cuatro valores, y sólo cuatro. Elegí el más alto que puedas sostener con una
+cita textual.
+
+bien — No dijo nada en contra nuestro. Puede estar frustrado con su negocio,
+cansado, o atrasado, y aun así estar bien con nosotros. Esto es lo normal y es
+lo que más vas a usar.
+
+tibio — Algo le molesta y lo dice de costado, o dejó de aparecer. Señales:
+menciona que le cuesta seguir el ritmo, que no llega con los materiales, que no
+entendió una consigna; o dice que faltó a las mentorías, que no está entrando a
+Telegram. Todavía no está pidiendo nada.
+
+caliente — Se queja de nosotros con todas las letras. Dice que algo del programa
+no funciona, que no le sirve, que esperaba otra cosa, que no lo están
+acompañando, que el material está mal, que no le contestan.
+
+quemando — Habla de irse, de la plata o de la garantía. Cualquier mención a
+darse de baja, pedir el reembolso, «esto no es lo que me vendieron», «estoy
+evaluando si sigo», o una comparación con otro programa que va a contratar.
+También entra si dice que no puede pagar.
+
+Entre dos valores, elegí el de abajo. Es más fácil subir una temperatura que
+explicar una alarma que no era.
+
+LAS SECCIONES QUE AGREGÁS AL FINAL, EXACTAMENTE ASÍ
+
+## Temperatura
+Una sola palabra: bien, tibio, caliente o quemando. Nada más en esa línea.
+
+## Por qué
+Una o dos frases. Qué pasó, sin adjetivos.
+
+## Lo que dijo
+Una cita por renglón, copiada palabra por palabra:
+- «<textual>»
+Si la temperatura es «bien», escribí una sola línea: «No dijo nada en contra nuestro.»
+
+## De qué se queja
+Una sola de estas, la que corresponda: tiempo · material · acompañamiento ·
+resultados · precio · lo que le vendieron · la consultora · otra
+Si la temperatura es «bien», escribí «ninguna».
+
+## Lo que no es queja pero conviene saber
+Lo que está frustrado de SU negocio, sus miedos, lo que le está costando. Dos
+renglones, con su cita. Esto no prende ninguna alarma: sirve para que quien
+prepare la próxima sesión sepa con qué se va a encontrar.
+
+## Qué preguntarle
+Una pregunta concreta que la consultora podría hacerle la próxima vez, si de
+esto quedó algo sin aclarar. Si no quedó nada, escribí «nada».
+
+REGLAS QUE NO TIENEN EXCEPCIÓN
+
+1. Sin cita textual no hay temperatura arriba de «bien». Si no podés copiar la
+   frase, la temperatura es bien. No importa lo que te parezca.
+2. La cita se copia literal, con los errores, las muletillas y los cortes. Si la
+   tenés que arreglar para que se entienda, no la uses.
+3. Sólo cuenta lo que dijo el cliente. Lo que dijo la consultora sobre él no es
+   una queja del cliente.
+3 bis. LAS CITAS SALEN SOLAMENTE DEL DOCUMENTO QUE ESTÁS LEYENDO: la
+   transcripción de esta sesión, o esta encuesta. El expediente es contexto para
+   entender lo que leés, no una fuente de citas: lo que está ahí ya lo sabe
+   alguien, ya prendió su alerta y contarlo de nuevo la duplica. Si algo del
+   expediente te parece importante, decilo en «Por qué» y nunca en «Lo que
+   dijo». Una cita con una aclaración de dónde salió es una cita que no va.
+4. No interpretes silencios. Que no haya dicho nada bueno no es una señal. Que
+   no haya hablado de resultados, tampoco.
+5. No sumes. Una queja chica dicha tres veces sigue siendo una queja chica: decí
+   que la repitió, no subas la temperatura por eso.
+6. Si el documento no alcanza —es corto, está cortado, no se entiende quién
+   habla— decilo en «Por qué» y poné «bien». Una transcripción de cuatro
+   renglones no alcanza para decir que un cliente está por irse.`
+
 // ── Analizar una sesión ─────────────────────────────────────────────────────
 
 export const REGLAS_SESION = `${REGLAS}
@@ -196,7 +329,8 @@ Una sola línea, la que va a leerse en la lista de sesiones.
 
 ## Compromisos
 - Lo que el cliente se comprometió a hacer, con fecha si la dijo.
-- Si no se acordó ninguno, escribí una sola línea: «No se acordó ningún compromiso.»`
+- Si no se acordó ninguno, escribí una sola línea: «No se acordó ningún compromiso.»
+${COMO_SE_TOMA_LA_TEMPERATURA}`
 
 export type Analisis = { texto: string; quePaso: string | null; puntos: string[]; compromisos: string[] }
 
@@ -258,6 +392,120 @@ export function partirAnalisis(texto: string): Analisis {
   const puntos = seccion('Puntos').slice(0, 5)   // ni uno más de cinco
   const compromisos = seccion('Compromisos')
   return { texto, quePaso, puntos, compromisos }
+}
+
+// ── La temperatura del cliente ──────────────────────────────────────────────
+
+export const REGLAS_ENCUESTA_DE_UN_CLIENTE = `${REGLAS}
+
+AHORA ESTÁS LEYENDO UNA ENCUESTA DE SATISFACCIÓN DE UN CLIENTE
+
+Te dan el expediente del cliente y el texto de una encuesta que contestó él.
+La encuesta habla de NOSOTROS: eso es lo que la hace distinta de todo lo demás
+que hay en el expediente.
+
+Devolvé solamente las secciones de la temperatura, sin nada antes ni después.
+${COMO_SE_TOMA_LA_TEMPERATURA}`
+
+export type LaTemperatura = {
+  temperatura: Temperatura
+  porque: string | null
+  citas: string[]
+  deQue: DeQue | null
+  loOtro: string | null
+  quePreguntar: string | null
+}
+
+/**
+ * Partir las secciones de la temperatura.
+ *
+ * Si falta la sección o dice cualquier cosa, queda «bien». Una alerta que se
+ * prende porque el modelo escribió mal un encabezado es peor que una que no se
+ * prende: la segunda se nota cuando el cliente se va, la primera hace que nadie
+ * vuelva a creerle al tablero.
+ */
+export function partirTemperatura(texto: string): LaTemperatura {
+  const seccion = (titulo: string): string[] => {
+    const re = new RegExp(`^#{1,3}\\s*${titulo}\\s*$`, 'im')
+    const desde = texto.search(re)
+    if (desde < 0) return []
+    const resto = texto.slice(desde).split('\n').slice(1)
+    const lineas: string[] = []
+    for (const linea of resto) {
+      if (/^#{1,3}\s/.test(linea)) break
+      const limpia = linea.replace(/^\s*[-*•]\s*/, '').trim()
+      if (limpia !== '') lineas.push(limpia)
+    }
+    return lineas
+  }
+
+  const temperatura = leerTemperatura(seccion('Temperatura')[0]) ?? 'bien'
+  const porque = seccion('Por qué').join(' ') || null
+  const loOtro = seccion('Lo que no es queja pero conviene saber').join(' ') || null
+  const preguntar = seccion('Qué preguntarle').join(' ') || null
+
+  // Sólo las líneas que son de verdad una cita. Si el modelo escribió «No dijo
+  // nada en contra nuestro», eso no es una cita y no puede sostener una alerta.
+  const citas = seccion('Lo que dijo')
+    .map((l) => entreComillas(l))
+    .filter((l): l is string => l !== null && l.length > 0)
+
+  return {
+    // La regla 1, revisada acá y no sólo pedida: sin cita, no hay alerta.
+    temperatura: temperatura !== 'bien' && citas.length === 0 ? 'bien' : temperatura,
+    porque,
+    citas,
+    deQue: leerDeQue(seccion('De qué se queja')[0]),
+    loOtro: loOtro && /no (dijo|hay)/i.test(loOtro) && loOtro.length < 40 ? null : loOtro,
+    quePreguntar: preguntar && /^nada\.?$/i.test(preguntar.trim()) ? null : preguntar,
+  }
+}
+
+/**
+ * Lo que está entre comillas, y nada más.
+ *
+ * El renglón puede traer una aclaración pegada atrás —«…» (esto lo dijo la
+ * consultora)— y esa aclaración no es parte de lo que dijo el cliente. Guardarla
+ * haría que la ficha muestre como cita textual algo que nadie dijo así.
+ */
+function entreComillas(renglon: string): string | null {
+  const abre = renglon.search(/[«"“]/)
+  if (abre < 0) return null
+  const cierra = Math.max(renglon.lastIndexOf('»'), renglon.lastIndexOf('”'), renglon.lastIndexOf('"'))
+  const adentro = cierra > abre ? renglon.slice(abre + 1, cierra) : renglon.slice(abre + 1)
+  return adentro.trim() || null
+}
+
+export async function* tomarTemperaturaEnVivo(
+  expediente: string,
+  encuesta: string,
+  registro: Registro,
+): AsyncGenerator<string, void, unknown> {
+  const arranque = Date.now()
+
+  const stream = anthropic().messages.stream({
+    model: MODELO,
+    max_tokens: 2000,
+    system: [{ type: 'text', text: REGLAS_ENCUESTA_DE_UN_CLIENTE, cache_control: { type: 'ephemeral' } }],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: expediente, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: `## La encuesta de satisfacción que contestó\n\n${encuesta}` },
+      ],
+    }],
+  })
+
+  try {
+    for await (const evento of stream) {
+      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') yield evento.delta.text
+    }
+    const final = await stream.finalMessage()
+    await anotarLlamada(registro, final.usage, Date.now() - arranque, null)
+  } catch (error) {
+    await anotarLlamada(registro, null, Date.now() - arranque, error instanceof Error ? error.message : String(error))
+    throw error
+  }
 }
 
 // ── El diagnóstico del caso ─────────────────────────────────────────────────

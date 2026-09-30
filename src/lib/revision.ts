@@ -71,6 +71,7 @@ export const ESQUEMA_ESPERADO: {
     migracion: '0019_growth_y_elite.sql',
     tablas: [], columnas: [['clientes', 'programa']],
   },
+  { migracion: '0020_la_temperatura.sql', tablas: ['temperaturas'], columnas: [] },
 ]
 
 /**
