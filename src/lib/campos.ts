@@ -420,3 +420,24 @@ export function dondeSeCarga(clienteId: number, clave: string): string | null {
   if (!campo) return null
   return `/clientes/${clienteId}?bloque=${PESTANA_DEL_GRUPO[campo.grupo]}&campo=${campo.clave}`
 }
+
+/**
+ * ¿Sabemos algo de SU NEGOCIO?
+ *
+ * No cuentan los datos de identidad —nombre, consultora, fechas—: ésos vienen
+ * de la planilla y los tiene todo el mundo. Que estén no quiere decir que
+ * alguien haya trabajado la ficha de este cliente.
+ *
+ * Sirve para no volver a decir «ficha vacía» de alguien que tiene media ficha
+ * cargada. Vale con los valores de verdad o con la presencia (true/null) que
+ * usa la lista, porque sólo pregunta si hay algo.
+ */
+export function hayAlgoDeSuNegocio(valores: Record<string, unknown>): boolean {
+  return CAMPOS.some((campo) => {
+    if (campo.grupo === 'identidad') return false
+    const valor = valores[campo.clave]
+    if (valor === null || valor === undefined) return false
+    if (typeof valor === 'string') return valor.trim() !== ''
+    return true
+  })
+}

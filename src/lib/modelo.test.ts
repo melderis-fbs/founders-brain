@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPOS, CAMPOS_POR_CLAVE } from './campos'
+import { HITOS } from './hitos'
 import { acotaCampos, camposInventados, camposQueBuscar, LECTURA } from './lectura-de-documentos'
 import { explicarError, partirAnalisis, partirDiagnostico, partirPropuestas, reglasDeFicha, reglasDelCruce, sacarSeccion } from './modelo'
 
@@ -368,5 +369,52 @@ describe('el cruce distingue el punto de partida del trabajo hecho', () => {
 
   it('avisa que el formulario viejo no tenía algunas preguntas', () => {
     expect(reglas).toContain('los formularios viejos no')
+  })
+})
+
+/**
+ * NINGÚN DATO PUEDE QUEDARSE SIN NINGUNA FUENTE.
+ *
+ * Cada tipo de documento declara qué campos puede proponer, y el modelo no ve
+ * ninguno más. Eso está bien —pedirle el valor del programa a un onboarding es
+ * pedirle algo que no tiene— pero tiene un costo silencioso: si un campo no
+ * está en NINGUNA lista, el modelo no lo propone nunca, desde ningún documento,
+ * y no hay pantalla donde eso se vea. Sólo se nota como «este dato no lo toma
+ * nunca», meses después.
+ *
+ * Pasó con «ticket»: es uno de los diecisiete datos base, decide el hito «sabe
+ * cuántas ventas necesita por mes», y estaba sólo en la lista de las sesiones
+ * —que no son documentos—. Ningún onboarding, ningún match, ninguna llamada lo
+ * podía proponer.
+ */
+describe('todo dato que la aplicación necesita tiene de dónde salir', () => {
+  const DE_LOS_HITOS = HITOS
+    .filter((h) => h.fuente === 'ficha')
+    .flatMap((h) => h.camposQueLoDan ?? [])
+
+  it('cada campo que decide un hito lo puede proponer algún documento', () => {
+    const conFuente = new Set(Object.values(LECTURA).flatMap((l) => l.campos))
+    for (const clave of DE_LOS_HITOS) {
+      expect(conFuente.has(clave), `«${clave}» decide un hito y ningún documento lo puede proponer`).toBe(true)
+    }
+  })
+
+  // Los tres que se cruzan son los que casi siempre están cargados. Si un campo
+  // sólo puede salir de una sesión suelta, en la práctica no sale.
+  it('y lo puede proponer alguno de los tres documentos que se cruzan', () => {
+    const delCruce = new Set(
+      (['onboarding', 'match_de_marca', 'llamada_venta'] as const).flatMap((t) => LECTURA[t].campos),
+    )
+    for (const clave of DE_LOS_HITOS) {
+      expect(delCruce.has(clave), `«${clave}» no sale de ningún documento de los que se cruzan`).toBe(true)
+    }
+  })
+
+  it('ningún tipo declara un campo que no existe en la ficha', () => {
+    for (const [tipo, lectura] of Object.entries(LECTURA)) {
+      for (const clave of lectura.campos) {
+        expect(CAMPOS_POR_CLAVE.has(clave), `${tipo} declara «${clave}», que no es un campo`).toBe(true)
+      }
+    }
   })
 })

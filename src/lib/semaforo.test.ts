@@ -109,10 +109,25 @@ describe('rojo no es cualquier cosa', () => {
    * Decir grave ahí afirma algo de él que no sabemos.
    */
   it('tener el onboarding subido no cuenta: eso lo hicimos nosotros, no el cliente', () => {
-    const s = semaforoDe(evaluar(12, {}, new Set(['onboarding'])))
+    const s = semaforoDe(evaluar(12, {}, new Set(['onboarding'])), { semana: 12, algoEnLaFicha: false })
     expect(s.color).toBe('gris')
     expect(s.palabra).toBe('ficha vacía')
     expect(s.porque).toContain('no sabemos')
+  })
+
+  /**
+   * Lo que reportó el equipo: «aparece ficha vacía con clientes que ya había
+   * cargado». Y tenían razón. «Ficha vacía» preguntaba si algún HITO de ficha
+   * estaba hecho, y un hito necesita sus DOS campos: un cliente con la oferta
+   * cargada sin la promesa, y el cliente ideal sin el problema, salía «no hay
+   * ni un dato cargado de este cliente». Era falso.
+   */
+  it('con media ficha cargada NO dice «ficha vacía»: dice qué falta', () => {
+    const aMedias = { cliente_ideal: 'dueños de pymes', oferta: 'programa de 12 semanas', canal: 'Instagram' }
+    const s = semaforoDe(evaluar(12, aMedias, new Set(['onboarding'])), { semana: 12, algoEnLaFicha: true })
+    expect(s.palabra).not.toBe('ficha vacía')
+    expect(s.palabra).toBe('falta cargarlo')
+    expect(s.sinCargar!.length).toBeGreaterThan(0)
   })
 
   // Antes esto decía que con algo hecho y el resto faltando «sí se puede

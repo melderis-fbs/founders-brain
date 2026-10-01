@@ -52,7 +52,7 @@ const DEL_ONBOARDING = [
   // lo que quiere lograr
   'problemas_negocio', 'necesidad_percibida', 'objetivos_semanas', 'objetivo_meses', 'meta_mensual',
   // sus números
-  'moneda', 'precio_actual', 'facturacion_actual', 'cantidad_clientes', 'ventas_ultimo_mes', 'tiene_tracker',
+  'moneda', 'precio_actual', 'ticket', 'facturacion_actual', 'cantidad_clientes', 'ventas_ultimo_mes', 'tiene_tracker',
 ] as const
 
 /**
@@ -106,7 +106,12 @@ export const LECTURA: Record<TipoDocumento, LecturaDeTipo> = {
     campos: ['dolor_textual', 'objeciones_venta', 'valor_prometido', 'forma_pago_prometida',
              'cuotas_prometidas', 'garantia_mencionada', 'problema_inicial', 'que_funciono',
              'que_no_funciono', 'intentos_captacion', 'facturacion_historica', 'a_quien_hoy',
-             'origen_clientes', 'motivo_ingreso', 'frustracion_negocio'],
+             'origen_clientes', 'motivo_ingreso', 'frustracion_negocio',
+             // Los números del negocio: el «cuidado» de abajo ya decía cómo
+             // proponerlos —sólo si el onboarding no los tiene, y con confianza
+             // media— pero la lista no los dejaba pasar. El prompt prometía algo
+             // que la lista prohibía, y el dato no aparecía nunca.
+             'ticket', 'meta_mensual', 'facturacion_actual', 'ventas_ultimo_mes', 'cantidad_clientes'],
     cuidado:
       'Lo comercial de acá es lo que se HABLÓ, no lo firmado: va a los campos «prometido», nunca a los del ' +
       'contrato. Tener los dos separados es lo que después permite ver si no coinciden. ' +

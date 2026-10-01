@@ -784,3 +784,9 @@ td.marca-fila, th.marca-fila { width: 34px; text-align: center; }
 /* Lo que falta cargar: una lista de trabajo, no un reproche. */
 .lo-que-falta { margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--gris); }
 .lo-que-falta li { margin: 3px 0; }
+
+/* Qué falta cargar: el cartel que dice dónde se arregla lo que nombra. */
+.falta-cargar { border-left: 3px solid var(--ambar); background: var(--ambar-suave); padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 16px 0; }
+.falta-cargar h2 { margin: 0 0 4px; font-size: 15px; }
+.falta-cargar .los-campos { margin: 10px 0; padding-left: 18px; font-size: 13.5px; }
+.falta-cargar .los-campos li { margin: 4px 0; }

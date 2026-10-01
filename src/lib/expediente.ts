@@ -15,6 +15,7 @@ import { filas } from './db'
 import { evaluarHitos } from './hitos'
 import { semanaEnLaQueVa, textoDeSemana , seLePasoElPrograma } from './programa'
 import { semaforoDe } from './semaforo'
+import { hayAlgoDeSuNegocio } from './campos'
 
 /**
  * El expediente de un cliente, en texto, para mandárselo al modelo.
@@ -110,7 +111,11 @@ export async function armarExpediente(
     tiposDeDocumento: new Set(todosLosDocumentos.map((d) => d.tipo)),
     conDatos,
   })
-  const semaforo = semaforoDe(evaluados, seLePasoElPrograma(plazo))
+  const semaforo = semaforoDe(evaluados, {
+    seLePaso: seLePasoElPrograma(plazo),
+    semana: semanaEnLaQueVa(inicio),
+    algoEnLaFicha: hayAlgoDeSuNegocio(cliente.valores),
+  })
   const lectura = leerElCaso({
     hitos: evaluados,
     valores: cliente.valores,

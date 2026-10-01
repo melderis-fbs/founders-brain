@@ -13,6 +13,7 @@ import { dondeSeCorta, fasesSegunLosHitos, evaluarHitos, queNecesita } from '@/l
 import { semaforoDe } from '@/lib/semaforo'
 import { loQueDijoLaCartera } from '@/lib/temperatura'
 import { plazoDe, semanaEnLaQueVa, seLePasoElPrograma, textoDeSemana } from '@/lib/programa'
+import { hayAlgoDeSuNegocio } from '@/lib/campos'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,7 @@ export default async function Clientes({
         bandera: banderas.get(c.id)?.color ?? null,
         banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
         loQueDijo: dichos.get(c.id),
+        algoEnLaFicha: hayAlgoDeSuNegocio(c.presencia),
       }),
       atraso: corte?.atrasoEnSemanas ?? -1,
       necesita: queNecesita(evaluados, c.faltan),

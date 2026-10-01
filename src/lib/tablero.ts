@@ -4,7 +4,7 @@ import { listarClientes, fuentesDeLaCartera } from './clientes'
 import { banderasLevantadas, contarBanderas, type BanderaEnLaLista } from './banderas'
 import type { Alcance } from './permisos'
 import { evaluarHitos, faltaCargar, FUENTES_ETIQUETA, HITOS, type Fuente } from './hitos'
-import { CAMPOS_BASE, TOTAL_BASE } from './campos'
+import { CAMPOS_BASE, hayAlgoDeSuNegocio, TOTAL_BASE } from './campos'
 import { plazoDe, seLePasoElPrograma, semanaEnLaQueVa } from './programa'
 import { semaforoDe, type Color } from './semaforo'
 import { contarTemperaturas, loQueDijoLaCartera } from './temperatura'
@@ -85,6 +85,7 @@ export async function traerTablero(alcance: Alcance): Promise<Tablero> {
       bandera: lasBanderas.get(c.id)?.color ?? null,
       banderaDesdeHaceSemanas: lasBanderas.get(c.id)?.semanas ?? null,
       loQueDijo: dichos.get(c.id),
+      algoEnLaFicha: hayAlgoDeSuNegocio(c.presencia),
     })
     porColor[semaforo.color]++
 

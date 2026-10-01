@@ -59,6 +59,14 @@ export type ComoViene = {
   banderaDesdeHaceSemanas?: number | null
   /** Lo que el cliente dijo de nosotros, con su cita: sesiones y encuestas. */
   loQueDijo?: readonly LoQueDijo[]
+  /**
+   * Si hay algún dato de ficha cargado de este cliente.
+   *
+   * Es distinto de «algún hito de ficha está hecho»: un hito necesita sus DOS
+   * campos, y confundir las dos cosas hacía que un cliente con media ficha
+   * cargada saliera «ficha vacía».
+   */
+  algoEnLaFicha?: boolean
 }
 
 /**
@@ -138,16 +146,18 @@ export function semaforoDe(evaluados: readonly HitoEvaluado[], como: ComoViene |
     }
   }
 
-  // Ni un dato de su negocio cargado no es un cliente que fracasó: es una ficha
-  // vacía.
+  // «FICHA VACÍA» TIENE QUE QUERER DECIR QUE LA FICHA ESTÁ VACÍA.
   //
-  // Se mira lo que sale de la FICHA, no de los documentos: tener el onboarding
-  // subido dice que hicimos el trámite, no que el cliente avanzó. Sin una sola
-  // cosa suya cargada no hay con qué comparar, y decir GRAVE ahí afirma algo de
-  // él que no sabemos. Lo que sabemos es de nosotros: que no lo cargamos. Gris
-  // manda a cargarlo, que es lo que hay que hacer; rojo manda a llamarlo por un
-  // atraso que puede no existir.
-  if (!evaluados.some((e) => e.estado === 'hecho' && e.hito.fuente === 'ficha')) {
+  // Antes esto preguntaba si algún hito de ficha estaba HECHO, y un hito está
+  // hecho sólo cuando están sus dos campos. Entonces un cliente con cuarenta
+  // datos cargados —pero con la oferta sin la promesa, y el cliente ideal sin
+  // el problema— salía «ficha vacía: no hay ni un dato cargado de este
+  // cliente». Era falso, y quien lo había cargado no tenía forma de entenderlo.
+  //
+  // Ahora se mira si hay ALGÚN dato de ficha cargado. Si no hay ninguno, es
+  // ficha vacía de verdad; si hay algunos, el gris de abajo dice cuáles faltan
+  // y dónde se cargan.
+  if (viene.algoEnLaFicha === false) {
     return {
       color: 'gris',
       palabra: 'ficha vacía',

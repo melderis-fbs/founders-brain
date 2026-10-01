@@ -24,8 +24,9 @@ import { mesesDe, totalesDe } from '@/lib/meses'
 import { Preguntar } from '@/componentes/Preguntar'
 import { Sesiones } from '@/componentes/Sesiones'
 import { Temperatura } from '@/componentes/Temperatura'
+import { FaltaCargar } from '@/componentes/FaltaCargar'
 import { comoLoLeeElSemaforo, temperaturasDe } from '@/lib/temperatura'
-import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, POR_QUE_EL_GRUPO, sigueElRoadMap, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
+import { CAMPOS, CAMPOS_BASE, ETIQUETA_GRUPO, hayAlgoDeSuNegocio, POR_QUE_EL_GRUPO, sigueElRoadMap, TOTAL_BASE, TOTAL_CAMPOS, type Campo, type Grupo } from '@/lib/campos'
 
 /** Los bloques de «El cliente», en el orden en que se conoce a alguien. */
 const GRUPOS_DEL_CLIENTE: Grupo[] = [
@@ -49,7 +50,7 @@ import { documentosDe, fuentesDeLaCartera, listarConsultoras, traerCliente } fro
 import { quienMira } from '@/lib/quien-mira'
 import { ultimoDiagnostico } from '@/lib/diagnosticos'
 import { pendientesDe } from '@/lib/propuestas'
-import { dondeSeCorta, evaluarHitos, queNecesita } from '@/lib/hitos'
+import { dondeSeCorta, evaluarHitos, faltaCargar, queNecesita } from '@/lib/hitos'
 import { cuandoTermina, desajusteDePlazo, seLePasoElPrograma, semanaEnLaQueVa, semanasQueDura, textoDeSemana } from '@/lib/programa'
 import { hayAlgunaSesionEnLaCartera, listarSesiones } from '@/lib/sesiones'
 
@@ -168,6 +169,12 @@ export default async function Ficha({
       loQueDijo: comoLoLeeElSemaforo(alertas),
     },
   )
+  // «Ficha vacía» tiene que querer decir que la ficha está vacía, no que
+  // falta la mitad de un par de campos.
+  const algoEnLaFicha = hayAlgoDeSuNegocio(cliente.valores)
+  // Lo que ya venció y no está cargado, con sus campos: es lo que convierte el
+  // gris en algo que se puede hacer ahora mismo.
+  const sinCargar = faltaCargar(evaluados)
   const filasEtapas = filasDeEtapas(
     semanaEnLaQueVa(inicio),
     etapasHechas,
@@ -360,6 +367,11 @@ export default async function Ficha({
                     <Link href={`/clientes/${cliente.id}?bloque=programa`}>Ver y marcar las catorce etapas →</Link>
                   </p>
                 </div>
+
+                <FaltaCargar
+                  clienteId={cliente.id} sinCargar={sinCargar}
+                  valores={cliente.valores} documentos={documentos.length}
+                />
 
                 <Temperatura clienteId={cliente.id} alertas={alertas} encuestasSinLeer={encuestasSinLeer} />
 

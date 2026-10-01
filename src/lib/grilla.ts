@@ -6,6 +6,7 @@ import { dondeSeCorta, evaluarHitos, HITOS, queNecesita, type EstadoHito } from 
 import { ETAPAS, etapasDeLaSemana, SEMANAS_DEL_PROGRAMA } from './modulos'
 import { semaforoDe, type Semaforo } from './semaforo'
 import { loQueDijoLaCartera } from './temperatura'
+import { hayAlgoDeSuNegocio } from './campos'
 import { plazoDe, semanaEnLaQueVa, semanasQueDura, seLePasoElPrograma } from './programa'
 
 /**
@@ -67,6 +68,7 @@ export async function traerGrilla(alcance: Alcance, filtros: { consultoraId?: nu
       bandera: banderas.get(c.id)?.color ?? null,
       banderaDesdeHaceSemanas: banderas.get(c.id)?.semanas ?? null,
       loQueDijo: dichos.get(c.id),
+      algoEnLaFicha: hayAlgoDeSuNegocio(c.presencia),
     })
 
     const porSemana: Record<number, EstadoHito> = {}
